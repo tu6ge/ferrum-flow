@@ -1,5 +1,5 @@
-use gpui::*;
 use flow_rs::*;
+use gpui::*;
 
 fn main() {
     Application::new().run(|cx| {
@@ -7,19 +7,19 @@ fn main() {
 
         graph.add_node(Node {
             id: NodeId(1),
-            x: 100.0,
-            y: 100.0,
+            x: 100.0.into(),
+            y: 100.0.into(),
         });
 
         graph.add_node(Node {
             id: NodeId(2),
-            x: 300.0,
-            y: 200.0,
+            x: 300.0.into(),
+            y: 200.0.into(),
         });
 
-        cx.open_window(
-            WindowOptions::default(),
-            |_,cx| cx.new(|_| FlowCanvas::new(graph)),
-        ).unwrap();
+        cx.open_window(WindowOptions::default(), |_, cx| {
+            cx.new(|_| FlowCanvas::new(graph))
+        })
+        .unwrap();
     });
 }
