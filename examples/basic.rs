@@ -5,17 +5,11 @@ fn main() {
     Application::new().run(|cx| {
         let mut graph = Graph::new();
 
-        graph.add_node(Node {
-            id: NodeId(1),
-            x: 100.0.into(),
-            y: 100.0.into(),
-        });
+        graph.add_node(
+            Node::new(1, 100.0, 100.0).output("1".into(), Point::new(px(60.0), px(60.0))),
+        );
 
-        graph.add_node(Node {
-            id: NodeId(2),
-            x: 300.0.into(),
-            y: 200.0.into(),
-        });
+        graph.add_node(Node::new(2, 300.0, 400.0).input("1".into(), Point::new(px(60.0), px(0.0))));
 
         cx.open_window(WindowOptions::default(), |_, cx| {
             cx.new(|_| FlowCanvas::new(graph))
