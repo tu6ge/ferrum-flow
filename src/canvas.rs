@@ -119,6 +119,9 @@ impl FlowCanvas {
                             }
                         });
                     })
+                    .on_mouse_down(MouseButton::Left, |_, _, cx| {
+                        cx.stop_propagation();
+                    })
             }))
     }
 
