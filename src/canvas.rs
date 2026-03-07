@@ -38,12 +38,11 @@ impl FlowCanvas {
                     .left(node.x)
                     .top(node.y)
                     .on_mouse_down(MouseButton::Left, move |ev, _win, cx| {
-                        //println!("mouse down");
-                        cx.stop_propagation(); // 防止触发画布的点击事件
+                        cx.stop_propagation();
                         let offset = ev.position - Point::new(node_x, node_y);
 
                         cx.update_entity(&entry, |this: &mut Self, cx| {
-                            this.drag_target = Some((node_id, offset));
+                            this.drag_target = Some((node_id.clone(), offset));
                             cx.notify();
                         });
                     })
@@ -54,7 +53,11 @@ impl FlowCanvas {
                     .border(px(1.5))
                     .border_color(rgb(0x1A192B))
                     .child(self.render_ports(node, this_cx))
-                    .child(div().child("Node").text_color(rgb(0x1A192B)))
+                    .child(
+                        div()
+                            .child(format!("Node {}", node_id))
+                            .text_color(rgb(0x1A192B)),
+                    )
             })
             .collect()
     }
