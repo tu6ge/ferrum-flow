@@ -8,7 +8,7 @@ pub struct FlowCanvas {
     connecting: Option<Connecting>,
 
     viewport: Viewport,
-    panning: bool,
+    panning: Option<Panning>,
 }
 
 #[derive(Debug, Clone)]
@@ -25,6 +25,12 @@ struct Connecting {
     mouse: Point<Pixels>,
 }
 
+#[derive(Debug, Clone)]
+struct Panning {
+    start_mouse: Point<Pixels>,
+    start_offset: Point<Pixels>,
+}
+
 impl FlowCanvas {
     pub fn new(graph: Graph) -> Self {
         Self {
@@ -32,7 +38,7 @@ impl FlowCanvas {
             dragging_node: None,
             connecting: None,
             viewport: Viewport::new(),
-            panning: false,
+            panning: None,
         }
     }
 
@@ -257,10 +263,20 @@ impl Render for FlowCanvas {
         let entry = this_cx.entity();
         let entry2 = entry.clone();
         let entity3 = entry.clone();
+        let entity_mouse_down = entry.clone();
         div()
             .size_full()
             // bg point 9F9FA7
             .bg(gpui::rgb(0xf8f9fb))
+            .on_mouse_down(MouseButton::Left, move |ev, _, app| {
+                app.update_entity(&entity_mouse_down, |this, cx| {
+                    this.panning = Some(Panning {
+                        start_mouse: ev.position,
+                        start_offset: this.viewport.offset,
+                    });
+                    cx.notify();
+                })
+            })
             .on_mouse_move(move |ev, _, cx| {
                 //println!("mouse move");
                 cx.update_entity(&entry, |this, cx| {
@@ -280,6 +296,17 @@ impl Render for FlowCanvas {
                             node.y = start_node.y + dy;
                             cx.notify();
                         }
+                    } else if let Some(Panning {
+                        start_mouse,
+                        start_offset,
+                    }) = this.panning
+                    {
+                        let dx = ev.position.x - start_mouse.x;
+                        let dy = ev.position.y - start_mouse.y;
+
+                        this.viewport.offset.x = start_offset.x + dx;
+                        this.viewport.offset.y = start_offset.y + dy;
+                        cx.notify();
                     }
                 });
             })
@@ -292,6 +319,10 @@ impl Render for FlowCanvas {
 
                     if this.connecting.is_some() {
                         this.connecting = None;
+                        cx.notify();
+                    }
+                    if this.panning.is_some() {
+                        this.panning = None;
                         cx.notify();
                     }
                 });
