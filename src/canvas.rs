@@ -244,6 +244,49 @@ impl FlowCanvas {
             },
         )
     }
+
+    fn render_grid(&self, win: &mut Window) -> impl IntoElement {
+        let base_grid = 40.0;
+        let zoom = self.viewport.zoom;
+
+        let grid = base_grid * zoom;
+
+        let offset = self.viewport.offset;
+
+        let start_x = f32::from(offset.x) % grid;
+        let start_y = f32::from(offset.y) % grid;
+
+        let mut dots = Vec::new();
+
+        let bounds = win.bounds();
+        let width = f32::from(bounds.size.width);
+        let height = f32::from(bounds.size.height);
+
+        let mut x = start_x;
+
+        while x < width {
+            let mut y = start_y;
+
+            while y < height {
+                dots.push(
+                    div()
+                        .absolute()
+                        .left(px(x))
+                        .top(px(y))
+                        .w(px(2.0))
+                        .h(px(2.0))
+                        .rounded_full()
+                        .bg(rgb(0x9F9FA7)),
+                );
+
+                y += grid;
+            }
+
+            x += grid;
+        }
+
+        div().absolute().size_full().children(dots)
+    }
 }
 
 fn edge_bezier(start: Point<Pixels>, end: Point<Pixels>) -> Result<Path<Pixels>, anyhow::Error> {
@@ -259,11 +302,12 @@ fn edge_bezier(start: Point<Pixels>, end: Point<Pixels>) -> Result<Path<Pixels>,
 }
 
 impl Render for FlowCanvas {
-    fn render(&mut self, _window: &mut Window, this_cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, this_cx: &mut Context<Self>) -> impl IntoElement {
         let entry = this_cx.entity();
         let entry2 = entry.clone();
         let entity3 = entry.clone();
-        let entity_mouse_down = entry.clone();
+        let entity_mouse_down: Entity<FlowCanvas> = entry.clone();
+
         div()
             .size_full()
             // bg point 9F9FA7
@@ -351,6 +395,7 @@ impl Render for FlowCanvas {
                     cx.notify();
                 });
             })
+            .child(self.render_grid(window))
             .children(self.render_nodes(this_cx))
             .child(self.render_connecting_edge())
             .child(self.render_edges())
