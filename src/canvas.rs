@@ -50,10 +50,12 @@ impl FlowCanvas {
                     })
                     .w(px(120.0))
                     .h(px(60.0))
-                    .bg(gpui::black())
+                    .bg(white())
                     .rounded(px(6.0))
+                    .border(px(1.5))
+                    .border_color(rgb(0x1A192B))
                     .child(self.render_ports(node, this_cx))
-                    .child(div().child("Node").text_color(gpui::white()))
+                    .child(div().child("Node").text_color(rgb(0x1A192B)))
             })
             .collect()
     }
@@ -73,7 +75,7 @@ impl FlowCanvas {
                     .w(px(12.0))
                     .h(px(12.0))
                     .rounded_full()
-                    .bg(rgb(0xdddddd))
+                    .bg(rgb(0x1A192B))
                     .on_mouse_down(MouseButton::Left, move |event, _, cx| {
                         cx.stop_propagation();
                         cx.update_entity(&entity, |this, _| {
@@ -120,7 +122,7 @@ impl FlowCanvas {
                     line.curve_to(mouse, Point::new(start.x, start.y + px(50.0)));
 
                     if let Ok(line) = line.build() {
-                        win.paint_path(line, rgb(0xdddddd));
+                        win.paint_path(line, rgb(0xb1b1b8));
                     }
                 },
             )
@@ -169,7 +171,7 @@ impl FlowCanvas {
                     );
 
                     if let Ok(line) = line.build() {
-                        win.paint_path(line, rgb(0xdddddd));
+                        win.paint_path(line, rgb(0xb1b1b8));
                     }
                 }
             },
@@ -184,7 +186,8 @@ impl Render for FlowCanvas {
         let entity_id = this_cx.entity_id();
         div()
             .size_full()
-            .bg(gpui::blue())
+            // bg point 9F9FA7
+            .bg(gpui::rgb(0xf8f9fb))
             .on_mouse_move(move |ev, _, cx| {
                 //println!("mouse move");
                 cx.update_entity(&entry, |this, _| {
