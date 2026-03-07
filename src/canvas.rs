@@ -117,11 +117,7 @@ impl FlowCanvas {
             canvas(
                 |_, _, _| {},
                 move |_, _, win, _| {
-                    let mut line = PathBuilder::stroke(px(1.0));
-                    line.move_to(start);
-                    line.curve_to(mouse, Point::new(start.x, start.y + px(50.0)));
-
-                    if let Ok(line) = line.build() {
+                    if let Ok(line) = edge_bezier(start, mouse) {
                         win.paint_path(line, rgb(0xb1b1b8));
                     }
                 },
@@ -145,8 +141,6 @@ impl FlowCanvas {
                     },
                 ) in graph.edges.iter()
                 {
-                    let mut line = PathBuilder::stroke(px(1.0));
-
                     let Some(source_node) = graph.get_node(&source_node) else {
                         return;
                     };
@@ -154,29 +148,36 @@ impl FlowCanvas {
                         return;
                     };
                     let source_point = source_node.outputs.first().unwrap().point;
-                    line.move_to(Point::new(
-                        source_node.x + source_point.x,
-                        source_node.y + source_point.y,
-                    ));
                     let target_point = target_node.inputs.first().unwrap().point;
-                    line.curve_to(
+
+                    if let Ok(line) = edge_bezier(
+                        Point::new(
+                            source_node.x + source_point.x,
+                            source_node.y + source_point.y,
+                        ),
                         Point::new(
                             target_node.x + target_point.x,
                             target_node.y + target_point.y,
                         ),
-                        Point::new(
-                            source_node.x + source_point.x,
-                            source_node.y + source_point.y + px(60.0),
-                        ),
-                    );
-
-                    if let Ok(line) = line.build() {
+                    ) {
                         win.paint_path(line, rgb(0xb1b1b8));
                     }
                 }
             },
         )
     }
+}
+
+fn edge_bezier(start: Point<Pixels>, end: Point<Pixels>) -> Result<Path<Pixels>, anyhow::Error> {
+    let mut line = PathBuilder::stroke(px(1.0));
+    line.move_to(start);
+    line.cubic_bezier_to(
+        end,
+        Point::new(start.x, start.y + px(50.0)),
+        Point::new(end.x, end.y - px(50.0)),
+    );
+
+    line.build()
 }
 
 impl Render for FlowCanvas {
