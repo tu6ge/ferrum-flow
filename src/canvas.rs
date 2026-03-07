@@ -30,7 +30,6 @@ impl FlowCanvas {
             .values()
             .map(|node| {
                 let entry = this_cx.entity();
-                let entry_id = this_cx.entity_id();
                 let node_id = node.id;
                 let node_x = node.x;
                 let node_y = node.y;
@@ -43,10 +42,10 @@ impl FlowCanvas {
                         cx.stop_propagation(); // 防止触发画布的点击事件
                         let offset = ev.position - Point::new(node_x, node_y);
 
-                        cx.update_entity(&entry, |this: &mut Self, _| {
+                        cx.update_entity(&entry, |this: &mut Self, cx| {
                             this.drag_target = Some((node_id, offset));
+                            cx.notify();
                         });
-                        cx.notify(entry_id);
                     })
                     .w(px(120.0))
                     .h(px(60.0))
@@ -65,7 +64,6 @@ impl FlowCanvas {
             .size_full()
             .children(node.outputs.iter().map(|port| {
                 let entity = this_cx.entity();
-                let entity_id = this_cx.entity_id();
                 let node_id = node.id;
                 let port_id = port.id.clone();
                 div()
@@ -78,14 +76,14 @@ impl FlowCanvas {
                     .bg(rgb(0x1A192B))
                     .on_mouse_down(MouseButton::Left, move |event, _, cx| {
                         cx.stop_propagation();
-                        cx.update_entity(&entity, |this, _| {
+                        cx.update_entity(&entity, |this, cx| {
                             this.connecting = Some(Connecting {
                                 node_id,
                                 port_id: port_id.clone(),
                                 mouse: event.position.clone(),
                             });
+                            cx.notify();
                         });
-                        cx.notify(entity_id);
                     })
             }))
     }
@@ -184,25 +182,25 @@ impl Render for FlowCanvas {
     fn render(&mut self, _window: &mut Window, this_cx: &mut Context<Self>) -> impl IntoElement {
         let entry = this_cx.entity();
         let entry2 = entry.clone();
-        let entity_id = this_cx.entity_id();
         div()
             .size_full()
             // bg point 9F9FA7
             .bg(gpui::rgb(0xf8f9fb))
             .on_mouse_move(move |ev, _, cx| {
                 //println!("mouse move");
-                cx.update_entity(&entry, |this, _| {
+                cx.update_entity(&entry, |this, cx| {
                     if let Some(connect) = &mut this.connecting {
                         connect.mouse = ev.position;
+                        cx.notify();
                     } else if let Some((node_id, offset)) = this.drag_target {
                         let new_pos = ev.position - offset;
                         if let Some(node) = this.graph.get_node_mut(node_id.clone()) {
                             node.x = new_pos.x.into();
                             node.y = new_pos.y.into();
+                            cx.notify();
                         }
                     }
                 });
-                cx.notify(entity_id);
             })
             .on_mouse_up(MouseButton::Left, move |_, _, cx| {
                 cx.update_entity(&entry2, |this, cx| {
