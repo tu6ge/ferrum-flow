@@ -1,11 +1,21 @@
 use gpui::*;
 
-use crate::{Edge, EdgeId, Node, NodeId, graph::Graph};
+use crate::{Edge, EdgeId, Node, NodeId, graph::Graph, viewport::Viewport};
 
 pub struct FlowCanvas {
     pub graph: Graph,
-    pub drag_target: Option<(NodeId, Point<Pixels>)>,
+    dragging_node: Option<DraggingNode>,
     connecting: Option<Connecting>,
+
+    viewport: Viewport,
+    panning: bool,
+}
+
+#[derive(Debug, Clone)]
+struct DraggingNode {
+    node_id: NodeId,
+    start_mouse: Point<Pixels>,
+    start_node: Point<Pixels>,
 }
 
 #[derive(Debug, Clone)]
@@ -19,8 +29,10 @@ impl FlowCanvas {
     pub fn new(graph: Graph) -> Self {
         Self {
             graph,
-            drag_target: None,
+            dragging_node: None,
             connecting: None,
+            viewport: Viewport::new(),
+            panning: false,
         }
     }
 
@@ -31,23 +43,28 @@ impl FlowCanvas {
             .map(|node| {
                 let entry = this_cx.entity();
                 let node_id = node.id;
-                let node_x = node.x;
-                let node_y = node.y;
+                let node_point = node.point();
+                let screen = self.viewport.world_to_screen(node.point());
+                let node_x = screen.x;
+                let node_y = screen.y;
                 div()
                     .absolute()
-                    .left(node.x)
-                    .top(node.y)
+                    .left(node_x)
+                    .top(node_y)
                     .on_mouse_down(MouseButton::Left, move |ev, _win, cx| {
                         cx.stop_propagation();
-                        let offset = ev.position - Point::new(node_x, node_y);
 
                         cx.update_entity(&entry, |this: &mut Self, cx| {
-                            this.drag_target = Some((node_id.clone(), offset));
+                            this.dragging_node = Some(DraggingNode {
+                                node_id: node_id.clone(),
+                                start_mouse: ev.position,
+                                start_node: node_point,
+                            });
                             cx.notify();
                         });
                     })
-                    .w(px(120.0))
-                    .h(px(60.0))
+                    .w(px(120.0 * self.viewport.zoom))
+                    .h(px(60.0 * self.viewport.zoom))
                     .bg(white())
                     .rounded(px(6.0))
                     .border(px(1.5))
@@ -71,10 +88,10 @@ impl FlowCanvas {
                 let port_id = port.id.clone();
                 div()
                     .absolute()
-                    .left(port.point.x - px(8.0))
-                    .top(port.point.y - px(8.0))
-                    .w(px(12.0))
-                    .h(px(12.0))
+                    .left((port.point.x - px(8.0)) * self.viewport.zoom)
+                    .top((port.point.y - px(8.0)) * self.viewport.zoom)
+                    .w(px(12.0 * self.viewport.zoom))
+                    .h(px(12.0 * self.viewport.zoom))
                     .rounded_full()
                     .bg(rgb(0x1A192B))
                     .on_mouse_down(MouseButton::Left, move |event, _, cx| {
@@ -95,10 +112,10 @@ impl FlowCanvas {
                 let port_id = port.id.clone();
                 div()
                     .absolute()
-                    .left(port.point.x - px(7.0))
-                    .top(port.point.y - px(7.0))
-                    .w(px(12.0))
-                    .h(px(12.0))
+                    .left((port.point.x - px(7.0)) * self.viewport.zoom)
+                    .top((port.point.y - px(7.0)) * self.viewport.zoom)
+                    .w(px(12.0 * self.viewport.zoom))
+                    .h(px(12.0 * self.viewport.zoom))
                     .rounded_full()
                     .bg(rgb(0x1A192B))
                     .on_mouse_up(MouseButton::Left, move |_, _, cx| {
@@ -139,7 +156,10 @@ impl FlowCanvas {
                         .map(|port| (node, port))
                 })
                 .flatten()
-                .map(|(node, port)| Point::new(node.x + port.point.x, node.y + port.point.y))
+                .map(|(node, port)| {
+                    self.viewport
+                        .world_to_screen(Point::new(node.x + port.point.x, node.y + port.point.y))
+                })
         } else {
             None
         }
@@ -148,7 +168,7 @@ impl FlowCanvas {
         if let Some(connect) = &self.connecting
             && let Some(start) = self.port_position()
         {
-            let mouse = connect.mouse;
+            let mouse: Point<Pixels> = connect.mouse;
             canvas(
                 |_, _, _| {},
                 move |_, _, win, _| {
@@ -163,10 +183,11 @@ impl FlowCanvas {
     }
     fn render_edges(&self) -> impl IntoElement {
         let graph = self.graph.clone();
+        let viewport = self.viewport.clone();
 
         canvas(
-            |_, _, _| graph,
-            |_, graph, win, _| {
+            |_, _, _| (graph, viewport),
+            |_, (graph, viewport), win, _| {
                 for (
                     _,
                     Edge {
@@ -202,14 +223,14 @@ impl FlowCanvas {
                     };
 
                     if let Ok(line) = edge_bezier(
-                        Point::new(
+                        viewport.world_to_screen(Point::new(
                             source_node.x + source_point.x,
                             source_node.y + source_point.y,
-                        ),
-                        Point::new(
+                        )),
+                        viewport.world_to_screen(Point::new(
                             target_node.x + target_point.x,
                             target_node.y + target_point.y,
-                        ),
+                        )),
                     ) {
                         win.paint_path(line, rgb(0xb1b1b8));
                     }
@@ -235,6 +256,7 @@ impl Render for FlowCanvas {
     fn render(&mut self, _window: &mut Window, this_cx: &mut Context<Self>) -> impl IntoElement {
         let entry = this_cx.entity();
         let entry2 = entry.clone();
+        let entity3 = entry.clone();
         div()
             .size_full()
             // bg point 9F9FA7
@@ -245,11 +267,17 @@ impl Render for FlowCanvas {
                     if let Some(connect) = &mut this.connecting {
                         connect.mouse = ev.position;
                         cx.notify();
-                    } else if let Some((node_id, offset)) = this.drag_target {
-                        let new_pos = ev.position - offset;
+                    } else if let Some(DraggingNode {
+                        node_id,
+                        start_mouse,
+                        start_node,
+                    }) = this.dragging_node
+                    {
+                        let dx = (ev.position.x - start_mouse.x) / this.viewport.zoom;
+                        let dy = (ev.position.y - start_mouse.y) / this.viewport.zoom;
                         if let Some(node) = this.graph.get_node_mut(node_id.clone()) {
-                            node.x = new_pos.x.into();
-                            node.y = new_pos.y.into();
+                            node.x = start_node.x + dx;
+                            node.y = start_node.y + dy;
                             cx.notify();
                         }
                     }
@@ -257,8 +285,8 @@ impl Render for FlowCanvas {
             })
             .on_mouse_up(MouseButton::Left, move |_, _, cx| {
                 cx.update_entity(&entry2, |this, cx| {
-                    if this.drag_target.is_some() {
-                        this.drag_target = None;
+                    if this.dragging_node.is_some() {
+                        this.dragging_node = None;
                         cx.notify();
                     }
 
@@ -266,6 +294,30 @@ impl Render for FlowCanvas {
                         this.connecting = None;
                         cx.notify();
                     }
+                });
+            })
+            .on_scroll_wheel(move |ev, _, app| {
+                app.update_entity(&entity3, |this, cx| {
+                    let cursor = ev.position;
+
+                    let before = this.viewport.screen_to_world(cursor);
+
+                    let delta = f32::from(ev.delta.pixel_delta(px(1.0)).y);
+                    if delta == 0.0 {
+                        return;
+                    }
+                    let zoom_delta = if delta > 0.0 { 0.9 } else { 1.1 };
+
+                    this.viewport.zoom *= zoom_delta;
+
+                    this.viewport.zoom = this.viewport.zoom.clamp(0.7, 3.0);
+
+                    let after = this.viewport.world_to_screen(before);
+
+                    this.viewport.offset.x += cursor.x - after.x;
+                    this.viewport.offset.y += cursor.y - after.y;
+
+                    cx.notify();
                 });
             })
             .children(self.render_nodes(this_cx))

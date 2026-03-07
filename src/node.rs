@@ -32,6 +32,10 @@ impl Node {
             outputs: vec![],
         }
     }
+
+    pub fn point(&self) -> Point<Pixels> {
+        Point::new(self.x, self.y)
+    }
     pub fn output(mut self, id: String, point: Point<Pixels>) -> Self {
         self.outputs.push(Port {
             id,
