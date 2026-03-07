@@ -71,8 +71,8 @@ impl FlowCanvas {
                 let port_id = port.id.clone();
                 div()
                     .absolute()
-                    .left(port.point.x - px(6.0))
-                    .top(port.point.y - px(6.0))
+                    .left(port.point.x - px(8.0))
+                    .top(port.point.y - px(8.0))
                     .w(px(12.0))
                     .h(px(12.0))
                     .rounded_full()
@@ -86,6 +86,37 @@ impl FlowCanvas {
                                 mouse: event.position.clone(),
                             });
                             cx.notify();
+                        });
+                    })
+            }))
+            .children(node.inputs.iter().map(|port| {
+                let entity = this_cx.entity();
+                let node_id = node.id;
+                let port_id = port.id.clone();
+                div()
+                    .absolute()
+                    .left(port.point.x - px(7.0))
+                    .top(port.point.y - px(7.0))
+                    .w(px(12.0))
+                    .h(px(12.0))
+                    .rounded_full()
+                    .bg(rgb(0x1A192B))
+                    .on_mouse_up(MouseButton::Left, move |_, _, cx| {
+                        cx.stop_propagation();
+                        cx.update_entity(&entity, |this, cx| {
+                            if let Some(connecting) = &this.connecting {
+                                let edge = Edge {
+                                    id: EdgeId(1),
+                                    source_node: connecting.node_id,
+                                    source_port: connecting.port_id.clone(),
+                                    target_node: node_id,
+                                    target_port: port_id.clone(),
+                                };
+
+                                this.graph.add_edge(edge);
+                                this.connecting = None;
+                                cx.notify();
+                            }
                         });
                     })
             }))
@@ -138,6 +169,8 @@ impl FlowCanvas {
                     Edge {
                         source_node,
                         target_node,
+                        source_port,
+                        target_port,
                         ..
                     },
                 ) in graph.edges.iter()
@@ -148,8 +181,22 @@ impl FlowCanvas {
                     let Some(target_node) = graph.get_node(&target_node) else {
                         return;
                     };
-                    let source_point = source_node.outputs.first().unwrap().point;
-                    let target_point = target_node.inputs.first().unwrap().point;
+                    let source_point = source_node
+                        .outputs
+                        .iter()
+                        .find(|p| p.id == source_port.clone())
+                        .map(|p| p.point);
+                    let Some(source_point) = source_point else {
+                        return;
+                    };
+                    let target_point = target_node
+                        .inputs
+                        .iter()
+                        .find(|p| p.id == target_port.clone())
+                        .map(|p| p.point);
+                    let Some(target_point) = target_point else {
+                        return;
+                    };
 
                     if let Ok(line) = edge_bezier(
                         Point::new(
@@ -212,16 +259,7 @@ impl Render for FlowCanvas {
                         cx.notify();
                     }
 
-                    if let Some(connecting) = &this.connecting {
-                        let edge = Edge {
-                            id: EdgeId(1),
-                            source_node: connecting.node_id,
-                            source_port: connecting.port_id.clone(),
-                            target_node: NodeId(2),
-                            target_port: "input".into(),
-                        };
-
-                        this.graph.add_edge(edge);
+                    if this.connecting.is_some() {
                         this.connecting = None;
                         cx.notify();
                     }
