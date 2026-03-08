@@ -457,8 +457,8 @@ impl Render for FlowCanvas {
                 });
             })
             .child(self.render_grid(window))
-            .children(self.render_nodes(this_cx))
             .child(self.render_connecting_edge())
             .child(self.render_edges())
+            .children(self.render_nodes(this_cx))
     }
 }
