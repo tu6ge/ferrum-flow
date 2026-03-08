@@ -5,6 +5,11 @@ use crate::{
     renderer::RendererRegistry, viewport::Viewport,
 };
 
+mod edge;
+mod utils;
+use edge::EdgeGeometry;
+use utils::*;
+
 #[derive(Clone)]
 pub struct FlowCanvas {
     pub graph: Graph,
@@ -15,6 +20,8 @@ pub struct FlowCanvas {
     panning: Option<Panning>,
 
     registry: RendererRegistry,
+
+    focus_handle: FocusHandle,
 }
 
 #[derive(Debug, Clone)]
@@ -38,7 +45,8 @@ struct Panning {
 }
 
 impl FlowCanvas {
-    pub fn new(graph: Graph) -> Self {
+    pub fn new(graph: Graph, cx: &mut Context<Self>) -> Self {
+        let focus_handle = cx.focus_handle();
         Self {
             graph,
             dragging_node: None,
@@ -46,6 +54,7 @@ impl FlowCanvas {
             viewport: Viewport::new(),
             panning: None,
             registry: RendererRegistry::new(),
+            focus_handle,
         }
     }
 
@@ -249,61 +258,97 @@ impl FlowCanvas {
         }
     }
     fn render_edges(&self) -> impl IntoElement {
-        let graph = self.graph.clone();
-        let viewport = self.viewport.clone();
-
+        let this = self.clone();
         canvas(
-            |_, _, _| (graph, viewport),
-            |_, (graph, viewport), win, _| {
-                for (
-                    _,
-                    Edge {
-                        source_node,
-                        target_node,
-                        source_port,
-                        target_port,
-                        ..
-                    },
-                ) in graph.edges.iter()
-                {
-                    let Some(source_node) = graph.get_node(&source_node) else {
-                        return;
-                    };
-                    let Some(target_node) = graph.get_node(&target_node) else {
-                        return;
-                    };
-                    let source_point = source_node
-                        .outputs
-                        .iter()
-                        .find(|p| p.id == source_port.clone())
-                        .map(|p| p.point);
-                    let Some(source_point) = source_point else {
-                        return;
-                    };
-                    let target_point = target_node
-                        .inputs
-                        .iter()
-                        .find(|p| p.id == target_port.clone())
-                        .map(|p| p.point);
-                    let Some(target_point) = target_point else {
-                        return;
-                    };
+            |_, _, _| this,
+            move |_, this, win, _| {
+                for (_, edge) in this.graph.edges.iter() {
+                    let geometry = this.edge_geometry(edge);
 
-                    if let Ok(line) = edge_bezier(
-                        viewport.world_to_screen(Point::new(
-                            source_node.x + source_point.x,
-                            source_node.y + source_point.y,
-                        )),
-                        viewport.world_to_screen(Point::new(
-                            target_node.x + target_point.x,
-                            target_node.y + target_point.y,
-                        )),
-                    ) {
-                        win.paint_path(line, rgb(0xb1b1b8));
+                    let selected = this.graph.selected_edge == Some(edge.id);
+
+                    let Some(EdgeGeometry { start, c1, c2, end }) = geometry else {
+                        return;
+                    };
+                    let mut line = PathBuilder::stroke(px(1.0));
+                    line.move_to(start);
+                    line.cubic_bezier_to(end, c1, c2);
+
+                    if let Ok(line) = line.build() {
+                        win.paint_path(line, rgb(if selected { 0xFF7800 } else { 0xb1b1b8 }));
                     }
                 }
             },
         )
+    }
+
+    fn edge_geometry(&self, edge: &Edge) -> Option<EdgeGeometry> {
+        let Edge {
+            source_node,
+            target_node,
+            source_port,
+            target_port,
+            ..
+        } = edge;
+        let Some(source_node) = self.graph.get_node(&source_node) else {
+            return None;
+        };
+        let Some(target_node) = self.graph.get_node(&target_node) else {
+            return None;
+        };
+        let source_point = source_node
+            .outputs
+            .iter()
+            .find(|p| p.id == source_port.clone())
+            .map(|p| p.point);
+        let Some(source_point) = source_point else {
+            return None;
+        };
+        let target_point = target_node
+            .inputs
+            .iter()
+            .find(|p| p.id == target_port.clone())
+            .map(|p| p.point);
+        let Some(target_point) = target_point else {
+            return None;
+        };
+
+        Some(EdgeGeometry {
+            start: self.viewport.world_to_screen(Point::new(
+                source_node.x + source_point.x,
+                source_node.y + source_point.y,
+            )),
+            c1: self.viewport.world_to_screen(Point::new(
+                source_node.x + source_point.x,
+                source_node.y + source_point.y + px(50.0),
+            )),
+            c2: self.viewport.world_to_screen(Point::new(
+                target_node.x + target_point.x,
+                target_node.y + target_point.y - px(50.0),
+            )),
+            end: self.viewport.world_to_screen(Point::new(
+                target_node.x + target_point.x,
+                target_node.y + target_point.y,
+            )),
+        })
+    }
+
+    fn hit_test_edge(&self, mouse: Point<Pixels>, edge: &Edge) -> bool {
+        let Some(geom) = self.edge_geometry(edge) else {
+            return false;
+        };
+
+        let points = sample_bezier(&geom, 20);
+
+        for segment in points.windows(2) {
+            let d = distance_to_segment(mouse, segment[0], segment[1]);
+
+            if d < 8.0 {
+                return true;
+            }
+        }
+
+        false
     }
 
     fn render_grid(&self, win: &mut Window) -> impl IntoElement {
@@ -362,15 +407,39 @@ fn edge_bezier(start: Point<Pixels>, end: Point<Pixels>) -> Result<Path<Pixels>,
     line.build()
 }
 
+fn sample_bezier(geom: &EdgeGeometry, steps: usize) -> Vec<Point<Pixels>> {
+    let mut points = Vec::new();
+
+    for i in 0..=steps {
+        let t = i as f32 / steps as f32;
+
+        let x = (1.0 - t).powi(3) * geom.start.x
+            + 3.0 * (1.0 - t).powi(2) * t * geom.c1.x
+            + 3.0 * (1.0 - t) * t * t * geom.c2.x
+            + t.powi(3) * geom.end.x;
+
+        let y = (1.0 - t).powi(3) * geom.start.y
+            + 3.0 * (1.0 - t).powi(2) * t * geom.c1.y
+            + 3.0 * (1.0 - t) * t * t * geom.c2.y
+            + t.powi(3) * geom.end.y;
+
+        points.push(Point::new(x, y));
+    }
+
+    points
+}
+
 impl Render for FlowCanvas {
     fn render(&mut self, window: &mut Window, this_cx: &mut Context<Self>) -> impl IntoElement {
         let entry = this_cx.entity();
         let entry2 = entry.clone();
         let entity3 = entry.clone();
         let entity_mouse_down: Entity<FlowCanvas> = entry.clone();
+        let entity_key_down = entry.clone();
 
         div()
             .size_full()
+            .track_focus(&self.focus_handle)
             // bg point 9F9FA7
             .bg(gpui::rgb(0xf8f9fb))
             .on_mouse_down(MouseButton::Left, move |ev, _, app| {
@@ -379,7 +448,35 @@ impl Render for FlowCanvas {
                         start_mouse: ev.position,
                         start_offset: this.viewport.offset,
                     });
+
+                    this.graph.selected_edge = None;
+                    for edge in this.graph.edges.values() {
+                        let Some(geom) = this.edge_geometry(edge) else {
+                            continue;
+                        };
+
+                        let bound = edge_bounds(&geom);
+                        if !bound.contains(&ev.position) {
+                            continue;
+                        }
+
+                        if this.hit_test_edge(ev.position, edge) {
+                            this.graph.selected_edge = Some(edge.id);
+                            break;
+                        }
+                    }
+
                     cx.notify();
+                })
+            })
+            .on_key_down(move |ev, _, app| {
+                app.update_entity(&entity_key_down, |this, cx| {
+                    if ev.keystroke.key == "delete" || ev.keystroke.key == "backspace" {
+                        if let Some(edge_id) = this.graph.selected_edge.take() {
+                            this.graph.edges.remove(&edge_id);
+                            cx.notify();
+                        }
+                    }
                 })
             })
             .on_mouse_move(move |ev, _, cx| {

@@ -13,7 +13,7 @@ fn main() {
         graph.add_node(Node::new(2, 300.0, 400.0).input("1".into(), Point::new(px(60.0), px(0.0))));
 
         cx.open_window(WindowOptions::default(), |_, cx| {
-            cx.new(|_| FlowCanvas::new(graph).register_node("number", NumberNode {}))
+            cx.new(|fc| FlowCanvas::new(graph, fc).register_node("number", NumberNode {}))
         })
         .unwrap();
     });

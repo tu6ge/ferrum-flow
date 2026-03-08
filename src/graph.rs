@@ -7,6 +7,8 @@ use crate::node::{Node, NodeId};
 pub struct Graph {
     pub nodes: HashMap<NodeId, Node>,
     pub edges: HashMap<EdgeId, Edge>,
+
+    pub selected_edge: Option<EdgeId>,
 }
 
 impl Graph {
@@ -14,6 +16,7 @@ impl Graph {
         Self {
             nodes: HashMap::new(),
             edges: HashMap::new(),
+            selected_edge: None,
         }
     }
 
