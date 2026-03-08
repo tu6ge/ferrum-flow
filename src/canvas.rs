@@ -1,7 +1,11 @@
 use gpui::*;
 
-use crate::{Edge, EdgeId, Node, NodeId, graph::Graph, viewport::Viewport};
+use crate::{
+    Edge, EdgeId, Node, NodeId, NodeRenderContext, NodeRenderer, graph::Graph,
+    renderer::RendererRegistry, viewport::Viewport,
+};
 
+#[derive(Clone)]
 pub struct FlowCanvas {
     pub graph: Graph,
     dragging_node: Option<DraggingNode>,
@@ -9,6 +13,8 @@ pub struct FlowCanvas {
 
     viewport: Viewport,
     panning: Option<Panning>,
+
+    registry: RendererRegistry,
 }
 
 #[derive(Debug, Clone)]
@@ -39,7 +45,16 @@ impl FlowCanvas {
             connecting: None,
             viewport: Viewport::new(),
             panning: None,
+            registry: RendererRegistry::new(),
         }
+    }
+
+    pub fn register_node<R>(mut self, name: impl Into<String>, renderer: R) -> Self
+    where
+        R: NodeRenderer + 'static,
+    {
+        self.registry.register(name, renderer);
+        self
     }
 
     fn render_nodes(&self, this_cx: &mut Context<Self>) -> Vec<impl IntoElement> {
@@ -47,43 +62,89 @@ impl FlowCanvas {
             .nodes
             .values()
             .map(|node| {
-                let entry = this_cx.entity();
-                let node_id = node.id;
-                let node_point = node.point();
-                let screen = self.viewport.world_to_screen(node.point());
-                let node_x = screen.x;
-                let node_y = screen.y;
-                div()
-                    .absolute()
-                    .left(node_x)
-                    .top(node_y)
-                    .on_mouse_down(MouseButton::Left, move |ev, _win, cx| {
-                        cx.stop_propagation();
+                // custom node render
+                if let Some(renderer) = self.registry.get(&node.node_type) {
+                    let world_pos = Point::new(node.x, node.y);
 
-                        cx.update_entity(&entry, |this: &mut Self, cx| {
-                            this.dragging_node = Some(DraggingNode {
-                                node_id: node_id.clone(),
-                                start_mouse: ev.position,
-                                start_node: node_point,
+                    let screen = self.viewport.world_to_screen(world_pos);
+
+                    let size = renderer.size(node);
+
+                    let screen_w = size.width * self.viewport.zoom;
+
+                    let screen_h = size.height * self.viewport.zoom;
+
+                    let mut ctx = NodeRenderContext {
+                        zoom: self.viewport.zoom,
+                    };
+
+                    let inner = renderer.render(node, &mut ctx);
+
+                    let entry = this_cx.entity();
+                    let node_id = node.id;
+                    let node_point = node.point();
+
+                    div()
+                        .absolute()
+                        .left(screen.x)
+                        .top(screen.y)
+                        .w(screen_w)
+                        .h(screen_h)
+                        .on_mouse_down(MouseButton::Left, move |ev, _win, cx| {
+                            cx.stop_propagation();
+
+                            cx.update_entity(&entry, |this: &mut Self, cx| {
+                                this.dragging_node = Some(DraggingNode {
+                                    node_id: node_id.clone(),
+                                    start_mouse: ev.position,
+                                    start_node: node_point,
+                                });
+                                cx.notify();
                             });
-                            cx.notify();
-                        });
-                    })
-                    .w(px(120.0 * self.viewport.zoom))
-                    .h(px(60.0 * self.viewport.zoom))
-                    .bg(white())
-                    .rounded(px(6.0))
-                    .border(px(1.5))
-                    .border_color(rgb(0x1A192B))
-                    .child(self.render_ports(node, this_cx))
-                    .child(
-                        div()
-                            .child(format!("Node {}", node_id))
-                            .text_color(rgb(0x1A192B)),
-                    )
+                        })
+                        .child(div().absolute().size_full().child(inner))
+                        .child(self.render_ports(node, this_cx))
+                } else {
+                    // default node render
+                    let entry = this_cx.entity();
+                    let node_id = node.id;
+                    let node_point = node.point();
+                    let screen = self.viewport.world_to_screen(node.point());
+                    let node_x = screen.x;
+                    let node_y = screen.y;
+                    div()
+                        .absolute()
+                        .left(node_x)
+                        .top(node_y)
+                        .on_mouse_down(MouseButton::Left, move |ev, _win, cx| {
+                            cx.stop_propagation();
+
+                            cx.update_entity(&entry, |this: &mut Self, cx| {
+                                this.dragging_node = Some(DraggingNode {
+                                    node_id: node_id.clone(),
+                                    start_mouse: ev.position,
+                                    start_node: node_point,
+                                });
+                                cx.notify();
+                            });
+                        })
+                        .w(px(120.0 * self.viewport.zoom))
+                        .h(px(60.0 * self.viewport.zoom))
+                        .bg(white())
+                        .rounded(px(6.0))
+                        .border(px(1.5))
+                        .border_color(rgb(0x1A192B))
+                        .child(self.render_ports(node, this_cx))
+                        .child(
+                            div()
+                                .child(format!("Node {}", node_id))
+                                .text_color(rgb(0x1A192B)),
+                        )
+                }
             })
             .collect()
     }
+
     fn render_ports(&self, node: &Node, this_cx: &mut Context<Self>) -> impl IntoElement {
         div()
             .absolute()
