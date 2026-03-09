@@ -10,6 +10,9 @@ mod utils;
 use edge::EdgeGeometry;
 use utils::*;
 
+const DEFAULT_NODE_WIDTH: Pixels = px(120.0);
+const DEFAULT_NODE_HEIGHT: Pixels = px(60.0);
+
 #[derive(Clone)]
 pub struct FlowCanvas {
     pub graph: Graph,
@@ -121,6 +124,7 @@ impl FlowCanvas {
                     let screen = self.viewport.world_to_screen(node.point());
                     let node_x = screen.x;
                     let node_y = screen.y;
+                    let selected = self.graph.selected_node == Some(node_id);
                     div()
                         .absolute()
                         .left(node_x)
@@ -134,15 +138,17 @@ impl FlowCanvas {
                                     start_mouse: ev.position,
                                     start_node: node_point,
                                 });
+                                this.graph.selected_edge = None;
+                                this.graph.selected_node = Some(node_id.clone());
                                 cx.notify();
                             });
                         })
-                        .w(px(120.0 * self.viewport.zoom))
-                        .h(px(60.0 * self.viewport.zoom))
+                        .w(DEFAULT_NODE_WIDTH * self.viewport.zoom)
+                        .h(DEFAULT_NODE_HEIGHT * self.viewport.zoom)
                         .bg(white())
                         .rounded(px(6.0))
                         .border(px(1.5))
-                        .border_color(rgb(0x1A192B))
+                        .border_color(rgb(if selected { 0xFF7800 } else { 0x1A192B }))
                         .child(self.render_ports(node, this_cx))
                         .child(
                             div()
@@ -351,6 +357,25 @@ impl FlowCanvas {
         false
     }
 
+    fn hit_test_get_edge(&self, mouse: Point<Pixels>) -> Option<EdgeId> {
+        for edge in self.graph.edges.values() {
+            let Some(geom) = self.edge_geometry(edge) else {
+                continue;
+            };
+
+            let bound = edge_bounds(&geom);
+            if !bound.contains(&mouse) {
+                continue;
+            }
+
+            if self.hit_test_edge(mouse, edge) {
+                return Some(edge.id);
+            }
+        }
+
+        None
+    }
+
     fn render_grid(&self, win: &mut Window) -> impl IntoElement {
         let base_grid = 40.0;
         let zoom = self.viewport.zoom;
@@ -392,6 +417,26 @@ impl FlowCanvas {
         }
 
         div().absolute().size_full().children(dots)
+    }
+
+    fn node_screen_bounds(&self, node: &Node) -> Bounds<Pixels> {
+        let pos = self.viewport.world_to_screen(Point::new(node.x, node.y));
+
+        let w = DEFAULT_NODE_WIDTH * self.viewport.zoom;
+        let h = DEFAULT_NODE_HEIGHT * self.viewport.zoom;
+
+        Bounds::new(pos, Size::new(w, h))
+    }
+
+    fn hit_test_node(&self, mouse: Point<Pixels>) -> Option<NodeId> {
+        for node in self.graph.nodes.values() {
+            let bounds = self.node_screen_bounds(node);
+
+            if bounds.contains(&mouse) {
+                return Some(node.id);
+            }
+        }
+        None
     }
 }
 
@@ -449,22 +494,9 @@ impl Render for FlowCanvas {
                         start_offset: this.viewport.offset,
                     });
 
-                    this.graph.selected_edge = None;
-                    for edge in this.graph.edges.values() {
-                        let Some(geom) = this.edge_geometry(edge) else {
-                            continue;
-                        };
+                    this.graph.selected_edge = this.hit_test_get_edge(ev.position);
 
-                        let bound = edge_bounds(&geom);
-                        if !bound.contains(&ev.position) {
-                            continue;
-                        }
-
-                        if this.hit_test_edge(ev.position, edge) {
-                            this.graph.selected_edge = Some(edge.id);
-                            break;
-                        }
-                    }
+                    this.graph.selected_node = this.hit_test_node(ev.position);
 
                     cx.notify();
                 })
@@ -474,6 +506,9 @@ impl Render for FlowCanvas {
                     if ev.keystroke.key == "delete" || ev.keystroke.key == "backspace" {
                         if let Some(edge_id) = this.graph.selected_edge.take() {
                             this.graph.edges.remove(&edge_id);
+                            cx.notify();
+                        } else if let Some(node_id) = this.graph.selected_node.take() {
+                            this.graph.nodes.remove(&node_id);
                             cx.notify();
                         }
                     }

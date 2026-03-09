@@ -9,6 +9,7 @@ pub struct Graph {
     pub edges: HashMap<EdgeId, Edge>,
 
     pub selected_edge: Option<EdgeId>,
+    pub selected_node: Option<NodeId>,
 }
 
 impl Graph {
@@ -17,6 +18,7 @@ impl Graph {
             nodes: HashMap::new(),
             edges: HashMap::new(),
             selected_edge: None,
+            selected_node: None,
         }
     }
 
