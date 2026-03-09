@@ -5,7 +5,8 @@ use crate::node::{Node, NodeId};
 
 #[derive(Debug, Clone)]
 pub struct Graph {
-    pub nodes: HashMap<NodeId, Node>,
+    nodes: HashMap<NodeId, Node>,
+    node_order: Vec<NodeId>,
     pub edges: HashMap<EdgeId, Edge>,
 
     pub selected_edge: Option<EdgeId>,
@@ -16,6 +17,7 @@ impl Graph {
     pub fn new() -> Self {
         Self {
             nodes: HashMap::new(),
+            node_order: vec![],
             edges: HashMap::new(),
             selected_edge: None,
             selected_node: None,
@@ -23,7 +25,20 @@ impl Graph {
     }
 
     pub fn add_node(&mut self, node: Node) {
+        let node_id = node.id.clone();
         self.nodes.insert(node.id, node);
+        self.node_order.push(node_id);
+    }
+
+    pub fn nodes(&self) -> &HashMap<NodeId, Node> {
+        &self.nodes
+    }
+
+    pub fn node_order(&self) -> &Vec<NodeId> {
+        &self.node_order
+    }
+    pub fn node_order_mut(&mut self) -> &mut Vec<NodeId> {
+        &mut self.node_order
     }
 
     pub fn add_edge(&mut self, edge: Edge) {
@@ -36,5 +51,13 @@ impl Graph {
 
     pub fn get_node_mut(&mut self, id: NodeId) -> Option<&mut Node> {
         self.nodes.get_mut(&id)
+    }
+
+    pub fn remove_node(&mut self, id: &NodeId) {
+        self.nodes.remove(id);
+        let index = self.node_order.iter().position(|v| *v == *id);
+        if let Some(index) = index {
+            self.node_order.remove(index);
+        }
     }
 }

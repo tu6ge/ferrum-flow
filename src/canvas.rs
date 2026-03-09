@@ -70,17 +70,19 @@ impl FlowCanvas {
     }
 
     fn render_nodes(&self, this_cx: &mut Context<Self>) -> Vec<impl IntoElement> {
+        let nodes = self.graph.nodes();
         self.graph
-            .nodes
-            .values()
-            .map(|node| {
+            .node_order()
+            .iter()
+            .map(|node_id| {
+                let node = nodes[node_id].clone();
                 // custom node render
                 if let Some(renderer) = self.registry.get(&node.node_type) {
                     let world_pos = Point::new(node.x, node.y);
 
                     let screen = self.viewport.world_to_screen(world_pos);
 
-                    let size = renderer.size(node);
+                    let size = renderer.size(&node);
 
                     let screen_w = size.width * self.viewport.zoom;
 
@@ -90,11 +92,11 @@ impl FlowCanvas {
                         zoom: self.viewport.zoom,
                     };
 
-                    let inner = renderer.render(node, &mut ctx);
+                    let inner = renderer.render(&node, &mut ctx);
 
                     let entry = this_cx.entity();
-                    let node_id = node.id;
                     let node_point = node.point();
+                    let node_id_clone = node_id.clone();
 
                     div()
                         .absolute()
@@ -107,7 +109,7 @@ impl FlowCanvas {
 
                             cx.update_entity(&entry, |this: &mut Self, cx| {
                                 this.dragging_node = Some(DraggingNode {
-                                    node_id: node_id.clone(),
+                                    node_id: node_id_clone,
                                     start_mouse: ev.position,
                                     start_node: node_point,
                                 });
@@ -115,7 +117,7 @@ impl FlowCanvas {
                             });
                         })
                         .child(div().absolute().size_full().child(inner))
-                        .child(self.render_ports(node, this_cx))
+                        .child(self.render_ports(&node, this_cx))
                 } else {
                     // default node render
                     let entry = this_cx.entity();
@@ -140,6 +142,7 @@ impl FlowCanvas {
                                 });
                                 this.graph.selected_edge = None;
                                 this.graph.selected_node = Some(node_id.clone());
+                                this.bring_node_to_front(node_id.clone());
                                 cx.notify();
                             });
                         })
@@ -149,7 +152,7 @@ impl FlowCanvas {
                         .rounded(px(6.0))
                         .border(px(1.5))
                         .border_color(rgb(if selected { 0xFF7800 } else { 0x1A192B }))
-                        .child(self.render_ports(node, this_cx))
+                        .child(self.render_ports(&node, this_cx))
                         .child(
                             div()
                                 .child(format!("Node {}", node_id))
@@ -429,14 +432,22 @@ impl FlowCanvas {
     }
 
     fn hit_test_node(&self, mouse: Point<Pixels>) -> Option<NodeId> {
-        for node in self.graph.nodes.values() {
-            let bounds = self.node_screen_bounds(node);
+        let nodes = self.graph.nodes();
+        for id in self.graph.node_order().iter().rev() {
+            let node = &nodes[id];
+            let bounds = self.node_screen_bounds(&node);
 
             if bounds.contains(&mouse) {
                 return Some(node.id);
             }
         }
         None
+    }
+
+    fn bring_node_to_front(&mut self, node_id: NodeId) {
+        self.graph.node_order_mut().retain(|id| *id != node_id);
+
+        self.graph.node_order_mut().push(node_id);
     }
 }
 
@@ -508,7 +519,7 @@ impl Render for FlowCanvas {
                             this.graph.edges.remove(&edge_id);
                             cx.notify();
                         } else if let Some(node_id) = this.graph.selected_node.take() {
-                            this.graph.nodes.remove(&node_id);
+                            this.graph.remove_node(&node_id);
                             cx.notify();
                         }
                     }
