@@ -59,6 +59,7 @@ impl Graph {
         self.nodes.get_mut(&id)
     }
 
+    #[inline]
     pub fn remove_node(&mut self, id: &NodeId) {
         self.nodes.remove(id);
         let index = self.node_order.iter().position(|v| *v == *id);
@@ -69,7 +70,11 @@ impl Graph {
 
     pub fn add_selected_node(&mut self, id: NodeId, shift: bool) {
         if shift {
-            self.selected_node.insert(id);
+            if self.selected_node.contains(&id) {
+                self.selected_node.remove(&id);
+            } else {
+                self.selected_node.insert(id);
+            }
         } else {
             self.selected_node.clear();
             self.selected_node.insert(id);
@@ -83,12 +88,13 @@ impl Graph {
         if self.selected_node.len() == 0 {
             return false;
         }
+
+        let mut ids = vec![];
         for id in self.selected_node.iter() {
-            self.nodes.remove(id);
-            let index = self.node_order.iter().position(|v| *v == *id);
-            if let Some(index) = index {
-                self.node_order.remove(index);
-            }
+            ids.push(id.clone());
+        }
+        for id in ids.iter() {
+            self.remove_node(&id);
         }
         self.selected_node.clear();
         return true;

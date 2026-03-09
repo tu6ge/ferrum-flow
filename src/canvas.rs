@@ -25,6 +25,8 @@ pub struct FlowCanvas {
     registry: RendererRegistry,
 
     focus_handle: FocusHandle,
+
+    selection_box: Option<SelectionBox>,
 }
 
 #[derive(Debug, Clone)]
@@ -47,6 +49,13 @@ struct Panning {
     start_offset: Point<Pixels>,
 }
 
+#[derive(Debug, Clone)]
+pub struct SelectionBox {
+    start: Point<Pixels>,
+
+    end: Point<Pixels>,
+}
+
 impl FlowCanvas {
     pub fn new(graph: Graph, cx: &mut Context<Self>) -> Self {
         let focus_handle = cx.focus_handle();
@@ -58,6 +67,7 @@ impl FlowCanvas {
             panning: None,
             registry: RendererRegistry::new(),
             focus_handle,
+            selection_box: None,
         }
     }
 
@@ -469,6 +479,57 @@ impl FlowCanvas {
 
         self.graph.node_order_mut().push(node_id);
     }
+
+    fn selection_bounds(&self) -> Option<Bounds<Pixels>> {
+        let selection_box = self.selection_box.clone();
+        selection_box.map(|b| {
+            let size = Size::new(b.end.x - b.start.x, b.end.y - b.start.y);
+            Bounds::new(b.start, size)
+        })
+    }
+
+    fn finalize_selection(&mut self) {
+        let rect = self.selection_bounds();
+
+        let Some(rect) = rect else {
+            return;
+        };
+
+        self.graph.clear_selected_node();
+
+        let mut selected_ids = Vec::new();
+
+        for node in self.graph.nodes().values() {
+            let pos = self.node_screen_bounds(node);
+
+            if rect.intersects(&pos) {
+                selected_ids.push(node.id);
+            }
+        }
+
+        for id in selected_ids.iter() {
+            self.graph.add_selected_node(id.clone(), true);
+        }
+
+        self.selection_box = None;
+    }
+
+    fn render_selected_box(&self) -> impl IntoElement {
+        if self.selection_box.is_some()
+            && let Some(rect) = self.selection_bounds()
+        {
+            div()
+                .absolute()
+                .left(rect.origin.x)
+                .top(rect.origin.y)
+                .w(rect.size.width)
+                .h(rect.size.height)
+                .border(px(1.0))
+                .border_color(rgb(0x78A0FF))
+        } else {
+            div()
+        }
+    }
 }
 
 fn edge_bezier(start: Point<Pixels>, end: Point<Pixels>) -> Result<Path<Pixels>, anyhow::Error> {
@@ -520,19 +581,28 @@ impl Render for FlowCanvas {
             .bg(gpui::rgb(0xf8f9fb))
             .on_mouse_down(MouseButton::Left, move |ev, _, app| {
                 app.update_entity(&entity_mouse_down, |this, cx| {
-                    this.panning = Some(Panning {
-                        start_mouse: ev.position,
-                        start_offset: this.viewport.offset,
-                    });
+                    let shift = ev.modifiers.shift;
+
+                    if !shift {
+                        this.panning = Some(Panning {
+                            start_mouse: ev.position,
+                            start_offset: this.viewport.offset,
+                        });
+                    }
 
                     this.graph.selected_edge = this.hit_test_get_edge(ev.position);
-
-                    let shift = ev.modifiers.shift;
 
                     if let Some(id) = this.hit_test_node(ev.position) {
                         this.graph.add_selected_node(id, shift);
                     } else {
                         this.graph.clear_selected_node();
+                    }
+
+                    if shift {
+                        this.selection_box = Some(SelectionBox {
+                            start: ev.position,
+                            end: ev.position,
+                        });
                     }
 
                     cx.notify();
@@ -581,7 +651,10 @@ impl Render for FlowCanvas {
                         this.viewport.offset.x = start_offset.x + dx;
                         this.viewport.offset.y = start_offset.y + dy;
                         cx.notify();
-                    }
+                    } else if let Some(selection_box) = &mut this.selection_box {
+                        selection_box.end = ev.position;
+                        cx.notify();
+                    };
                 });
             })
             .on_mouse_up(MouseButton::Left, move |_, _, cx| {
@@ -597,6 +670,10 @@ impl Render for FlowCanvas {
                     }
                     if this.panning.is_some() {
                         this.panning = None;
+                        cx.notify();
+                    }
+                    if this.selection_box.is_some() {
+                        this.finalize_selection();
                         cx.notify();
                     }
                 });
@@ -629,5 +706,6 @@ impl Render for FlowCanvas {
             .child(self.render_connecting_edge())
             .child(self.render_edges())
             .children(self.render_nodes(this_cx))
+            .child(self.render_selected_box())
     }
 }
