@@ -1,4 +1,4 @@
-use gpui::*;
+use gpui::{prelude::FluentBuilder, *};
 
 use crate::{
     Edge, EdgeId, Node, NodeId, NodeRenderContext, NodeRenderer, graph::Graph,
@@ -76,6 +76,7 @@ impl FlowCanvas {
             .iter()
             .map(|node_id| {
                 let node = nodes[node_id].clone();
+
                 // custom node render
                 if let Some(renderer) = self.registry.get(&node.node_type) {
                     let world_pos = Point::new(node.x, node.y);
@@ -90,6 +91,7 @@ impl FlowCanvas {
 
                     let mut ctx = NodeRenderContext {
                         zoom: self.viewport.zoom,
+                        rounded: px(5.0),
                     };
 
                     let inner = renderer.render(&node, &mut ctx);
@@ -97,6 +99,7 @@ impl FlowCanvas {
                     let entry = this_cx.entity();
                     let node_point = node.point();
                     let node_id_clone = node_id.clone();
+                    let selected = self.graph.selected_node == Some(node_id_clone);
 
                     div()
                         .absolute()
@@ -113,9 +116,15 @@ impl FlowCanvas {
                                     start_mouse: ev.position,
                                     start_node: node_point,
                                 });
+                                this.graph.selected_edge = None;
+                                this.graph.selected_node = Some(node_id_clone.clone());
+                                this.bring_node_to_front(node_id_clone.clone());
                                 cx.notify();
                             });
                         })
+                        .rounded(px(6.0))
+                        .border(px(1.5))
+                        .when(selected, |div| div.border_color(rgb(0xFF7800)))
                         .child(div().absolute().size_full().child(inner))
                         .child(self.render_ports(&node, this_cx))
                 } else {
@@ -127,6 +136,7 @@ impl FlowCanvas {
                     let node_x = screen.x;
                     let node_y = screen.y;
                     let selected = self.graph.selected_node == Some(node_id);
+
                     div()
                         .absolute()
                         .left(node_x)

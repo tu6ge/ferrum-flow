@@ -26,11 +26,11 @@ impl NodeRenderer for NumberNode {
         Size::new(px(160.0), px(80.0))
     }
 
-    fn render(&self, _node: &Node, _cx: &mut NodeRenderContext) -> AnyElement {
+    fn render(&self, _node: &Node, cx: &mut NodeRenderContext) -> AnyElement {
         div()
             .size_full()
             .bg(rgb(0x505078))
-            .rounded(px(8.0))
+            .rounded(cx.rounded)
             .child(div().child("Number Node").text_color(white()))
             .into_any()
     }

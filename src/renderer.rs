@@ -6,6 +6,7 @@ use crate::node::Node;
 
 pub struct NodeRenderContext {
     pub zoom: f32,
+    pub rounded: Pixels,
 }
 
 pub trait NodeRenderer: Send + Sync {
