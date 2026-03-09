@@ -56,6 +56,12 @@ pub struct SelectionBox {
     end: Point<Pixels>,
 }
 
+impl SelectionBox {
+    fn not_move(&self) -> bool {
+        self.start.x == self.end.x && self.start.y == self.end.y
+    }
+}
+
 impl FlowCanvas {
     pub fn new(graph: Graph, cx: &mut Context<Self>) -> Self {
         let focus_handle = cx.focus_handle();
@@ -131,7 +137,9 @@ impl FlowCanvas {
                                     start_mouse: ev.position,
                                     start_node: node_point,
                                 });
-                                this.graph.selected_edge = None;
+                                if !ev.modifiers.shift {
+                                    this.graph.clear_selected_edge();
+                                }
                                 this.graph
                                     .add_selected_node(node_id_clone.clone(), ev.modifiers.shift);
                                 this.bring_node_to_front(node_id_clone.clone());
@@ -171,7 +179,9 @@ impl FlowCanvas {
                                     start_mouse: ev.position,
                                     start_node: node_point,
                                 });
-                                this.graph.selected_edge = None;
+                                if !ev.modifiers.shift {
+                                    this.graph.clear_selected_edge();
+                                }
                                 this.graph
                                     .add_selected_node(node_id.clone(), ev.modifiers.shift);
                                 this.bring_node_to_front(node_id.clone());
@@ -304,7 +314,12 @@ impl FlowCanvas {
                 for (_, edge) in this.graph.edges.iter() {
                     let geometry = this.edge_geometry(edge);
 
-                    let selected = this.graph.selected_edge == Some(edge.id);
+                    let selected = this
+                        .graph
+                        .selected_edge
+                        .iter()
+                        .find(|e| **e == edge.id)
+                        .is_some();
 
                     let Some(EdgeGeometry { start, c1, c2, end }) = geometry else {
                         return;
@@ -590,15 +605,26 @@ impl Render for FlowCanvas {
                         });
                     }
 
-                    this.graph.selected_edge = this.hit_test_get_edge(ev.position);
+                    let mut selected_edge = false;
+
+                    if let Some(id) = this.hit_test_get_edge(ev.position) {
+                        this.graph.add_selected_edge(id, shift);
+                        selected_edge = true;
+                    } else {
+                        if !shift {
+                            this.graph.clear_selected_edge();
+                        }
+                    }
 
                     if let Some(id) = this.hit_test_node(ev.position) {
                         this.graph.add_selected_node(id, shift);
                     } else {
-                        this.graph.clear_selected_node();
+                        if !shift {
+                            this.graph.clear_selected_node();
+                        }
                     }
 
-                    if shift {
+                    if shift && !selected_edge {
                         this.selection_box = Some(SelectionBox {
                             start: ev.position,
                             end: ev.position,
@@ -611,8 +637,7 @@ impl Render for FlowCanvas {
             .on_key_down(move |ev, _, app| {
                 app.update_entity(&entity_key_down, |this, cx| {
                     if ev.keystroke.key == "delete" || ev.keystroke.key == "backspace" {
-                        if let Some(edge_id) = this.graph.selected_edge.take() {
-                            this.graph.edges.remove(&edge_id);
+                        if this.graph.remove_selected_edge() {
                             cx.notify();
                         }
                         if this.graph.remove_selected_node() {
@@ -672,7 +697,7 @@ impl Render for FlowCanvas {
                         this.panning = None;
                         cx.notify();
                     }
-                    if this.selection_box.is_some() {
+                    if this.selection_box.as_ref().is_some_and(|b| !b.not_move()) {
                         this.finalize_selection();
                         cx.notify();
                     }

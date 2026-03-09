@@ -9,7 +9,7 @@ pub struct Graph {
     node_order: Vec<NodeId>,
     pub edges: HashMap<EdgeId, Edge>,
 
-    pub selected_edge: Option<EdgeId>,
+    pub selected_edge: HashSet<EdgeId>,
     pub selected_node: HashSet<NodeId>,
 }
 
@@ -19,7 +19,7 @@ impl Graph {
             nodes: HashMap::new(),
             node_order: vec![],
             edges: HashMap::new(),
-            selected_edge: None,
+            selected_edge: HashSet::new(),
             selected_node: HashSet::new(),
         }
     }
@@ -106,6 +106,38 @@ impl Graph {
             self.remove_node(&id);
         }
         self.selected_node.clear();
+        return true;
+    }
+
+    pub fn add_selected_edge(&mut self, id: EdgeId, shift: bool) {
+        if shift {
+            if self.selected_edge.contains(&id) {
+                self.selected_edge.remove(&id);
+            } else {
+                self.selected_edge.insert(id);
+            }
+        } else {
+            self.selected_edge.clear();
+            self.selected_edge.insert(id);
+        }
+    }
+    pub fn clear_selected_edge(&mut self) {
+        self.selected_edge.clear();
+    }
+
+    pub fn remove_selected_edge(&mut self) -> bool {
+        if self.selected_edge.len() == 0 {
+            return false;
+        }
+
+        let mut ids = vec![];
+        for id in self.selected_edge.iter() {
+            ids.push(id.clone());
+        }
+        for id in ids.iter() {
+            self.edges.remove(id);
+        }
+        self.selected_edge.clear();
         return true;
     }
 }
