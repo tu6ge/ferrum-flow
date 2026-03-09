@@ -59,12 +59,21 @@ impl Graph {
         self.nodes.get_mut(&id)
     }
 
-    #[inline]
     pub fn remove_node(&mut self, id: &NodeId) {
         self.nodes.remove(id);
         let index = self.node_order.iter().position(|v| *v == *id);
         if let Some(index) = index {
             self.node_order.remove(index);
+        }
+
+        let edge1 = self.edges.iter().find(|(_, edge)| edge.source_node == *id);
+        if let Some((&edge_id, _)) = edge1 {
+            self.edges.remove(&edge_id);
+        }
+
+        let edge2 = self.edges.iter().find(|(_, edge)| edge.target_node == *id);
+        if let Some((&edge_id, _)) = edge2 {
+            self.edges.remove(&edge_id);
         }
     }
 
