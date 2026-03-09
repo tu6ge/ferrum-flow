@@ -99,7 +99,12 @@ impl FlowCanvas {
                     let entry = this_cx.entity();
                     let node_point = node.point();
                     let node_id_clone = node_id.clone();
-                    let selected = self.graph.selected_node == Some(node_id_clone);
+                    let selected = self
+                        .graph
+                        .selected_node
+                        .iter()
+                        .find(|id| **id == node_id_clone)
+                        .is_some();
 
                     div()
                         .absolute()
@@ -117,7 +122,8 @@ impl FlowCanvas {
                                     start_node: node_point,
                                 });
                                 this.graph.selected_edge = None;
-                                this.graph.selected_node = Some(node_id_clone.clone());
+                                this.graph
+                                    .add_selected_node(node_id_clone.clone(), ev.modifiers.shift);
                                 this.bring_node_to_front(node_id_clone.clone());
                                 cx.notify();
                             });
@@ -135,7 +141,12 @@ impl FlowCanvas {
                     let screen = self.viewport.world_to_screen(node.point());
                     let node_x = screen.x;
                     let node_y = screen.y;
-                    let selected = self.graph.selected_node == Some(node_id);
+                    let selected = self
+                        .graph
+                        .selected_node
+                        .iter()
+                        .find(|id| **id == node_id)
+                        .is_some();
 
                     div()
                         .absolute()
@@ -151,7 +162,8 @@ impl FlowCanvas {
                                     start_node: node_point,
                                 });
                                 this.graph.selected_edge = None;
-                                this.graph.selected_node = Some(node_id.clone());
+                                this.graph
+                                    .add_selected_node(node_id.clone(), ev.modifiers.shift);
                                 this.bring_node_to_front(node_id.clone());
                                 cx.notify();
                             });
@@ -515,7 +527,13 @@ impl Render for FlowCanvas {
 
                     this.graph.selected_edge = this.hit_test_get_edge(ev.position);
 
-                    this.graph.selected_node = this.hit_test_node(ev.position);
+                    let shift = ev.modifiers.shift;
+
+                    if let Some(id) = this.hit_test_node(ev.position) {
+                        this.graph.add_selected_node(id, shift);
+                    } else {
+                        this.graph.clear_selected_node();
+                    }
 
                     cx.notify();
                 })
@@ -526,8 +544,8 @@ impl Render for FlowCanvas {
                         if let Some(edge_id) = this.graph.selected_edge.take() {
                             this.graph.edges.remove(&edge_id);
                             cx.notify();
-                        } else if let Some(node_id) = this.graph.selected_node.take() {
-                            this.graph.remove_node(&node_id);
+                        }
+                        if this.graph.remove_selected_node() {
                             cx.notify();
                         }
                     }

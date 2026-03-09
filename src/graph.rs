@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::edge::{Edge, EdgeId};
 use crate::node::{Node, NodeId};
@@ -10,7 +10,7 @@ pub struct Graph {
     pub edges: HashMap<EdgeId, Edge>,
 
     pub selected_edge: Option<EdgeId>,
-    pub selected_node: Option<NodeId>,
+    pub selected_node: HashSet<NodeId>,
 }
 
 impl Graph {
@@ -20,7 +20,7 @@ impl Graph {
             node_order: vec![],
             edges: HashMap::new(),
             selected_edge: None,
-            selected_node: None,
+            selected_node: HashSet::new(),
         }
     }
 
@@ -65,5 +65,32 @@ impl Graph {
         if let Some(index) = index {
             self.node_order.remove(index);
         }
+    }
+
+    pub fn add_selected_node(&mut self, id: NodeId, shift: bool) {
+        if shift {
+            self.selected_node.insert(id);
+        } else {
+            self.selected_node.clear();
+            self.selected_node.insert(id);
+        }
+    }
+    pub fn clear_selected_node(&mut self) {
+        self.selected_node.clear();
+    }
+
+    pub fn remove_selected_node(&mut self) -> bool {
+        if self.selected_node.len() == 0 {
+            return false;
+        }
+        for id in self.selected_node.iter() {
+            self.nodes.remove(id);
+            let index = self.node_order.iter().position(|v| *v == *id);
+            if let Some(index) = index {
+                self.node_order.remove(index);
+            }
+        }
+        self.selected_node.clear();
+        return true;
     }
 }
