@@ -41,6 +41,12 @@ impl Graph {
         &mut self.node_order
     }
 
+    pub fn new_edge(&self) -> Edge {
+        let id = self.edges.len() + 1;
+
+        Edge::new(EdgeId(id as u64))
+    }
+
     pub fn add_edge(&mut self, edge: Edge) {
         self.edges.insert(edge.id, edge);
     }

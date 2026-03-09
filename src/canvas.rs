@@ -217,13 +217,11 @@ impl FlowCanvas {
                         cx.stop_propagation();
                         cx.update_entity(&entity, |this, cx| {
                             if let Some(connecting) = &this.connecting {
-                                let edge = Edge {
-                                    id: EdgeId(1),
-                                    source_node: connecting.node_id,
-                                    source_port: connecting.port_id.clone(),
-                                    target_node: node_id,
-                                    target_port: port_id.clone(),
-                                };
+                                let edge = this
+                                    .graph
+                                    .new_edge()
+                                    .source(connecting.node_id, connecting.port_id.clone())
+                                    .target(node_id, port_id.clone());
 
                                 this.graph.add_edge(edge);
                                 this.connecting = None;
