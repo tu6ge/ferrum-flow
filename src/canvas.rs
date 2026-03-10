@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use gpui::{prelude::FluentBuilder, *};
 
 use crate::{
@@ -16,6 +18,7 @@ const DEFAULT_NODE_HEIGHT: Pixels = px(60.0);
 #[derive(Clone)]
 pub struct FlowCanvas {
     pub graph: Graph,
+    dragging_nodes: Option<DraggingNodes>,
     dragging_node: Option<DraggingNode>,
     connecting: Option<Connecting>,
 
@@ -37,6 +40,13 @@ struct DraggingNode {
 }
 
 #[derive(Debug, Clone)]
+struct DraggingNodes {
+    start_mouse: Point<Pixels>,
+    start_positions: HashMap<NodeId, Point<Pixels>>,
+    start_box_bounds: Bounds<Pixels>,
+}
+
+#[derive(Debug, Clone)]
 struct Connecting {
     node_id: NodeId,
     port_id: String,
@@ -54,6 +64,8 @@ pub struct SelectionBox {
     start: Point<Pixels>,
 
     end: Point<Pixels>,
+
+    is_stop: bool,
 }
 
 impl SelectionBox {
@@ -67,6 +79,7 @@ impl FlowCanvas {
         let focus_handle = cx.focus_handle();
         Self {
             graph,
+            dragging_nodes: None,
             dragging_node: None,
             connecting: None,
             viewport: Viewport::new(),
@@ -131,7 +144,7 @@ impl FlowCanvas {
                         .on_mouse_down(MouseButton::Left, move |ev, _win, cx| {
                             cx.stop_propagation();
 
-                            cx.update_entity(&entry, |this: &mut Self, cx| {
+                            cx.update_entity(&entry, move |this: &mut Self, cx| {
                                 this.dragging_node = Some(DraggingNode {
                                     node_id: node_id_clone,
                                     start_mouse: ev.position,
@@ -512,6 +525,11 @@ impl FlowCanvas {
 
         self.graph.clear_selected_node();
 
+        if rect.size.width < px(4.0) || rect.size.height < px(4.0) {
+            self.selection_box = None;
+            return;
+        }
+
         let mut selected_ids = Vec::new();
 
         for node in self.graph.nodes().values() {
@@ -526,13 +544,18 @@ impl FlowCanvas {
             self.graph.add_selected_node(id.clone(), true);
         }
 
-        self.selection_box = None;
+        if let Some(b) = &mut self.selection_box {
+            b.is_stop = true;
+        }
     }
 
-    fn render_selected_box(&self) -> impl IntoElement {
+    fn render_selected_box(&self, this_cx: &mut Context<Self>) -> impl IntoElement {
         if self.selection_box.is_some()
             && let Some(rect) = self.selection_bounds()
         {
+            let this_entity = this_cx.entity();
+            let this_entity_move = this_entity.clone();
+            let this_entity_up = this_entity.clone();
             div()
                 .absolute()
                 .left(rect.origin.x)
@@ -541,6 +564,75 @@ impl FlowCanvas {
                 .h(rect.size.height)
                 .border(px(1.0))
                 .border_color(rgb(0x78A0FF))
+                .bg(rgba(0x78A0FF4c))
+                .on_mouse_down(MouseButton::Left, move |ev, _, cx| {
+                    cx.stop_propagation();
+                    cx.update_entity(&this_entity, |this, cx| {
+                        let map = {
+                            let mut map = HashMap::new();
+                            for id in this.graph.selected_node.iter() {
+                                if let Some(node) = this.graph.get_node(id) {
+                                    map.insert(*id, node.point());
+                                }
+                            }
+                            map
+                        };
+                        this.dragging_nodes = Some(DraggingNodes {
+                            start_mouse: ev.position,
+                            start_positions: map,
+                            start_box_bounds: rect,
+                        });
+                        cx.notify();
+                    })
+                })
+                .on_mouse_move(move |ev, _, cx| {
+                    cx.stop_propagation();
+                    cx.update_entity(&this_entity_move, |this, cx| {
+                        if let Some(DraggingNodes {
+                            start_mouse,
+                            start_positions,
+                            start_box_bounds,
+                        }) = &this.dragging_nodes
+                        {
+                            let dx = (ev.position.x - start_mouse.x) / this.viewport.zoom;
+                            let dy = (ev.position.y - start_mouse.y) / this.viewport.zoom;
+                            for (id, point) in start_positions.iter() {
+                                if let Some(node) = this.graph.get_node_mut(*id) {
+                                    node.x = point.x + dx;
+                                    node.y = point.y + dy;
+                                }
+                            }
+
+                            if let Some(selection_box) = &mut this.selection_box {
+                                let dx = ev.position.x - start_mouse.x;
+                                let dy = ev.position.y - start_mouse.y;
+                                selection_box.start.x = start_box_bounds.origin.x + dx;
+                                selection_box.start.y = start_box_bounds.origin.y + dy;
+                                selection_box.end.x =
+                                    selection_box.start.x + start_box_bounds.size.width;
+                                selection_box.end.y =
+                                    selection_box.start.y + start_box_bounds.size.height;
+                            }
+                            cx.notify();
+                        }
+
+                        if let Some(selection_box) = &mut this.selection_box {
+                            if !selection_box.is_stop {
+                                selection_box.end = ev.position;
+                                cx.notify();
+                            }
+                        }
+                    })
+                })
+                .on_mouse_up(MouseButton::Left, move |_, _, cx| {
+                    cx.stop_propagation();
+                    cx.update_entity(&this_entity_up, |this, cx| {
+                        if this.dragging_nodes.is_some() {
+                            this.dragging_nodes = None;
+                            cx.notify();
+                        }
+                    })
+                })
         } else {
             div()
         }
@@ -598,7 +690,7 @@ impl Render for FlowCanvas {
                 app.update_entity(&entity_mouse_down, |this, cx| {
                     let shift = ev.modifiers.shift;
 
-                    if !shift {
+                    if shift {
                         this.panning = Some(Panning {
                             start_mouse: ev.position,
                             start_offset: this.viewport.offset,
@@ -624,11 +716,15 @@ impl Render for FlowCanvas {
                         }
                     }
 
-                    if shift && !selected_edge {
+                    if !shift && !selected_edge {
                         this.selection_box = Some(SelectionBox {
                             start: ev.position,
                             end: ev.position,
+                            is_stop: false,
                         });
+                    }
+                    if shift && this.selection_box.is_some() {
+                        this.selection_box = None;
                     }
 
                     cx.notify();
@@ -677,13 +773,19 @@ impl Render for FlowCanvas {
                         this.viewport.offset.y = start_offset.y + dy;
                         cx.notify();
                     } else if let Some(selection_box) = &mut this.selection_box {
-                        selection_box.end = ev.position;
-                        cx.notify();
+                        if !selection_box.is_stop {
+                            selection_box.end = ev.position;
+                            cx.notify();
+                        }
                     };
                 });
             })
             .on_mouse_up(MouseButton::Left, move |_, _, cx| {
                 cx.update_entity(&entry2, |this, cx| {
+                    if this.dragging_nodes.is_some() {
+                        this.dragging_nodes = None;
+                        cx.notify();
+                    }
                     if this.dragging_node.is_some() {
                         this.dragging_node = None;
                         cx.notify();
@@ -731,6 +833,6 @@ impl Render for FlowCanvas {
             .child(self.render_connecting_edge())
             .child(self.render_edges())
             .children(self.render_nodes(this_cx))
-            .child(self.render_selected_box())
+            .child(self.render_selected_box(this_cx))
     }
 }
