@@ -37,6 +37,7 @@ enum DragState {
     BoxSelect(BoxSelectDrag),
     BoxMove(BoxMoveDrag),
     Pan(Panning),
+    PendingNode(PendingNode),
 }
 
 #[derive(Debug, Clone)]
@@ -60,6 +61,13 @@ struct BoxSelection {
 }
 
 #[derive(Debug, Clone)]
+struct PendingNode {
+    node_id: NodeId,
+    start_mouse: Point<Pixels>,
+    shift: bool,
+}
+
+#[derive(Debug, Clone)]
 struct Connecting {
     node_id: NodeId,
     port_id: String,
@@ -77,8 +85,6 @@ pub struct BoxSelectDrag {
     start_mouse: Point<Pixels>,
     start: Point<Pixels>,
     end: Point<Pixels>,
-    nodes: Vec<(NodeId, Point<Pixels>)>,
-    is_stop: bool,
 }
 
 impl BoxSelectDrag {
@@ -110,6 +116,7 @@ impl FlowCanvas {
     }
 
     fn render_nodes(&self, this_cx: &mut Context<Self>) -> Vec<impl IntoElement> {
+        const DRAG_THRESHOLD: Pixels = px(2.0);
         let nodes = self.graph.nodes();
         self.graph
             .node_order()
@@ -138,7 +145,9 @@ impl FlowCanvas {
 
                     let entry = this_cx.entity();
                     let this_entity_move = entry.clone();
+                    let this_entity_up = entry.clone();
                     let node_id_clone = node_id.clone();
+                    let node_point = node.point();
                     let selected = self
                         .graph
                         .selected_node
@@ -156,35 +165,72 @@ impl FlowCanvas {
                             cx.stop_propagation();
 
                             cx.update_entity(&entry, move |this: &mut Self, cx| {
-                                if !ev.modifiers.shift {
-                                    this.graph.clear_selected_edge();
-                                }
-                                this.graph
-                                    .add_selected_node(node_id_clone.clone(), ev.modifiers.shift);
-
-                                this.init_dragging_nodes(ev.position);
-                                this.bring_node_to_front(node_id_clone.clone());
+                                this.drag_state = DragState::PendingNode(PendingNode {
+                                    node_id: node_id_clone,
+                                    start_mouse: ev.position,
+                                    shift: ev.modifiers.shift,
+                                });
                                 cx.notify();
                             });
                         })
                         .on_mouse_move(move |ev, _, cx| {
                             cx.stop_propagation();
                             cx.update_entity(&this_entity_move, |this, cx| {
-                                if let DragState::NodeDrag(NodeDrag {
-                                    start_mouse,
-                                    start_positions,
-                                }) = &this.drag_state
-                                {
-                                    let dx = (ev.position.x - start_mouse.x) / this.viewport.zoom;
-                                    let dy = (ev.position.y - start_mouse.y) / this.viewport.zoom;
-                                    for (id, point) in start_positions.iter() {
-                                        if let Some(node) = this.graph.get_node_mut(*id) {
-                                            node.x = point.x + dx;
-                                            node.y = point.y + dy;
+                                match this.drag_state.clone() {
+                                    DragState::NodeDrag(NodeDrag {
+                                        start_mouse,
+                                        start_positions,
+                                    }) => {
+                                        let dx =
+                                            (ev.position.x - start_mouse.x) / this.viewport.zoom;
+                                        let dy =
+                                            (ev.position.y - start_mouse.y) / this.viewport.zoom;
+                                        for (id, point) in start_positions.iter() {
+                                            if let Some(node) = this.graph.get_node_mut(*id) {
+                                                node.x = point.x + dx;
+                                                node.y = point.y + dy;
+                                            }
+                                        }
+                                        cx.notify();
+                                    }
+                                    DragState::PendingNode(PendingNode {
+                                        node_id: id,
+                                        start_mouse,
+                                        ..
+                                    }) if node_id_clone == id => {
+                                        let delta = ev.position - start_mouse;
+                                        if delta.x > DRAG_THRESHOLD || delta.y > DRAG_THRESHOLD {
+                                            this.start_node_drag(
+                                                ev.position,
+                                                node_id_clone,
+                                                node_point,
+                                            );
+                                            cx.notify();
                                         }
                                     }
-                                    cx.notify();
+                                    _ => {}
                                 }
+                            })
+                        })
+                        .on_mouse_up(MouseButton::Left, move |_, _, cx| {
+                            cx.stop_propagation();
+                            cx.update_entity(&this_entity_up, |this, cx| {
+                                if let DragState::PendingNode(PendingNode {
+                                    node_id: id,
+                                    shift,
+                                    ..
+                                }) = this.drag_state
+                                    && id == node_id_clone
+                                {
+                                    if !shift {
+                                        this.graph.clear_selected_edge();
+                                    }
+                                    this.graph.add_selected_node(id, shift);
+                                    this.bring_node_to_front(node_id_clone);
+                                }
+
+                                this.drag_state = DragState::None;
+                                cx.notify();
                             })
                         })
                         .rounded(px(6.0))
@@ -196,7 +242,9 @@ impl FlowCanvas {
                     // default node render
                     let entry = this_cx.entity();
                     let this_entity_move = entry.clone();
+                    let this_entity_up = entry.clone();
                     let node_id = node.id;
+                    let node_point = node.point();
                     let screen = self.viewport.world_to_screen(node.point());
                     let node_x = screen.x;
                     let node_y = screen.y;
@@ -215,34 +263,68 @@ impl FlowCanvas {
                             cx.stop_propagation();
 
                             cx.update_entity(&entry, |this: &mut Self, cx| {
-                                if !ev.modifiers.shift {
-                                    this.graph.clear_selected_edge();
-                                }
-                                this.graph
-                                    .add_selected_node(node_id.clone(), ev.modifiers.shift);
-                                this.init_dragging_nodes(ev.position);
-                                this.bring_node_to_front(node_id.clone());
+                                this.drag_state = DragState::PendingNode(PendingNode {
+                                    node_id: node_id.clone(),
+                                    start_mouse: ev.position,
+                                    shift: ev.modifiers.shift,
+                                });
                                 cx.notify();
                             });
                         })
                         .on_mouse_move(move |ev, _, cx| {
                             cx.stop_propagation();
                             cx.update_entity(&this_entity_move, |this, cx| {
-                                if let DragState::NodeDrag(NodeDrag {
-                                    start_mouse,
-                                    start_positions,
-                                }) = &this.drag_state
-                                {
-                                    let dx = (ev.position.x - start_mouse.x) / this.viewport.zoom;
-                                    let dy = (ev.position.y - start_mouse.y) / this.viewport.zoom;
-                                    for (id, point) in start_positions.iter() {
-                                        if let Some(node) = this.graph.get_node_mut(*id) {
-                                            node.x = point.x + dx;
-                                            node.y = point.y + dy;
+                                match this.drag_state.clone() {
+                                    DragState::NodeDrag(NodeDrag {
+                                        start_mouse,
+                                        start_positions,
+                                    }) => {
+                                        let dx =
+                                            (ev.position.x - start_mouse.x) / this.viewport.zoom;
+                                        let dy =
+                                            (ev.position.y - start_mouse.y) / this.viewport.zoom;
+                                        for (id, point) in start_positions.iter() {
+                                            if let Some(node) = this.graph.get_node_mut(*id) {
+                                                node.x = point.x + dx;
+                                                node.y = point.y + dy;
+                                            }
+                                        }
+                                        cx.notify();
+                                    }
+                                    DragState::PendingNode(PendingNode {
+                                        node_id: id,
+                                        start_mouse,
+                                        ..
+                                    }) if node_id == id => {
+                                        let delta = ev.position - start_mouse;
+                                        if delta.x > DRAG_THRESHOLD || delta.y > DRAG_THRESHOLD {
+                                            this.start_node_drag(ev.position, node_id, node_point);
+                                            cx.notify();
                                         }
                                     }
-                                    cx.notify();
+                                    _ => {}
                                 }
+                            })
+                        })
+                        .on_mouse_up(MouseButton::Left, move |_, _, cx| {
+                            cx.stop_propagation();
+                            cx.update_entity(&this_entity_up, |this, cx| {
+                                if let DragState::PendingNode(PendingNode {
+                                    node_id: id,
+                                    shift,
+                                    ..
+                                }) = this.drag_state
+                                    && id == node_id
+                                {
+                                    if !shift {
+                                        this.graph.clear_selected_edge();
+                                    }
+                                    this.graph.add_selected_node(id, shift);
+                                    this.bring_node_to_front(node_id.clone());
+                                }
+
+                                this.drag_state = DragState::None;
+                                cx.notify();
                             })
                         })
                         .w(DEFAULT_NODE_WIDTH * self.viewport.zoom)
@@ -260,6 +342,24 @@ impl FlowCanvas {
                 }
             })
             .collect()
+    }
+
+    fn start_node_drag(&mut self, mouse: Point<Pixels>, node_id: NodeId, point: Point<Pixels>) {
+        let start_positions = if self.graph.selected_node.contains(&node_id) {
+            self.graph
+                .selected_node
+                .iter()
+                .map(|id| (*id, self.graph.nodes()[id].point()))
+                .collect()
+        } else {
+            vec![(node_id, point)]
+        };
+
+        let drag = NodeDrag {
+            start_mouse: mouse,
+            start_positions,
+        };
+        self.drag_state = DragState::NodeDrag(drag);
     }
 
     fn render_ports(&self, node: &Node, this_cx: &mut Context<Self>) -> impl IntoElement {
@@ -524,13 +624,6 @@ impl FlowCanvas {
         div().absolute().size_full().children(dots)
     }
 
-    fn init_dragging_nodes(&mut self, position: Point<Pixels>) {
-        self.drag_state = DragState::NodeDrag(NodeDrag {
-            start_mouse: position,
-            start_positions: vec![],
-        });
-    }
-
     fn node_screen_bounds(&self, node: &Node) -> Bounds<Pixels> {
         let pos = self.viewport.world_to_screen(Point::new(node.x, node.y));
 
@@ -703,7 +796,7 @@ impl FlowCanvas {
             .on_mouse_up(MouseButton::Left, move |ev, _, cx| {
                 cx.stop_propagation();
                 cx.update_entity(&this_entity_up, |this, cx| {
-                    if let DragState::BoxMove(BoxMoveDrag { start_mouse, .. }) = this.drag_state {
+                    if let DragState::BoxMove(_) = this.drag_state {
                         this.drag_state = DragState::None;
                         let Some(BoxSelection {
                             start_mouse: box_start_mouse,
@@ -802,8 +895,6 @@ impl Render for FlowCanvas {
                             start: ev.position,
                             end: ev.position,
                             start_mouse: ev.position,
-                            nodes: vec![],
-                            is_stop: false,
                         });
                         this.box_selection = None;
                     }
@@ -844,10 +935,8 @@ impl Render for FlowCanvas {
                         this.viewport.offset.y = start_offset.y + dy;
                         cx.notify();
                     } else if let DragState::BoxSelect(selection_box) = &mut this.drag_state {
-                        if !selection_box.is_stop {
-                            selection_box.end = ev.position;
-                            cx.notify();
-                        }
+                        selection_box.end = ev.position;
+                        cx.notify();
                     };
                 });
             })
@@ -858,6 +947,9 @@ impl Render for FlowCanvas {
                             this.drag_state = DragState::None;
                         }
                         DragState::NodeDrag(_) => {
+                            this.drag_state = DragState::None;
+                        }
+                        DragState::PendingNode(_) => {
                             this.drag_state = DragState::None;
                         }
                         DragState::BoxSelect(b) if !b.not_move() => {
