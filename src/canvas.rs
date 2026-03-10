@@ -718,13 +718,15 @@ impl FlowCanvas {
             .bg(rgba(0x78A0FF4c))
     }
 
-    fn render_selected_box(&self, this_cx: &mut Context<Self>) -> impl IntoElement {
+    fn render_selected_box(
+        &self,
+        window: &mut Window,
+        this_cx: &mut Context<Self>,
+    ) -> impl IntoElement {
         let Some(BoxSelection { bounds, .. }) = &self.box_selection else {
             return div();
         };
         let this_entity = this_cx.entity();
-        let this_entity_move = this_entity.clone();
-        let this_entity_up = this_entity.clone();
         div()
             .absolute()
             .left(bounds.origin.x)
@@ -734,82 +736,213 @@ impl FlowCanvas {
             .border(px(1.0))
             .border_color(rgb(0x78A0FF))
             .bg(rgba(0x78A0FF4c))
-            .on_mouse_down(MouseButton::Left, move |ev, _, cx| {
-                cx.stop_propagation();
-                cx.update_entity(&this_entity, |this, cx| {
-                    if let Some(BoxSelection { bounds, nodes, .. }) = &this.box_selection {
-                        this.drag_state = DragState::BoxMove(BoxMoveDrag {
-                            start_mouse: ev.position,
-                            start_bounds: *bounds,
-                            nodes: nodes.iter().map(|(k, v)| (*k, *v)).collect(),
-                        });
+            .on_mouse_down(
+                MouseButton::Left,
+                window.listener_for(&this_entity, Self::box_on_mouse_down),
+            )
+            .on_mouse_move(window.listener_for(&this_entity, Self::box_on_mouse_move))
+            .on_mouse_up(
+                MouseButton::Left,
+                window.listener_for(&this_entity, Self::box_on_mouse_up),
+            )
+    }
 
-                        cx.notify();
-                    }
-                })
-            })
-            .on_mouse_move(move |ev, _, cx| {
-                cx.stop_propagation();
-                cx.update_entity(&this_entity_move, |this, cx| {
-                    let DragState::BoxMove(BoxMoveDrag {
-                        //start_bounds,
-                        nodes,
-                        start_mouse,
-                        start_bounds,
-                        ..
-                    }) = &mut this.drag_state
-                    else {
-                        return;
-                    };
-                    let Some(BoxSelection {
-                        bounds,
-                        nodes: box_nodes,
-                        ..
-                    }) = &mut this.box_selection
-                    else {
-                        return;
-                    };
-                    {
-                        let dx = (ev.position.x - start_mouse.x) / this.viewport.zoom;
-                        let dy = (ev.position.y - start_mouse.y) / this.viewport.zoom;
-                        for (id, point) in nodes.iter() {
-                            if let Some(node) = this.graph.get_node_mut(*id) {
-                                node.x = point.x + dx;
-                                node.y = point.y + dy;
-                            }
-                            if let Some(node) = box_nodes.get_mut(id) {
-                                node.x = point.x + dx;
-                                node.y = point.y + dy;
-                            }
-                        }
-                        //let box_bounds = Bounds::new(*box_start_mouse, bounds.size);
+    fn box_on_mouse_down(&mut self, ev: &MouseDownEvent, _: &mut Window, cx: &mut Context<Self>) {
+        cx.stop_propagation();
+        if let Some(BoxSelection { bounds, nodes, .. }) = &self.box_selection {
+            self.drag_state = DragState::BoxMove(BoxMoveDrag {
+                start_mouse: ev.position,
+                start_bounds: *bounds,
+                nodes: nodes.iter().map(|(k, v)| (*k, *v)).collect(),
+            });
 
-                        let dx = ev.position.x - start_mouse.x;
-                        let dy = ev.position.y - start_mouse.y;
-                        bounds.origin.x = start_bounds.origin.x + dx;
-                        bounds.origin.y = start_bounds.origin.y + dy;
+            cx.notify();
+        }
+    }
 
-                        cx.notify();
-                    }
-                })
-            })
-            .on_mouse_up(MouseButton::Left, move |ev, _, cx| {
-                cx.stop_propagation();
-                cx.update_entity(&this_entity_up, |this, cx| {
-                    if let DragState::BoxMove(_) = this.drag_state {
-                        this.drag_state = DragState::None;
-                        let Some(BoxSelection {
-                            start_mouse: box_start_mouse,
-                            ..
-                        }) = &mut this.box_selection
-                        else {
-                            return;
-                        };
-                        *box_start_mouse = ev.position;
-                        cx.notify();
-                    }
-                })
-            })
+    fn box_on_mouse_move(&mut self, ev: &MouseMoveEvent, _: &mut Window, cx: &mut Context<Self>) {
+        cx.stop_propagation();
+        let DragState::BoxMove(BoxMoveDrag {
+            //start_bounds,
+            nodes,
+            start_mouse,
+            start_bounds,
+            ..
+        }) = &mut self.drag_state
+        else {
+            return;
+        };
+        let Some(BoxSelection {
+            bounds,
+            nodes: box_nodes,
+            ..
+        }) = &mut self.box_selection
+        else {
+            return;
+        };
+        {
+            let dx = (ev.position.x - start_mouse.x) / self.viewport.zoom;
+            let dy = (ev.position.y - start_mouse.y) / self.viewport.zoom;
+            for (id, point) in nodes.iter() {
+                if let Some(node) = self.graph.get_node_mut(*id) {
+                    node.x = point.x + dx;
+                    node.y = point.y + dy;
+                }
+                if let Some(node) = box_nodes.get_mut(id) {
+                    node.x = point.x + dx;
+                    node.y = point.y + dy;
+                }
+            }
+            //let box_bounds = Bounds::new(*box_start_mouse, bounds.size);
+
+            let dx = ev.position.x - start_mouse.x;
+            let dy = ev.position.y - start_mouse.y;
+            bounds.origin.x = start_bounds.origin.x + dx;
+            bounds.origin.y = start_bounds.origin.y + dy;
+
+            cx.notify();
+        }
+    }
+
+    fn box_on_mouse_up(&mut self, ev: &MouseUpEvent, _: &mut Window, cx: &mut Context<Self>) {
+        cx.stop_propagation();
+        if let DragState::BoxMove(_) = self.drag_state {
+            self.drag_state = DragState::None;
+            let Some(BoxSelection {
+                start_mouse: box_start_mouse,
+                ..
+            }) = &mut self.box_selection
+            else {
+                return;
+            };
+            *box_start_mouse = ev.position;
+            cx.notify();
+        }
+    }
+
+    fn on_key_down(&mut self, ev: &KeyDownEvent, _: &mut Window, cx: &mut Context<Self>) {
+        if ev.keystroke.key == "delete" || ev.keystroke.key == "backspace" {
+            if self.graph.remove_selected_edge() {
+                cx.notify();
+            }
+            if self.graph.remove_selected_node() {
+                cx.notify();
+            }
+        }
+    }
+
+    fn on_mouse_down(&mut self, ev: &MouseDownEvent, _: &mut Window, cx: &mut Context<Self>) {
+        let shift = ev.modifiers.shift;
+
+        let mut selected_edge = false;
+
+        if let Some(id) = self.hit_test_get_edge(ev.position) {
+            self.graph.add_selected_edge(id, shift);
+            selected_edge = true;
+        } else {
+            if !shift {
+                self.graph.clear_selected_edge();
+            }
+        }
+
+        if let Some(id) = self.hit_test_node(ev.position) {
+            self.graph.add_selected_node(id, shift);
+        } else {
+            if !shift {
+                self.graph.clear_selected_node();
+            }
+        }
+
+        if shift {
+            self.drag_state = DragState::Pan(Panning {
+                start_mouse: ev.position,
+                start_offset: self.viewport.offset,
+            });
+        }
+
+        if !shift && !selected_edge {
+            self.drag_state = DragState::BoxSelect(BoxSelectDrag {
+                start: ev.position,
+                end: ev.position,
+                start_mouse: ev.position,
+            });
+            self.box_selection = None;
+        }
+        if shift && let DragState::BoxSelect(_) = self.drag_state {
+            self.drag_state = DragState::None;
+        }
+        cx.notify();
+    }
+
+    fn on_mouse_move(&mut self, ev: &MouseMoveEvent, _: &mut Window, cx: &mut Context<Self>) {
+        if let Some(connect) = &mut self.connecting {
+            connect.mouse = ev.position;
+            cx.notify();
+        } else if let DragState::Pan(Panning {
+            start_mouse,
+            start_offset,
+        }) = self.drag_state
+        {
+            let dx = ev.position.x - start_mouse.x;
+            let dy = ev.position.y - start_mouse.y;
+
+            self.viewport.offset.x = start_offset.x + dx;
+            self.viewport.offset.y = start_offset.y + dy;
+            cx.notify();
+        } else if let DragState::BoxSelect(selection_box) = &mut self.drag_state {
+            selection_box.end = ev.position;
+            cx.notify();
+        };
+    }
+
+    fn on_mouse_up(&mut self, _: &MouseUpEvent, _: &mut Window, cx: &mut Context<Self>) {
+        match self.drag_state.clone() {
+            DragState::Pan(_) => {
+                self.drag_state = DragState::None;
+                cx.notify();
+            }
+            DragState::NodeDrag(_) => {
+                self.drag_state = DragState::None;
+                cx.notify();
+            }
+            DragState::PendingNode(_) => {
+                self.drag_state = DragState::None;
+                cx.notify();
+            }
+            DragState::BoxSelect(b) if !b.not_move() => {
+                self.finalize_selection();
+                cx.notify();
+            }
+            _ => (),
+        };
+
+        if self.connecting.is_some() {
+            self.connecting = None;
+            cx.notify();
+        }
+    }
+
+    fn on_scroll_wheel(&mut self, ev: &ScrollWheelEvent, _: &mut Window, cx: &mut Context<Self>) {
+        let cursor = ev.position;
+
+        let before = self.viewport.screen_to_world(cursor);
+
+        let delta = f32::from(ev.delta.pixel_delta(px(1.0)).y);
+        if delta == 0.0 {
+            return;
+        }
+        let zoom_delta = if delta > 0.0 { 0.9 } else { 1.1 };
+
+        self.viewport.zoom *= zoom_delta;
+
+        self.viewport.zoom = self.viewport.zoom.clamp(0.7, 3.0);
+
+        let after = self.viewport.world_to_screen(before);
+
+        self.viewport.offset.x += cursor.x - after.x;
+        self.viewport.offset.y += cursor.y - after.y;
+
+        cx.notify();
     }
 }
 
@@ -849,151 +982,29 @@ fn sample_bezier(geom: &EdgeGeometry, steps: usize) -> Vec<Point<Pixels>> {
 
 impl Render for FlowCanvas {
     fn render(&mut self, window: &mut Window, this_cx: &mut Context<Self>) -> impl IntoElement {
-        let entry = this_cx.entity();
-        let entry2 = entry.clone();
-        let entity3 = entry.clone();
-        let entity_mouse_down: Entity<FlowCanvas> = entry.clone();
-        let entity_key_down = entry.clone();
+        let entity = this_cx.entity();
 
         div()
             .size_full()
             .track_focus(&self.focus_handle)
             // bg point 9F9FA7
             .bg(gpui::rgb(0xf8f9fb))
-            .on_mouse_down(MouseButton::Left, move |ev, _, app| {
-                app.update_entity(&entity_mouse_down, |this, cx| {
-                    let shift = ev.modifiers.shift;
-
-                    let mut selected_edge = false;
-
-                    if let Some(id) = this.hit_test_get_edge(ev.position) {
-                        this.graph.add_selected_edge(id, shift);
-                        selected_edge = true;
-                    } else {
-                        if !shift {
-                            this.graph.clear_selected_edge();
-                        }
-                    }
-
-                    if let Some(id) = this.hit_test_node(ev.position) {
-                        this.graph.add_selected_node(id, shift);
-                    } else {
-                        if !shift {
-                            this.graph.clear_selected_node();
-                        }
-                    }
-
-                    if shift {
-                        this.drag_state = DragState::Pan(Panning {
-                            start_mouse: ev.position,
-                            start_offset: this.viewport.offset,
-                        });
-                    }
-
-                    if !shift && !selected_edge {
-                        this.drag_state = DragState::BoxSelect(BoxSelectDrag {
-                            start: ev.position,
-                            end: ev.position,
-                            start_mouse: ev.position,
-                        });
-                        this.box_selection = None;
-                    }
-                    if shift && let DragState::BoxSelect(_) = this.drag_state {
-                        this.drag_state = DragState::None;
-                    }
-
-                    cx.notify();
-                })
-            })
-            .on_key_down(move |ev, _, app| {
-                app.update_entity(&entity_key_down, |this, cx| {
-                    if ev.keystroke.key == "delete" || ev.keystroke.key == "backspace" {
-                        if this.graph.remove_selected_edge() {
-                            cx.notify();
-                        }
-                        if this.graph.remove_selected_node() {
-                            cx.notify();
-                        }
-                    }
-                })
-            })
-            .on_mouse_move(move |ev, _, cx| {
-                //println!("mouse move");
-                cx.update_entity(&entry, |this, cx| {
-                    if let Some(connect) = &mut this.connecting {
-                        connect.mouse = ev.position;
-                        cx.notify();
-                    } else if let DragState::Pan(Panning {
-                        start_mouse,
-                        start_offset,
-                    }) = this.drag_state
-                    {
-                        let dx = ev.position.x - start_mouse.x;
-                        let dy = ev.position.y - start_mouse.y;
-
-                        this.viewport.offset.x = start_offset.x + dx;
-                        this.viewport.offset.y = start_offset.y + dy;
-                        cx.notify();
-                    } else if let DragState::BoxSelect(selection_box) = &mut this.drag_state {
-                        selection_box.end = ev.position;
-                        cx.notify();
-                    };
-                });
-            })
-            .on_mouse_up(MouseButton::Left, move |_, _, cx| {
-                cx.update_entity(&entry2, |this, cx| {
-                    match this.drag_state.clone() {
-                        DragState::Pan(_) => {
-                            this.drag_state = DragState::None;
-                        }
-                        DragState::NodeDrag(_) => {
-                            this.drag_state = DragState::None;
-                        }
-                        DragState::PendingNode(_) => {
-                            this.drag_state = DragState::None;
-                        }
-                        DragState::BoxSelect(b) if !b.not_move() => {
-                            this.finalize_selection();
-                            cx.notify();
-                        }
-                        _ => (),
-                    };
-
-                    if this.connecting.is_some() {
-                        this.connecting = None;
-                        cx.notify();
-                    }
-                });
-            })
-            .on_scroll_wheel(move |ev, _, app| {
-                app.update_entity(&entity3, |this, cx| {
-                    let cursor = ev.position;
-
-                    let before = this.viewport.screen_to_world(cursor);
-
-                    let delta = f32::from(ev.delta.pixel_delta(px(1.0)).y);
-                    if delta == 0.0 {
-                        return;
-                    }
-                    let zoom_delta = if delta > 0.0 { 0.9 } else { 1.1 };
-
-                    this.viewport.zoom *= zoom_delta;
-
-                    this.viewport.zoom = this.viewport.zoom.clamp(0.7, 3.0);
-
-                    let after = this.viewport.world_to_screen(before);
-
-                    this.viewport.offset.x += cursor.x - after.x;
-                    this.viewport.offset.y += cursor.y - after.y;
-
-                    cx.notify();
-                });
-            })
+            .on_mouse_down(
+                MouseButton::Left,
+                window.listener_for(&entity, Self::on_mouse_down),
+            )
+            .on_key_down(window.listener_for(&entity, Self::on_key_down))
+            .on_mouse_move(window.listener_for(&entity, Self::on_mouse_move))
+            .on_mouse_up(
+                MouseButton::Left,
+                window.listener_for(&entity, Self::on_mouse_up),
+            )
+            .on_scroll_wheel(window.listener_for(&entity, Self::on_scroll_wheel))
             .child(self.render_grid(window))
             .child(self.render_connecting_edge())
             .child(self.render_edges())
             .children(self.render_nodes(this_cx))
             .child(self.render_draging_select_box())
-            .child(self.render_selected_box(this_cx))
+            .child(self.render_selected_box(window, this_cx))
     }
 }
