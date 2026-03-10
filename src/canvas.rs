@@ -19,7 +19,6 @@ const DEFAULT_NODE_HEIGHT: Pixels = px(60.0);
 pub struct FlowCanvas {
     pub graph: Graph,
     dragging_nodes: Option<DraggingNodes>,
-    dragging_node: Option<DraggingNode>,
     connecting: Option<Connecting>,
 
     viewport: Viewport,
@@ -30,13 +29,6 @@ pub struct FlowCanvas {
     focus_handle: FocusHandle,
 
     selection_box: Option<SelectionBox>,
-}
-
-#[derive(Debug, Clone)]
-struct DraggingNode {
-    node_id: NodeId,
-    start_mouse: Point<Pixels>,
-    start_node: Point<Pixels>,
 }
 
 #[derive(Debug, Clone)]
@@ -80,7 +72,6 @@ impl FlowCanvas {
         Self {
             graph,
             dragging_nodes: None,
-            dragging_node: None,
             connecting: None,
             viewport: Viewport::new(),
             panning: None,
@@ -126,7 +117,7 @@ impl FlowCanvas {
                     let inner = renderer.render(&node, &mut ctx);
 
                     let entry = this_cx.entity();
-                    let node_point = node.point();
+                    let this_entity_move = entry.clone();
                     let node_id_clone = node_id.clone();
                     let selected = self
                         .graph
@@ -145,19 +136,39 @@ impl FlowCanvas {
                             cx.stop_propagation();
 
                             cx.update_entity(&entry, move |this: &mut Self, cx| {
-                                this.dragging_node = Some(DraggingNode {
-                                    node_id: node_id_clone,
-                                    start_mouse: ev.position,
-                                    start_node: node_point,
-                                });
                                 if !ev.modifiers.shift {
                                     this.graph.clear_selected_edge();
                                 }
                                 this.graph
                                     .add_selected_node(node_id_clone.clone(), ev.modifiers.shift);
+
+                                this.init_dragging_nodes(ev.position);
+                                this.dragging_nodes_from_selected();
                                 this.bring_node_to_front(node_id_clone.clone());
                                 cx.notify();
                             });
+                        })
+                        .on_mouse_move(move |ev, _, cx| {
+                            cx.stop_propagation();
+                            cx.update_entity(&this_entity_move, |this, cx| {
+                                if let Some(DraggingNodes {
+                                    start_mouse,
+                                    start_positions,
+                                    ..
+                                }) = &this.dragging_nodes
+                                {
+                                    let dx = (ev.position.x - start_mouse.x) / this.viewport.zoom;
+                                    let dy = (ev.position.y - start_mouse.y) / this.viewport.zoom;
+                                    for (id, point) in start_positions.iter() {
+                                        if let Some(node) = this.graph.get_node_mut(*id) {
+                                            node.x = point.x + dx;
+                                            node.y = point.y + dy;
+                                        }
+                                    }
+
+                                    cx.notify();
+                                }
+                            })
                         })
                         .rounded(px(6.0))
                         .border(px(1.5))
@@ -167,8 +178,8 @@ impl FlowCanvas {
                 } else {
                     // default node render
                     let entry = this_cx.entity();
+                    let this_entity_move = entry.clone();
                     let node_id = node.id;
-                    let node_point = node.point();
                     let screen = self.viewport.world_to_screen(node.point());
                     let node_x = screen.x;
                     let node_y = screen.y;
@@ -187,19 +198,38 @@ impl FlowCanvas {
                             cx.stop_propagation();
 
                             cx.update_entity(&entry, |this: &mut Self, cx| {
-                                this.dragging_node = Some(DraggingNode {
-                                    node_id: node_id.clone(),
-                                    start_mouse: ev.position,
-                                    start_node: node_point,
-                                });
                                 if !ev.modifiers.shift {
                                     this.graph.clear_selected_edge();
                                 }
                                 this.graph
                                     .add_selected_node(node_id.clone(), ev.modifiers.shift);
+                                this.init_dragging_nodes(ev.position);
+                                this.dragging_nodes_from_selected();
                                 this.bring_node_to_front(node_id.clone());
                                 cx.notify();
                             });
+                        })
+                        .on_mouse_move(move |ev, _, cx| {
+                            cx.stop_propagation();
+                            cx.update_entity(&this_entity_move, |this, cx| {
+                                if let Some(DraggingNodes {
+                                    start_mouse,
+                                    start_positions,
+                                    ..
+                                }) = &this.dragging_nodes
+                                {
+                                    let dx = (ev.position.x - start_mouse.x) / this.viewport.zoom;
+                                    let dy = (ev.position.y - start_mouse.y) / this.viewport.zoom;
+                                    for (id, point) in start_positions.iter() {
+                                        if let Some(node) = this.graph.get_node_mut(*id) {
+                                            node.x = point.x + dx;
+                                            node.y = point.y + dy;
+                                        }
+                                    }
+
+                                    cx.notify();
+                                }
+                            })
                         })
                         .w(DEFAULT_NODE_WIDTH * self.viewport.zoom)
                         .h(DEFAULT_NODE_HEIGHT * self.viewport.zoom)
@@ -480,6 +510,31 @@ impl FlowCanvas {
         div().absolute().size_full().children(dots)
     }
 
+    fn init_dragging_nodes(&mut self, position: Point<Pixels>) {
+        if self.dragging_nodes.is_none() {
+            self.dragging_nodes = Some(DraggingNodes {
+                start_mouse: position,
+                start_positions: HashMap::new(),
+                start_box_bounds: Bounds::default(),
+            })
+        }
+    }
+
+    fn dragging_nodes_from_selected(&mut self) {
+        if let Some(DraggingNodes {
+            start_positions, ..
+        }) = self.dragging_nodes.as_mut()
+        {
+            let nodes = self.graph.nodes();
+            let mut map = HashMap::new();
+            for id in self.graph.selected_node.iter() {
+                let node = &nodes[id];
+                map.insert(*id, node.point());
+            }
+            *start_positions = map;
+        }
+    }
+
     fn node_screen_bounds(&self, node: &Node) -> Bounds<Pixels> {
         let pos = self.viewport.world_to_screen(Point::new(node.x, node.y));
 
@@ -748,19 +803,6 @@ impl Render for FlowCanvas {
                     if let Some(connect) = &mut this.connecting {
                         connect.mouse = ev.position;
                         cx.notify();
-                    } else if let Some(DraggingNode {
-                        node_id,
-                        start_mouse,
-                        start_node,
-                    }) = this.dragging_node
-                    {
-                        let dx = (ev.position.x - start_mouse.x) / this.viewport.zoom;
-                        let dy = (ev.position.y - start_mouse.y) / this.viewport.zoom;
-                        if let Some(node) = this.graph.get_node_mut(node_id.clone()) {
-                            node.x = start_node.x + dx;
-                            node.y = start_node.y + dy;
-                            cx.notify();
-                        }
                     } else if let Some(Panning {
                         start_mouse,
                         start_offset,
@@ -784,10 +826,6 @@ impl Render for FlowCanvas {
                 cx.update_entity(&entry2, |this, cx| {
                     if this.dragging_nodes.is_some() {
                         this.dragging_nodes = None;
-                        cx.notify();
-                    }
-                    if this.dragging_node.is_some() {
-                        this.dragging_node = None;
                         cx.notify();
                     }
 
