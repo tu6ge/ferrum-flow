@@ -70,24 +70,24 @@ pub enum PortKind {
 pub struct Port {
     pub id: PortId,
     pub kind: PortKind,
-    pub point: Point<Pixels>,
+    pub index: usize,
     pub node_id: NodeId,
 }
 
 impl Port {
-    pub fn new_input(id: u64, node_id: u64, point: Point<Pixels>) -> Self {
+    pub fn new_input(id: u64, node_id: u64, index: usize) -> Self {
         Self {
             id: PortId(id),
             kind: PortKind::Input,
-            point,
+            index,
             node_id: NodeId(node_id),
         }
     }
-    pub fn new_output(id: u64, node_id: u64, point: Point<Pixels>) -> Self {
+    pub fn new_output(id: u64, node_id: u64, index: usize) -> Self {
         Self {
             id: PortId(id),
             kind: PortKind::Output,
-            point,
+            index,
             node_id: NodeId(node_id),
         }
     }

@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use gpui::{prelude::FluentBuilder, *};
 
 use crate::{
-    Edge, EdgeId, Node, NodeId, NodeRenderContext, NodeRenderer, Port, graph::Graph,
-    renderer::RendererRegistry, viewport::Viewport,
+    Edge, EdgeId, Node, NodeId, NodeRenderContext, NodeRenderer, Port, PortId, PortKind,
+    graph::Graph, renderer::RendererRegistry, viewport::Viewport,
 };
 
 mod edge;
@@ -299,18 +299,11 @@ impl FlowCanvas {
                 |(
                     _,
                     Port {
-                        id,
-                        point,
-                        node_id,
-                        kind,
-                        ..
+                        id, node_id, kind, ..
                     },
                 )| {
-                    let node = &self.graph.nodes()[node_id];
                     let node_id_clone = node_id.clone();
-                    let position = self
-                        .viewport
-                        .world_to_screen(node.point() + *point - Point::new(px(8.0), px(8.0)));
+                    let position = self.port_screen_position(*id);
                     let port_id_clone = id.clone();
                     let entity = this_cx.entity();
                     let entity_up = entity.clone();
@@ -318,8 +311,8 @@ impl FlowCanvas {
 
                     div()
                         .absolute()
-                        .left(position.x)
-                        .top(position.y)
+                        .left(position.x - px(6.0 * self.viewport.zoom))
+                        .top(position.y - px(6.0 * self.viewport.zoom))
                         .w(px(12.0 * self.viewport.zoom))
                         .h(px(12.0 * self.viewport.zoom))
                         .rounded_full()
@@ -365,36 +358,40 @@ impl FlowCanvas {
     }
 
     fn port_position(&self) -> Option<Point<Pixels>> {
-        if let DragState::EdgeDrag(Connecting { port_id, .. }) = &self.drag_state
-            && let Some(port) = self.graph.ports.get(port_id)
-            && let Some(node) = self.graph.get_node(&port.node_id)
-        {
-            Some(
-                self.viewport
-                    .world_to_screen(Point::new(node.x + port.point.x, node.y + port.point.y)),
-            )
+        if let DragState::EdgeDrag(Connecting { port_id, .. }) = &self.drag_state {
+            Some(self.port_screen_position(*port_id))
         } else {
             None
         }
     }
-    // fn port_offset(&self, _node: &Node, port: &Port) -> Point<Pixels> {
-    //     match port.kind {
-    //         PortKind::Input => Point::new(px(0.0), px(20.0)),
+    fn port_offset(&self, node: &Node, port: &Port) -> Point<Pixels> {
+        let node_size = if node.node_type.is_empty() {
+            Size::new(DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT)
+        } else {
+            if let Some(render) = self.registry.get(&node.node_type) {
+                render.size(node)
+            } else {
+                Size::new(DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT)
+            }
+        };
 
-    //         PortKind::Output => Point::new(DEFAULT_NODE_WIDTH, px(20.0)),
-    //     }
-    // }
+        match port.kind {
+            PortKind::Input => Point::new(px(0.0), node_size.height / 2.0),
 
-    // fn port_screen_position(&self, port_id: PortId) -> Point<Pixels> {
-    //     let port = &self.graph.ports[&port_id];
-    //     let node = &self.graph.nodes()[&port.node_id];
+            PortKind::Output => Point::new(node_size.width, node_size.height / 2.0),
+        }
+    }
 
-    //     let node_pos = node.point();
+    fn port_screen_position(&self, port_id: PortId) -> Point<Pixels> {
+        let port = &self.graph.ports[&port_id];
+        let node = &self.graph.nodes()[&port.node_id];
 
-    //     let offset = self.port_offset(node, port);
+        let node_pos = node.point();
 
-    //     self.viewport.world_to_screen(node_pos + offset)
-    // }
+        let offset = self.port_offset(node, port);
+
+        self.viewport.world_to_screen(node_pos + offset)
+    }
     fn render_connecting_edge(&self) -> impl IntoElement {
         if let DragState::EdgeDrag(connect) = &self.drag_state
             && let Some(start) = self.port_position()
@@ -449,49 +446,14 @@ impl FlowCanvas {
             ..
         } = edge;
 
-        let source_point = self
-            .graph
-            .ports
-            .iter()
-            .find(|(id, _)| **id == *source_port)
-            .map(|(_, point)| point);
-        let Some(source_point) = source_point else {
-            return None;
-        };
-        let target_point = self
-            .graph
-            .ports
-            .iter()
-            .find(|(id, _)| **id == *target_port)
-            .map(|(_, point)| point);
-        let Some(target_point) = target_point else {
-            return None;
-        };
-
-        let Some(source_node) = self.graph.nodes().get(&source_point.node_id) else {
-            return None;
-        };
-        let Some(target_node) = self.graph.nodes().get(&target_point.node_id) else {
-            return None;
-        };
+        let start = self.port_screen_position(*source_port);
+        let end = self.port_screen_position(*target_port);
 
         Some(EdgeGeometry {
-            start: self.viewport.world_to_screen(Point::new(
-                source_node.x + source_point.point.x,
-                source_node.y + source_point.point.y,
-            )),
-            c1: self.viewport.world_to_screen(Point::new(
-                source_node.x + source_point.point.x,
-                source_node.y + source_point.point.y + px(50.0),
-            )),
-            c2: self.viewport.world_to_screen(Point::new(
-                target_node.x + target_point.point.x,
-                target_node.y + target_point.point.y - px(50.0),
-            )),
-            end: self.viewport.world_to_screen(Point::new(
-                target_node.x + target_point.point.x,
-                target_node.y + target_point.point.y,
-            )),
+            start,
+            c1: start + Point::new(px(50.0), px(0.0)),
+            c2: end - Point::new(px(50.0), px(0.0)),
+            end,
         })
     }
 
@@ -901,8 +863,8 @@ fn edge_bezier(start: Point<Pixels>, end: Point<Pixels>) -> Result<Path<Pixels>,
     line.move_to(start);
     line.cubic_bezier_to(
         end,
-        Point::new(start.x, start.y + px(50.0)),
-        Point::new(end.x, end.y - px(50.0)),
+        Point::new(start.x + px(50.0), start.y),
+        Point::new(end.x - px(50.0), end.y),
     );
 
     line.build()
