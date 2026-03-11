@@ -8,8 +8,10 @@ use crate::{
 };
 
 mod edge;
+mod types;
 mod utils;
 use edge::EdgeGeometry;
+use types::*;
 use utils::*;
 
 const DEFAULT_NODE_WIDTH: Pixels = px(120.0);
@@ -27,70 +29,6 @@ pub struct FlowCanvas {
     focus_handle: FocusHandle,
 
     box_selection: Option<BoxSelection>,
-}
-
-#[derive(Debug, Clone)]
-enum DragState {
-    None,
-    NodeDrag(NodeDrag),
-    BoxSelect(BoxSelectDrag),
-    BoxMove(BoxMoveDrag),
-    Pan(Panning),
-    PendingNode(PendingNode),
-    EdgeDrag(Connecting),
-}
-
-#[derive(Debug, Clone)]
-struct NodeDrag {
-    start_mouse: Point<Pixels>,
-    start_positions: Vec<(NodeId, Point<Pixels>)>,
-}
-
-#[derive(Debug, Clone)]
-struct BoxMoveDrag {
-    start_mouse: Point<Pixels>,
-    start_bounds: Bounds<Pixels>,
-    nodes: Vec<(NodeId, Point<Pixels>)>,
-}
-
-#[derive(Debug, Clone)]
-struct BoxSelection {
-    start_mouse: Point<Pixels>,
-    bounds: Bounds<Pixels>,
-    nodes: HashMap<NodeId, Point<Pixels>>,
-}
-
-#[derive(Debug, Clone)]
-struct PendingNode {
-    node_id: NodeId,
-    start_mouse: Point<Pixels>,
-    shift: bool,
-}
-
-#[derive(Debug, Clone)]
-struct Connecting {
-    node_id: NodeId,
-    port_id: String,
-    mouse: Point<Pixels>,
-}
-
-#[derive(Debug, Clone)]
-struct Panning {
-    start_mouse: Point<Pixels>,
-    start_offset: Point<Pixels>,
-}
-
-#[derive(Debug, Clone)]
-pub struct BoxSelectDrag {
-    start_mouse: Point<Pixels>,
-    start: Point<Pixels>,
-    end: Point<Pixels>,
-}
-
-impl BoxSelectDrag {
-    fn not_move(&self) -> bool {
-        self.start.x == self.end.x && self.start.y == self.end.y
-    }
 }
 
 impl FlowCanvas {
