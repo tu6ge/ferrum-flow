@@ -8,6 +8,7 @@ use crate::NodeId;
 pub enum DragState {
     None,
     NodeDrag(NodeDrag),
+    PendingBoxSelect(PendingBoxSelect),
     BoxSelect(BoxSelectDrag),
     BoxMove(BoxMoveDrag),
     Pan(Panning),
@@ -56,14 +57,12 @@ pub struct Panning {
 }
 
 #[derive(Debug, Clone)]
-pub struct BoxSelectDrag {
-    pub(super) start_mouse: Point<Pixels>,
+pub struct PendingBoxSelect {
     pub(super) start: Point<Pixels>,
-    pub(super) end: Point<Pixels>,
 }
 
-impl BoxSelectDrag {
-    pub(super) fn not_move(&self) -> bool {
-        self.start.x == self.end.x && self.start.y == self.end.y
-    }
+#[derive(Debug, Clone)]
+pub struct BoxSelectDrag {
+    pub(super) start: Point<Pixels>,
+    pub(super) end: Point<Pixels>,
 }

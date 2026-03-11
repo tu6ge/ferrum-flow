@@ -16,6 +16,7 @@ use utils::*;
 
 const DEFAULT_NODE_WIDTH: Pixels = px(120.0);
 const DEFAULT_NODE_HEIGHT: Pixels = px(60.0);
+const DRAG_THRESHOLD: Pixels = px(2.0);
 
 #[derive(Clone)]
 pub struct FlowCanvas {
@@ -53,7 +54,6 @@ impl FlowCanvas {
     }
 
     fn render_nodes(&self, this_cx: &mut Context<Self>) -> Vec<impl IntoElement> {
-        const DRAG_THRESHOLD: Pixels = px(2.0);
         let nodes = self.graph.nodes();
         self.graph
             .node_order()
@@ -585,14 +585,9 @@ impl FlowCanvas {
 
     fn selection_bounds_mouse(&self) -> Option<(Bounds<Pixels>, Point<Pixels>)> {
         match self.drag_state {
-            DragState::BoxSelect(BoxSelectDrag {
-                start,
-                end,
-                start_mouse,
-                ..
-            }) => {
+            DragState::BoxSelect(BoxSelectDrag { start, end, .. }) => {
                 let size = Size::new(end.x - start.x, end.y - start.y);
-                Some((Bounds::new(start, size), start_mouse))
+                Some((Bounds::new(start, size), start))
             }
             _ => None,
         }
@@ -792,11 +787,7 @@ impl FlowCanvas {
         }
 
         if !shift && !selected_edge {
-            self.drag_state = DragState::BoxSelect(BoxSelectDrag {
-                start: ev.position,
-                end: ev.position,
-                start_mouse: ev.position,
-            });
+            self.drag_state = DragState::PendingBoxSelect(PendingBoxSelect { start: ev.position });
             self.box_selection = None;
         }
         if shift && let DragState::BoxSelect(_) = self.drag_state {
@@ -822,6 +813,15 @@ impl FlowCanvas {
                 self.viewport.offset.y = start_offset.y + dy;
                 cx.notify();
             }
+            DragState::PendingBoxSelect(pending) => {
+                let delta = ev.position - pending.start;
+                if delta.x > DRAG_THRESHOLD || delta.y > DRAG_THRESHOLD {
+                    self.drag_state = DragState::BoxSelect(BoxSelectDrag {
+                        start: pending.start,
+                        end: ev.position,
+                    })
+                }
+            }
             DragState::BoxSelect(selection_box) => {
                 selection_box.end = ev.position;
                 cx.notify();
@@ -835,11 +835,12 @@ impl FlowCanvas {
             DragState::Pan(_)
             | DragState::NodeDrag(_)
             | DragState::PendingNode(_)
-            | DragState::EdgeDrag(_) => {
+            | DragState::EdgeDrag(_)
+            | DragState::PendingBoxSelect(_) => {
                 self.drag_state = DragState::None;
                 cx.notify();
             }
-            DragState::BoxSelect(b) if !b.not_move() => {
+            DragState::BoxSelect(_) => {
                 self.finalize_selection();
                 cx.notify();
             }
