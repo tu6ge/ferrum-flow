@@ -19,7 +19,6 @@ const DEFAULT_NODE_HEIGHT: Pixels = px(60.0);
 pub struct FlowCanvas {
     pub graph: Graph,
     drag_state: DragState,
-    connecting: Option<Connecting>,
 
     viewport: Viewport,
 
@@ -38,6 +37,7 @@ enum DragState {
     BoxMove(BoxMoveDrag),
     Pan(Panning),
     PendingNode(PendingNode),
+    EdgeDrag(Connecting),
 }
 
 #[derive(Debug, Clone)]
@@ -99,7 +99,6 @@ impl FlowCanvas {
         Self {
             graph,
             drag_state: DragState::None,
-            connecting: None,
             viewport: Viewport::new(),
             registry: RendererRegistry::new(),
             focus_handle,
@@ -373,7 +372,7 @@ impl FlowCanvas {
                     .on_mouse_down(MouseButton::Left, move |event, _, cx| {
                         cx.stop_propagation();
                         cx.update_entity(&entity, |this, cx| {
-                            this.connecting = Some(Connecting {
+                            this.drag_state = DragState::EdgeDrag(Connecting {
                                 node_id,
                                 port_id: port_id.clone(),
                                 mouse: event.position.clone(),
@@ -397,7 +396,7 @@ impl FlowCanvas {
                     .on_mouse_up(MouseButton::Left, move |_, _, cx| {
                         cx.stop_propagation();
                         cx.update_entity(&entity, |this, cx| {
-                            if let Some(connecting) = &this.connecting {
+                            if let DragState::EdgeDrag(connecting) = &this.drag_state {
                                 let edge = this
                                     .graph
                                     .new_edge()
@@ -405,7 +404,7 @@ impl FlowCanvas {
                                     .target(node_id, port_id.clone());
 
                                 this.graph.add_edge(edge);
-                                this.connecting = None;
+                                this.drag_state = DragState::None;
                                 cx.notify();
                             }
                         });
@@ -417,9 +416,9 @@ impl FlowCanvas {
     }
 
     fn port_position(&self) -> Option<Point<Pixels>> {
-        if let Some(Connecting {
+        if let DragState::EdgeDrag(Connecting {
             node_id, port_id, ..
-        }) = &self.connecting
+        }) = &self.drag_state
         {
             self.graph
                 .get_node(&node_id)
@@ -439,7 +438,7 @@ impl FlowCanvas {
         }
     }
     fn render_connecting_edge(&self) -> impl IntoElement {
-        if let Some(connect) = &self.connecting
+        if let DragState::EdgeDrag(connect) = &self.drag_state
             && let Some(start) = self.port_position()
         {
             let mouse: Point<Pixels> = connect.mouse;
@@ -867,37 +866,36 @@ impl FlowCanvas {
     }
 
     fn on_mouse_move(&mut self, ev: &MouseMoveEvent, _: &mut Window, cx: &mut Context<Self>) {
-        if let Some(connect) = &mut self.connecting {
-            connect.mouse = ev.position;
-            cx.notify();
-        } else if let DragState::Pan(Panning {
-            start_mouse,
-            start_offset,
-        }) = self.drag_state
-        {
-            let dx = ev.position.x - start_mouse.x;
-            let dy = ev.position.y - start_mouse.y;
+        match &mut self.drag_state {
+            DragState::EdgeDrag(connect) => {
+                connect.mouse = ev.position;
+                cx.notify();
+            }
+            DragState::Pan(Panning {
+                start_mouse,
+                start_offset,
+            }) => {
+                let dx = ev.position.x - start_mouse.x;
+                let dy = ev.position.y - start_mouse.y;
 
-            self.viewport.offset.x = start_offset.x + dx;
-            self.viewport.offset.y = start_offset.y + dy;
-            cx.notify();
-        } else if let DragState::BoxSelect(selection_box) = &mut self.drag_state {
-            selection_box.end = ev.position;
-            cx.notify();
-        };
+                self.viewport.offset.x = start_offset.x + dx;
+                self.viewport.offset.y = start_offset.y + dy;
+                cx.notify();
+            }
+            DragState::BoxSelect(selection_box) => {
+                selection_box.end = ev.position;
+                cx.notify();
+            }
+            _ => (),
+        }
     }
 
     fn on_mouse_up(&mut self, _: &MouseUpEvent, _: &mut Window, cx: &mut Context<Self>) {
         match &self.drag_state {
-            DragState::Pan(_) => {
-                self.drag_state = DragState::None;
-                cx.notify();
-            }
-            DragState::NodeDrag(_) => {
-                self.drag_state = DragState::None;
-                cx.notify();
-            }
-            DragState::PendingNode(_) => {
+            DragState::Pan(_)
+            | DragState::NodeDrag(_)
+            | DragState::PendingNode(_)
+            | DragState::EdgeDrag(_) => {
                 self.drag_state = DragState::None;
                 cx.notify();
             }
@@ -907,11 +905,6 @@ impl FlowCanvas {
             }
             _ => (),
         };
-
-        if self.connecting.is_some() {
-            self.connecting = None;
-            cx.notify();
-        }
     }
 
     fn on_scroll_wheel(&mut self, ev: &ScrollWheelEvent, _: &mut Window, cx: &mut Context<Self>) {
