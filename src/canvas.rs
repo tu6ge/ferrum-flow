@@ -857,6 +857,10 @@ impl FlowCanvas {
         if delta == 0.0 {
             return;
         }
+
+        self.drag_state = DragState::None;
+        self.box_selection = None;
+
         let zoom_delta = if delta > 0.0 { 0.9 } else { 1.1 };
 
         self.viewport.zoom *= zoom_delta;
