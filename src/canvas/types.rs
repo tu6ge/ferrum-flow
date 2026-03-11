@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use gpui::{Bounds, Pixels, Point};
 
-use crate::NodeId;
+use crate::{NodeId, PortId};
 
 #[derive(Debug, Clone)]
 pub enum DragState {
@@ -46,7 +46,7 @@ pub struct PendingNode {
 #[derive(Debug, Clone)]
 pub struct Connecting {
     pub(super) node_id: NodeId,
-    pub(super) port_id: String,
+    pub(super) port_id: PortId,
     pub(super) mouse: Point<Pixels>,
 }
 

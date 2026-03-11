@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::node::NodeId;
+use crate::PortId;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct EdgeId(pub u64);
@@ -8,31 +8,25 @@ pub struct EdgeId(pub u64);
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Edge {
     pub id: EdgeId,
-    pub source_node: NodeId,
-    pub source_port: String,
+    pub source_port: PortId,
 
-    pub target_node: NodeId,
-    pub target_port: String,
+    pub target_port: PortId,
 }
 
 impl Edge {
     pub fn new(id: EdgeId) -> Self {
         Self {
             id,
-            source_node: NodeId(0),
-            source_port: "".into(),
-            target_node: NodeId(0),
-            target_port: "".into(),
+            source_port: PortId(0),
+            target_port: PortId(0),
         }
     }
-    pub fn source(mut self, node_id: NodeId, port: impl Into<String>) -> Self {
-        self.source_node = node_id;
-        self.source_port = port.into();
+    pub fn source(mut self, port: PortId) -> Self {
+        self.source_port = port;
         self
     }
-    pub fn target(mut self, node_id: NodeId, port: impl Into<String>) -> Self {
-        self.target_node = node_id;
-        self.target_port = port.into();
+    pub fn target(mut self, port: PortId) -> Self {
+        self.target_port = port;
         self
     }
 }

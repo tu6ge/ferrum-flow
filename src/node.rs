@@ -20,8 +20,8 @@ pub struct Node {
     pub x: Pixels,
     pub y: Pixels,
 
-    pub inputs: Vec<Port>,
-    pub outputs: Vec<Port>,
+    pub inputs: Vec<PortId>,
+    pub outputs: Vec<PortId>,
     pub data: serde_json::Value,
 }
 
@@ -46,26 +46,21 @@ impl Node {
     pub fn point(&self) -> Point<Pixels> {
         Point::new(self.x, self.y)
     }
-    pub fn output(mut self, id: String, point: Point<Pixels>) -> Self {
-        self.outputs.push(Port {
-            id,
-            kind: PortKind::Output,
-            point,
-        });
+    pub fn output(mut self, id: PortId) -> Self {
+        self.outputs.push(id);
         self
     }
 
-    pub fn input(mut self, id: String, point: Point<Pixels>) -> Self {
-        self.inputs.push(Port {
-            id,
-            kind: PortKind::Input,
-            point,
-        });
+    pub fn input(mut self, id: PortId) -> Self {
+        self.inputs.push(id);
         self
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct PortId(pub u64);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PortKind {
     Input,
     Output,
@@ -73,7 +68,27 @@ pub enum PortKind {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Port {
-    pub id: String,
+    pub id: PortId,
     pub kind: PortKind,
     pub point: Point<Pixels>,
+    pub node_id: NodeId,
+}
+
+impl Port {
+    pub fn new_input(id: u64, node_id: u64, point: Point<Pixels>) -> Self {
+        Self {
+            id: PortId(id),
+            kind: PortKind::Input,
+            point,
+            node_id: NodeId(node_id),
+        }
+    }
+    pub fn new_output(id: u64, node_id: u64, point: Point<Pixels>) -> Self {
+        Self {
+            id: PortId(id),
+            kind: PortKind::Output,
+            point,
+            node_id: NodeId(node_id),
+        }
+    }
 }

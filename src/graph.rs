@@ -1,12 +1,13 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::edge::{Edge, EdgeId};
-use crate::node::{Node, NodeId};
+use crate::node::{Node, NodeId, Port, PortId};
 
 #[derive(Debug, Clone)]
 pub struct Graph {
     nodes: HashMap<NodeId, Node>,
     node_order: Vec<NodeId>,
+    pub ports: HashMap<PortId, Port>,
     pub edges: HashMap<EdgeId, Edge>,
 
     pub selected_edge: HashSet<EdgeId>,
@@ -18,6 +19,7 @@ impl Graph {
         Self {
             nodes: HashMap::new(),
             node_order: vec![],
+            ports: HashMap::new(),
             edges: HashMap::new(),
             selected_edge: HashSet::new(),
             selected_node: HashSet::new(),
@@ -28,6 +30,11 @@ impl Graph {
         let node_id = node.id.clone();
         self.nodes.insert(node.id, node);
         self.node_order.push(node_id);
+    }
+
+    pub fn add_point(&mut self, port: Port) {
+        let ref mut map = self.ports;
+        map.insert(port.id, port);
     }
 
     pub fn nodes(&self) -> &HashMap<NodeId, Node> {
@@ -60,20 +67,32 @@ impl Graph {
     }
 
     pub fn remove_node(&mut self, id: &NodeId) {
+        let node = &self.nodes[id];
+        let mut port_ids = node.inputs.clone();
+        port_ids.extend(node.outputs.clone());
+
         self.nodes.remove(id);
         let index = self.node_order.iter().position(|v| *v == *id);
         if let Some(index) = index {
             self.node_order.remove(index);
         }
 
-        let edge1 = self.edges.iter().find(|(_, edge)| edge.source_node == *id);
-        if let Some((&edge_id, _)) = edge1 {
-            self.edges.remove(&edge_id);
-        }
+        for port_id in port_ids.iter() {
+            let edge1 = self
+                .edges
+                .iter()
+                .find(|(_, edge)| edge.source_port == *port_id);
+            if let Some((&edge_id, _)) = edge1 {
+                self.edges.remove(&edge_id);
+            }
 
-        let edge2 = self.edges.iter().find(|(_, edge)| edge.target_node == *id);
-        if let Some((&edge_id, _)) = edge2 {
-            self.edges.remove(&edge_id);
+            let edge2 = self
+                .edges
+                .iter()
+                .find(|(_, edge)| edge.target_port == *port_id);
+            if let Some((&edge_id, _)) = edge2 {
+                self.edges.remove(&edge_id);
+            }
         }
     }
 
