@@ -289,7 +289,9 @@ impl FlowCanvas {
                                     ..
                                 }) if node_id == *id => {
                                     let delta = ev.position - *start_mouse;
-                                    if delta.x > DRAG_THRESHOLD || delta.y > DRAG_THRESHOLD {
+                                    if delta.x.abs() > DRAG_THRESHOLD
+                                        || delta.y.abs() > DRAG_THRESHOLD
+                                    {
                                         this.start_node_drag(ev.position, node_id, node_point);
                                         cx.notify();
                                     }
