@@ -11,9 +11,11 @@ use crate::{
 pub trait Plugin {
     fn name(&self) -> &'static str;
 
-    fn setup(&mut self, ctx: &mut PluginContext);
+    fn setup(&mut self, ctx: &mut InitPluginContext);
 
-    fn on_event(&mut self, event: &FlowEvent, ctx: &mut PluginContext);
+    fn on_event(&mut self, event: &FlowEvent, ctx: &mut PluginContext) -> EventResult {
+        EventResult::Continue
+    }
 
     fn render(
         &mut self,
@@ -28,12 +30,24 @@ pub trait Plugin {
     }
 }
 
+pub struct InitPluginContext<'a> {
+    pub graph: &'a mut Graph,
+    pub viewport: &'a mut Viewport,
+}
+
 pub struct PluginContext<'a> {
     pub graph: &'a mut Graph,
     pub viewport: &'a mut Viewport,
-    interaction: &'a mut InteractionState,
+    pub(crate) interaction: &'a mut InteractionState,
+
     //pub commands: &'a mut CommandQueue,
     pub emit: &'a mut dyn FnMut(FlowEvent),
+    pub notify: &'a mut dyn FnMut(),
+}
+
+pub enum EventResult {
+    Continue,
+    Stop,
 }
 
 impl<'a> PluginContext<'a> {
@@ -42,6 +56,7 @@ impl<'a> PluginContext<'a> {
         viewport: &'a mut Viewport,
         interaction: &'a mut InteractionState,
         emit: &'a mut dyn FnMut(FlowEvent),
+        notify: &'a mut dyn FnMut(),
     ) -> Self {
         Self {
             graph,
@@ -49,6 +64,7 @@ impl<'a> PluginContext<'a> {
             interaction,
             //commands: ,
             emit,
+            notify,
         }
     }
 
@@ -62,6 +78,14 @@ impl<'a> PluginContext<'a> {
 
     pub fn has_interaction(&self) -> bool {
         self.interaction.handler.is_some()
+    }
+
+    // pub fn take_interaction(&mut self) -> Option<Box<dyn InteractionHandler + 'static>> {
+    //     self.interaction.handler.take()
+    // }
+
+    pub fn notify(&mut self) {
+        (self.notify)();
     }
 }
 
@@ -138,29 +162,14 @@ pub struct RenderContext<'a> {
     pub viewport: &'a Viewport,
 
     pub layer: RenderLayer,
-
-    pub screen_to_world: Box<dyn Fn(Point<Pixels>) -> Point<Pixels> + 'a>,
-    pub world_to_screen: Box<dyn Fn(Point<Pixels>) -> Point<Pixels> + 'a>,
 }
 
 impl<'a> RenderContext<'a> {
     pub fn new(graph: &'a Graph, viewport: &'a Viewport, layer: RenderLayer) -> Self {
-        let zoom = viewport.zoom;
-        let pan = viewport.offset;
-
-        let screen_to_world = Box::new(move |p: Point<Pixels>| {
-            Point::new((p.x - pan.x) / zoom, (p.y - pan.y) / zoom)
-        });
-
-        let world_to_screen =
-            Box::new(move |p: Point<Pixels>| Point::new(p.x * zoom + pan.x, p.y * zoom + pan.y));
-
         Self {
             graph,
             viewport,
             layer,
-            screen_to_world,
-            world_to_screen,
         }
     }
 }

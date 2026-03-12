@@ -29,6 +29,18 @@ impl InteractionState {
     pub fn new() -> Self {
         Self { handler: None }
     }
+
+    pub fn add(&mut self, handler: impl InteractionHandler + 'static) {
+        self.handler = Some(Box::new(handler));
+    }
+
+    pub fn clear(&mut self) {
+        self.handler = None;
+    }
+
+    pub fn is_some(&self) -> bool {
+        self.handler.is_some()
+    }
 }
 
 // if let Some(handler) = &mut self.interaction.handler {
@@ -43,13 +55,23 @@ impl InteractionState {
 
 // }
 pub trait InteractionHandler {
-    fn on_mouse_move(&mut self, event: &MouseMoveEvent, ctx: &mut PluginContext);
+    fn on_mouse_move(
+        &mut self,
+        event: &MouseMoveEvent,
+        ctx: &mut PluginContext,
+    ) -> InteractionResult;
 
-    fn on_mouse_up(&mut self, event: &MouseUpEvent, ctx: &mut PluginContext);
+    fn on_mouse_up(&mut self, event: &MouseUpEvent, ctx: &mut PluginContext) -> InteractionResult;
 
     fn render(&self, ctx: &mut RenderContext) -> Option<AnyElement> {
         None
     }
+}
+
+pub enum InteractionResult {
+    Continue,
+    End,
+    Replace(Box<dyn InteractionHandler>),
 }
 
 #[derive(Debug, Clone)]
@@ -59,14 +81,19 @@ pub struct NodeDrag {
 }
 
 impl InteractionHandler for NodeDrag {
-    fn on_mouse_move(&mut self, event: &MouseMoveEvent, ctx: &mut PluginContext) {
+    fn on_mouse_move(
+        &mut self,
+        event: &MouseMoveEvent,
+        ctx: &mut PluginContext,
+    ) -> InteractionResult {
         todo!()
     }
-    fn on_mouse_up(&mut self, event: &MouseUpEvent, ctx: &mut PluginContext) {
+    fn on_mouse_up(&mut self, event: &MouseUpEvent, ctx: &mut PluginContext) -> InteractionResult {
         todo!()
     }
 }
 
+#[deprecated]
 #[derive(Debug, Clone)]
 pub struct BoxMoveDrag {
     pub(super) start_mouse: Point<Pixels>,
@@ -89,17 +116,19 @@ pub struct PendingNode {
 }
 
 impl InteractionHandler for PendingNode {
-    fn on_mouse_move(&mut self, ev: &MouseMoveEvent, ctx: &mut PluginContext) {
+    fn on_mouse_move(&mut self, ev: &MouseMoveEvent, ctx: &mut PluginContext) -> InteractionResult {
         let node = &ctx.graph.nodes()[&self.node_id];
         let delta = ev.position - self.start_mouse;
         if delta.x > DRAG_THRESHOLD || delta.y > DRAG_THRESHOLD {
-            ctx.start_interaction(NodeDrag {
+            InteractionResult::Replace(Box::new(NodeDrag {
                 start_mouse: ev.position,
                 start_positions: vec![(self.node_id.clone(), node.point())],
-            });
+            }))
+        } else {
+            InteractionResult::Continue
         }
     }
-    fn on_mouse_up(&mut self, event: &MouseUpEvent, ctx: &mut PluginContext) {
+    fn on_mouse_up(&mut self, event: &MouseUpEvent, ctx: &mut PluginContext) -> InteractionResult {
         todo!()
     }
 }
@@ -117,11 +146,13 @@ pub struct Panning {
     pub(super) start_offset: Point<Pixels>,
 }
 
+#[deprecated]
 #[derive(Debug, Clone)]
 pub struct PendingBoxSelect {
     pub(super) start: Point<Pixels>,
 }
 
+#[deprecated]
 #[derive(Debug, Clone)]
 pub struct BoxSelectDrag {
     pub(super) start: Point<Pixels>,

@@ -4,10 +4,12 @@ use gpui::{prelude::FluentBuilder, *};
 
 use crate::{
     Edge, EdgeId, Node, NodeId, NodeRenderContext, NodeRenderer, Port, PortId, PortKind,
-    graph::Graph,
-    plugin::{FlowEvent, InputEvent, Plugin, PluginContext, RenderContext, RenderLayer},
+    graph::{self, Graph},
+    plugin::{
+        FlowEvent, InitPluginContext, InputEvent, Plugin, PluginContext, RenderContext, RenderLayer,
+    },
     renderer::RendererRegistry,
-    viewport::Viewport,
+    viewport::{self, Viewport},
 };
 
 mod edge;
@@ -17,10 +19,10 @@ use edge::EdgeGeometry;
 use types::*;
 use utils::*;
 
-pub use types::{BoxSelection, InteractionHandler, InteractionState};
+pub use types::{BoxSelection, InteractionHandler, InteractionResult, InteractionState};
 
-const DEFAULT_NODE_WIDTH: Pixels = px(120.0);
-const DEFAULT_NODE_HEIGHT: Pixels = px(60.0);
+pub const DEFAULT_NODE_WIDTH: Pixels = px(120.0);
+pub const DEFAULT_NODE_HEIGHT: Pixels = px(60.0);
 const DRAG_THRESHOLD: Pixels = px(2.0);
 
 pub struct FlowCanvas {
@@ -81,28 +83,25 @@ impl FlowCanvas {
     }
 
     pub fn init_plugins(&mut self) {
-        let event_queue = &mut self.event_queue;
-
-        let mut emit = |event: FlowEvent| {
-            event_queue.push(event);
+        let mut ctx = InitPluginContext {
+            graph: &mut self.graph,
+            viewport: &mut self.viewport,
         };
-        let mut ctx = PluginContext::new(
-            &mut self.graph,
-            &mut self.viewport,
-            &mut self.interaction,
-            &mut emit,
-        );
 
         for plugin in &mut self.plugins.iter_mut() {
             plugin.setup(&mut ctx);
         }
     }
 
-    pub fn handle_event(&mut self, event: FlowEvent) {
+    pub fn handle_event(&mut self, event: FlowEvent, cx: &mut Context<Self>) {
         let event_queue = &mut self.event_queue;
 
         let mut emit = |event: FlowEvent| {
             event_queue.push(event);
+        };
+
+        let mut notify = || {
+            cx.notify();
         };
 
         // if has interaction
@@ -112,21 +111,36 @@ impl FlowCanvas {
                 &mut self.viewport,
                 &mut self.interaction,
                 &mut emit,
+                &mut notify,
             );
-            match event {
+            let mut fast_return = false;
+            let result = match &event {
                 FlowEvent::Input(InputEvent::MouseMove(ev)) => {
-                    handler.on_mouse_move(&ev, &mut ctx);
-                    self.interaction.handler = Some(handler);
-                    return;
+                    fast_return = true;
+                    handler.on_mouse_move(ev, &mut ctx)
                 }
+
                 FlowEvent::Input(InputEvent::MouseUp(ev)) => {
-                    handler.on_mouse_up(&ev, &mut ctx);
-                    self.interaction.handler = Some(handler);
-                    return;
+                    fast_return = true;
+                    handler.on_mouse_up(ev, &mut ctx)
                 }
-                _ => {
-                    self.interaction.handler = Some(handler);
+
+                _ => InteractionResult::Continue,
+            };
+
+            if fast_return {
+                match result {
+                    InteractionResult::Continue => self.interaction.handler = Some(handler),
+
+                    InteractionResult::End => {
+                        self.interaction.handler = None;
+                    }
+
+                    InteractionResult::Replace(h) => {
+                        self.interaction.handler = Some(h);
+                    }
                 }
+                return;
             }
         }
 
@@ -135,11 +149,34 @@ impl FlowCanvas {
             &mut self.viewport,
             &mut self.interaction,
             &mut emit,
+            &mut notify,
         );
 
         // 否则广播给 plugins
         for plugin in &mut self.plugins {
             plugin.on_event(&event, &mut ctx);
+        }
+    }
+
+    fn process_event_queue(&mut self, cx: &mut Context<Self>) {
+        while let Some(event) = self.event_queue.pop() {
+            let mut emit = |e| self.event_queue.push(e);
+
+            let mut notify = || {
+                cx.notify();
+            };
+
+            let mut ctx = PluginContext::new(
+                &mut self.graph,
+                &mut self.viewport,
+                &mut self.interaction,
+                &mut emit,
+                &mut notify,
+            );
+
+            for plugin in &mut self.plugins {
+                plugin.on_event(&event, &mut ctx);
+            }
         }
     }
 
@@ -838,6 +875,8 @@ impl FlowCanvas {
     }
 
     fn on_mouse_down(&mut self, ev: &MouseDownEvent, _: &mut Window, cx: &mut Context<Self>) {
+        self.handle_event(FlowEvent::Input(InputEvent::MouseDown(ev.clone())), cx);
+        self.process_event_queue(cx);
         let shift = ev.modifiers.shift;
 
         let mut selected_edge = false;
@@ -866,10 +905,10 @@ impl FlowCanvas {
             });
         }
 
-        if !shift && !selected_edge {
-            self.drag_state = DragState::PendingBoxSelect(PendingBoxSelect { start: ev.position });
-            self.box_selection = None;
-        }
+        // if !shift && !selected_edge {
+        //     self.drag_state = DragState::PendingBoxSelect(PendingBoxSelect { start: ev.position });
+        //     self.box_selection = None;
+        // }
         if shift && let DragState::BoxSelect(_) = self.drag_state {
             self.drag_state = DragState::None;
         }
@@ -877,6 +916,8 @@ impl FlowCanvas {
     }
 
     fn on_mouse_move(&mut self, ev: &MouseMoveEvent, _: &mut Window, cx: &mut Context<Self>) {
+        self.handle_event(FlowEvent::Input(InputEvent::MouseMove(ev.clone())), cx);
+        self.process_event_queue(cx);
         match &mut self.drag_state {
             DragState::EdgeDrag(connect) => {
                 connect.mouse = ev.position;
@@ -910,7 +951,9 @@ impl FlowCanvas {
         }
     }
 
-    fn on_mouse_up(&mut self, _: &MouseUpEvent, _: &mut Window, cx: &mut Context<Self>) {
+    fn on_mouse_up(&mut self, ev: &MouseUpEvent, _: &mut Window, cx: &mut Context<Self>) {
+        self.handle_event(FlowEvent::Input(InputEvent::MouseUp(ev.clone())), cx);
+        self.process_event_queue(cx);
         match &self.drag_state {
             DragState::Pan(_)
             | DragState::NodeDrag(_)
@@ -929,6 +972,8 @@ impl FlowCanvas {
     }
 
     fn on_scroll_wheel(&mut self, ev: &ScrollWheelEvent, _: &mut Window, cx: &mut Context<Self>) {
+        self.handle_event(FlowEvent::Input(InputEvent::Wheel(ev.clone())), cx);
+        self.process_event_queue(cx);
         let cursor = ev.position;
 
         let before = self.viewport.screen_to_world(cursor);
