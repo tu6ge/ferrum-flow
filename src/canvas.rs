@@ -4,7 +4,10 @@ use gpui::{prelude::FluentBuilder, *};
 
 use crate::{
     Edge, EdgeId, Node, NodeId, NodeRenderContext, NodeRenderer, Port, PortId, PortKind,
-    graph::Graph, plugin::Plugin, renderer::RendererRegistry, viewport::Viewport,
+    graph::Graph,
+    plugin::{FlowEvent, InputEvent, Plugin, PluginContext, RenderContext, RenderLayer},
+    renderer::RendererRegistry,
+    viewport::Viewport,
 };
 
 mod edge;
@@ -14,7 +17,7 @@ use edge::EdgeGeometry;
 use types::*;
 use utils::*;
 
-pub use types::{InteractionHandler, InteractionState};
+pub use types::{BoxSelection, InteractionHandler, InteractionState};
 
 const DEFAULT_NODE_WIDTH: Pixels = px(120.0);
 const DEFAULT_NODE_HEIGHT: Pixels = px(60.0);
@@ -24,17 +27,19 @@ pub struct FlowCanvas {
     pub graph: Graph,
     drag_state: DragState,
 
-    viewport: Viewport,
+    pub(crate) viewport: Viewport,
 
-    registry: RendererRegistry,
+    pub(crate) registry: RendererRegistry,
 
-    plugins: Vec<Box<dyn Plugin>>,
+    pub(crate) plugins: Vec<Box<dyn Plugin>>,
 
-    focus_handle: FocusHandle,
+    pub(crate) focus_handle: FocusHandle,
 
-    box_selection: Option<BoxSelection>,
+    pub(crate) box_selection: Option<BoxSelection>,
 
-    interaction: InteractionState,
+    pub(crate) interaction: InteractionState,
+
+    pub event_queue: Vec<FlowEvent>,
 }
 
 // TODO
@@ -49,6 +54,7 @@ impl Clone for FlowCanvas {
             focus_handle: self.focus_handle.clone(),
             box_selection: self.box_selection.clone(),
             interaction: InteractionState::new(),
+            event_queue: vec![],
         }
     }
 }
@@ -65,12 +71,76 @@ impl FlowCanvas {
             focus_handle,
             box_selection: None,
             interaction: InteractionState::new(),
+            event_queue: vec![],
         }
     }
 
     pub fn plugin(mut self, plugin: impl Plugin + 'static) -> Self {
         self.plugins.push(Box::new(plugin));
         self
+    }
+
+    pub fn init_plugins(&mut self) {
+        let event_queue = &mut self.event_queue;
+
+        let mut emit = |event: FlowEvent| {
+            event_queue.push(event);
+        };
+        let mut ctx = PluginContext::new(
+            &mut self.graph,
+            &mut self.viewport,
+            &mut self.interaction,
+            &mut emit,
+        );
+
+        for plugin in &mut self.plugins.iter_mut() {
+            plugin.setup(&mut ctx);
+        }
+    }
+
+    pub fn handle_event(&mut self, event: FlowEvent) {
+        let event_queue = &mut self.event_queue;
+
+        let mut emit = |event: FlowEvent| {
+            event_queue.push(event);
+        };
+
+        // if has interaction
+        if let Some(mut handler) = self.interaction.handler.take() {
+            let mut ctx = PluginContext::new(
+                &mut self.graph,
+                &mut self.viewport,
+                &mut self.interaction,
+                &mut emit,
+            );
+            match event {
+                FlowEvent::Input(InputEvent::MouseMove(ev)) => {
+                    handler.on_mouse_move(&ev, &mut ctx);
+                    self.interaction.handler = Some(handler);
+                    return;
+                }
+                FlowEvent::Input(InputEvent::MouseUp(ev)) => {
+                    handler.on_mouse_up(&ev, &mut ctx);
+                    self.interaction.handler = Some(handler);
+                    return;
+                }
+                _ => {
+                    self.interaction.handler = Some(handler);
+                }
+            }
+        }
+
+        let mut ctx = PluginContext::new(
+            &mut self.graph,
+            &mut self.viewport,
+            &mut self.interaction,
+            &mut emit,
+        );
+
+        // 否则广播给 plugins
+        for plugin in &mut self.plugins {
+            plugin.on_event(&event, &mut ctx);
+        }
     }
 
     pub fn register_node<R>(mut self, name: impl Into<String>, renderer: R) -> Self
@@ -924,6 +994,17 @@ impl Render for FlowCanvas {
     fn render(&mut self, window: &mut Window, this_cx: &mut Context<Self>) -> impl IntoElement {
         let entity = this_cx.entity();
 
+        let graph = &self.graph;
+        let viewport = &self.viewport;
+        let plugin_elements: Vec<_> = self
+            .plugins
+            .iter_mut()
+            .filter_map(|plugin| {
+                let mut ctx = RenderContext::new(graph, viewport, RenderLayer::Overlay);
+                plugin.render(&mut ctx, this_cx)
+            })
+            .collect();
+
         div()
             .size_full()
             .track_focus(&self.focus_handle)
@@ -947,5 +1028,6 @@ impl Render for FlowCanvas {
             .children(self.render_ports(this_cx))
             .child(self.render_draging_select_box())
             .child(self.render_selected_box(window, this_cx))
+            .children(plugin_elements)
     }
 }

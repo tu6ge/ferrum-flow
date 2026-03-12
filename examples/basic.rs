@@ -17,7 +17,11 @@ fn main() {
         graph.add_point(Port::new_output(5, 3, 0));
 
         cx.open_window(WindowOptions::default(), |_, cx| {
-            cx.new(|fc| FlowCanvas::new(graph, fc))
+            cx.new(|fc| {
+                let mut flow = FlowCanvas::new(graph, fc).plugin(SelectionPlugin::new());
+                flow.init_plugins();
+                flow
+            })
         })
         .unwrap();
     });

@@ -1,5 +1,6 @@
 use gpui::{
-    AnyElement, Context, KeyDownEvent, MouseDownEvent, MouseMoveEvent, MouseUpEvent, Pixels, Point,
+    AnyElement, Context, KeyDownEvent, KeyUpEvent, MouseDownEvent, MouseMoveEvent, MouseUpEvent,
+    Pixels, Point, ScrollWheelEvent,
 };
 
 use crate::{
@@ -14,7 +15,11 @@ pub trait Plugin {
 
     fn on_event(&mut self, event: &FlowEvent, ctx: &mut PluginContext);
 
-    fn render(&mut self, ctx: &mut RenderContext) -> Option<AnyElement> {
+    fn render(
+        &mut self,
+        render_ctx: &mut RenderContext,
+        ctx: &mut Context<FlowCanvas>,
+    ) -> Option<AnyElement> {
         None
     }
 
@@ -26,13 +31,27 @@ pub trait Plugin {
 pub struct PluginContext<'a> {
     pub graph: &'a mut Graph,
     pub viewport: &'a mut Viewport,
-    pub plugins: &'a mut Vec<Box<dyn Plugin>>,
     interaction: &'a mut InteractionState,
-    pub commands: &'a mut CommandQueue,
-    pub emit: &'a dyn Fn(FlowEvent),
+    //pub commands: &'a mut CommandQueue,
+    pub emit: &'a mut dyn FnMut(FlowEvent),
 }
 
 impl<'a> PluginContext<'a> {
+    pub fn new(
+        graph: &'a mut Graph,
+        viewport: &'a mut Viewport,
+        interaction: &'a mut InteractionState,
+        emit: &'a mut dyn FnMut(FlowEvent),
+    ) -> Self {
+        Self {
+            graph,
+            viewport,
+            interaction,
+            //commands: ,
+            emit,
+        }
+    }
+
     pub fn start_interaction(&mut self, handler: impl InteractionHandler + 'static) {
         self.interaction.handler = Some(Box::new(handler));
     }
@@ -47,22 +66,61 @@ impl<'a> PluginContext<'a> {
 }
 
 pub enum FlowEvent {
-    NodeClicked(NodeId),
-    NodeDragged(NodeId, Point<Pixels>),
+    Input(InputEvent),
+    Graph(GraphEvent),
+    Ui(UiEvent),
+    Custom(Box<dyn std::any::Any + Send>),
+}
 
-    EdgeClicked(EdgeId),
+impl FlowEvent {
+    pub fn custom<T: 'static + Send>(event: T) -> Self {
+        FlowEvent::Custom(Box::new(event))
+    }
+    pub fn as_custom<T: 'static>(&self) -> Option<&T> {
+        match self {
+            FlowEvent::Custom(e) => e.downcast_ref::<T>(),
+            _ => None,
+        }
+    }
+}
 
-    SelectionChanged(Vec<NodeId>),
-
-    ConnectStart(PortId),
-    ConnectEnd(PortId),
-
-    ViewportChanged,
-
+pub enum InputEvent {
     KeyDown(KeyDownEvent),
+    KeyUp(KeyUpEvent),
+
     MouseDown(MouseDownEvent),
     MouseMove(MouseMoveEvent),
     MouseUp(MouseUpEvent),
+
+    Wheel(ScrollWheelEvent),
+}
+
+pub enum GraphEvent {
+    NodeClicked(NodeId),
+
+    NodeDragStart(NodeId),
+    NodeDragging(NodeId, Point<Pixels>),
+    NodeDragEnd(NodeId),
+
+    EdgeClicked(EdgeId),
+
+    EdgeCreated { from: PortId, to: PortId },
+
+    EdgeRemoved(EdgeId),
+}
+
+pub enum UiEvent {
+    SelectionChanged(Vec<NodeId>),
+
+    ConnectStart(PortId),
+
+    ConnectPreview(Point<Pixels>),
+
+    ConnectEnd(PortId),
+
+    ConnectCancel,
+
+    ViewportChanged { zoom: f32, pan: Point<Pixels> },
 }
 
 pub trait Command {
@@ -81,10 +139,30 @@ pub struct RenderContext<'a> {
 
     pub layer: RenderLayer,
 
-    pub cx: &'a mut Context<'a, FlowCanvas>,
+    pub screen_to_world: Box<dyn Fn(Point<Pixels>) -> Point<Pixels> + 'a>,
+    pub world_to_screen: Box<dyn Fn(Point<Pixels>) -> Point<Pixels> + 'a>,
+}
 
-    pub screen_to_world: fn(Point<Pixels>) -> Point<Pixels>,
-    pub world_to_screen: fn(Point<Pixels>) -> Point<Pixels>,
+impl<'a> RenderContext<'a> {
+    pub fn new(graph: &'a Graph, viewport: &'a Viewport, layer: RenderLayer) -> Self {
+        let zoom = viewport.zoom;
+        let pan = viewport.offset;
+
+        let screen_to_world = Box::new(move |p: Point<Pixels>| {
+            Point::new((p.x - pan.x) / zoom, (p.y - pan.y) / zoom)
+        });
+
+        let world_to_screen =
+            Box::new(move |p: Point<Pixels>| Point::new(p.x * zoom + pan.x, p.y * zoom + pan.y));
+
+        Self {
+            graph,
+            viewport,
+            layer,
+            screen_to_world,
+            world_to_screen,
+        }
+    }
 }
 
 pub enum RenderLayer {
