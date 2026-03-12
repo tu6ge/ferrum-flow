@@ -4,7 +4,7 @@ use gpui::{prelude::FluentBuilder, *};
 
 use crate::{
     Edge, EdgeId, Node, NodeId, NodeRenderContext, NodeRenderer, Port, PortId, PortKind,
-    graph::Graph, renderer::RendererRegistry, viewport::Viewport,
+    graph::Graph, plugin::Plugin, renderer::RendererRegistry, viewport::Viewport,
 };
 
 mod edge;
@@ -14,11 +14,12 @@ use edge::EdgeGeometry;
 use types::*;
 use utils::*;
 
+pub use types::{InteractionHandler, InteractionState};
+
 const DEFAULT_NODE_WIDTH: Pixels = px(120.0);
 const DEFAULT_NODE_HEIGHT: Pixels = px(60.0);
 const DRAG_THRESHOLD: Pixels = px(2.0);
 
-#[derive(Clone)]
 pub struct FlowCanvas {
     pub graph: Graph,
     drag_state: DragState,
@@ -27,9 +28,29 @@ pub struct FlowCanvas {
 
     registry: RendererRegistry,
 
+    plugins: Vec<Box<dyn Plugin>>,
+
     focus_handle: FocusHandle,
 
     box_selection: Option<BoxSelection>,
+
+    interaction: InteractionState,
+}
+
+// TODO
+impl Clone for FlowCanvas {
+    fn clone(&self) -> Self {
+        Self {
+            graph: self.graph.clone(),
+            drag_state: self.drag_state.clone(),
+            viewport: self.viewport.clone(),
+            registry: self.registry.clone(),
+            plugins: vec![],
+            focus_handle: self.focus_handle.clone(),
+            box_selection: self.box_selection.clone(),
+            interaction: InteractionState::new(),
+        }
+    }
 }
 
 impl FlowCanvas {
@@ -40,9 +61,16 @@ impl FlowCanvas {
             drag_state: DragState::None,
             viewport: Viewport::new(),
             registry: RendererRegistry::new(),
+            plugins: vec![],
             focus_handle,
             box_selection: None,
+            interaction: InteractionState::new(),
         }
+    }
+
+    pub fn plugin(mut self, plugin: impl Plugin + 'static) -> Self {
+        self.plugins.push(Box::new(plugin));
+        self
     }
 
     pub fn register_node<R>(mut self, name: impl Into<String>, renderer: R) -> Self
