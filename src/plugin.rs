@@ -41,8 +41,8 @@ pub struct PluginContext<'a> {
     pub(crate) interaction: &'a mut InteractionState,
 
     //pub commands: &'a mut CommandQueue,
-    pub emit: &'a mut dyn FnMut(FlowEvent),
-    pub notify: &'a mut dyn FnMut(),
+    emit: &'a mut dyn FnMut(FlowEvent),
+    notify: &'a mut dyn FnMut(),
 }
 
 pub enum EventResult {
@@ -86,6 +86,11 @@ impl<'a> PluginContext<'a> {
 
     pub fn notify(&mut self) {
         (self.notify)();
+    }
+
+    pub fn emit(&mut self, event: FlowEvent) {
+        (self.emit)(event);
+        self.notify();
     }
 }
 

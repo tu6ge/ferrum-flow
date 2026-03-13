@@ -4,12 +4,12 @@ use gpui::{prelude::FluentBuilder, *};
 
 use crate::{
     Edge, EdgeId, Node, NodeId, NodeRenderContext, NodeRenderer, Port, PortId, PortKind,
-    graph::{self, Graph},
+    graph::Graph,
     plugin::{
         FlowEvent, InitPluginContext, InputEvent, Plugin, PluginContext, RenderContext, RenderLayer,
     },
     renderer::RendererRegistry,
-    viewport::{self, Viewport},
+    viewport::Viewport,
 };
 
 mod edge;
@@ -1050,6 +1050,16 @@ impl Render for FlowCanvas {
             })
             .collect();
 
+        let interaction_render = self
+            .interaction
+            .handler
+            .as_ref()
+            .map(|i| {
+                let mut ctx = RenderContext::new(graph, viewport, RenderLayer::Overlay);
+                i.render(&mut ctx)
+            })
+            .flatten();
+
         div()
             .size_full()
             .track_focus(&self.focus_handle)
@@ -1074,5 +1084,6 @@ impl Render for FlowCanvas {
             .child(self.render_draging_select_box())
             .child(self.render_selected_box(window, this_cx))
             .children(plugin_elements)
+            .children(interaction_render)
     }
 }

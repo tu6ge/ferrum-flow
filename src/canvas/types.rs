@@ -80,18 +80,18 @@ pub struct NodeDrag {
     pub(super) start_positions: Vec<(NodeId, Point<Pixels>)>,
 }
 
-impl InteractionHandler for NodeDrag {
-    fn on_mouse_move(
-        &mut self,
-        event: &MouseMoveEvent,
-        ctx: &mut PluginContext,
-    ) -> InteractionResult {
-        todo!()
-    }
-    fn on_mouse_up(&mut self, event: &MouseUpEvent, ctx: &mut PluginContext) -> InteractionResult {
-        todo!()
-    }
-}
+// impl InteractionHandler for NodeDrag {
+//     fn on_mouse_move(
+//         &mut self,
+//         event: &MouseMoveEvent,
+//         ctx: &mut DragContext,
+//     ) -> InteractionResult {
+//         todo!()
+//     }
+//     fn on_mouse_up(&mut self, event: &MouseUpEvent, ctx: &mut DragContext) -> InteractionResult {
+//         todo!()
+//     }
+// }
 
 #[deprecated]
 #[derive(Debug, Clone)]
@@ -115,23 +115,23 @@ pub struct PendingNode {
     pub(super) shift: bool,
 }
 
-impl InteractionHandler for PendingNode {
-    fn on_mouse_move(&mut self, ev: &MouseMoveEvent, ctx: &mut PluginContext) -> InteractionResult {
-        let node = &ctx.graph.nodes()[&self.node_id];
-        let delta = ev.position - self.start_mouse;
-        if delta.x > DRAG_THRESHOLD || delta.y > DRAG_THRESHOLD {
-            InteractionResult::Replace(Box::new(NodeDrag {
-                start_mouse: ev.position,
-                start_positions: vec![(self.node_id.clone(), node.point())],
-            }))
-        } else {
-            InteractionResult::Continue
-        }
-    }
-    fn on_mouse_up(&mut self, event: &MouseUpEvent, ctx: &mut PluginContext) -> InteractionResult {
-        todo!()
-    }
-}
+// impl InteractionHandler for PendingNode {
+//     fn on_mouse_move(&mut self, ev: &MouseMoveEvent, ctx: &mut DragContext) -> InteractionResult {
+//         let node = &ctx.graph.nodes()[&self.node_id];
+//         let delta = ev.position - self.start_mouse;
+//         if delta.x > DRAG_THRESHOLD || delta.y > DRAG_THRESHOLD {
+//             InteractionResult::Replace(Box::new(NodeDrag {
+//                 start_mouse: ev.position,
+//                 start_positions: vec![(self.node_id.clone(), node.point())],
+//             }))
+//         } else {
+//             InteractionResult::Continue
+//         }
+//     }
+//     fn on_mouse_up(&mut self, event: &MouseUpEvent, ctx: &mut DragContext) -> InteractionResult {
+//         todo!()
+//     }
+// }
 
 #[derive(Debug, Clone)]
 pub struct Connecting {

@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use gpui::{
     Bounds, Element, MouseMoveEvent, MouseUpEvent, Pixels, Point, Size, Styled, div, px, rgb, rgba,
@@ -36,7 +36,6 @@ impl Plugin for SelectionPlugin {
     ) -> EventResult {
         match &event {
             FlowEvent::Input(InputEvent::MouseDown(ev)) => {
-                println!("InputEvent::MouseDown");
                 if !ev.modifiers.shift {
                     ctx.start_interaction(PendingBoxSelect { start: ev.position });
                     ctx.notify();
@@ -44,10 +43,19 @@ impl Plugin for SelectionPlugin {
                 }
             }
             FlowEvent::Custom(cus) => {
-                let Some(data) = cus.downcast_ref::<BoxSelection>() else {
-                    return EventResult::Continue;
+                if let Some(_) = cus.downcast_ref::<BoxSelectClear>() {
+                    self.box_selection = None;
+                    return EventResult::Stop;
+                }
+                if let Some(data) = cus.downcast_ref::<BoxSelection>() {
+                    self.box_selection = Some(data.clone());
                 };
-                self.box_selection = Some(data.clone());
+            }
+            FlowEvent::Input(InputEvent::MouseUp(_)) => {
+                if self.box_selection.is_some() {
+                    self.box_selection = None;
+                    ctx.notify();
+                }
             }
             _ => {}
         }
@@ -57,8 +65,8 @@ impl Plugin for SelectionPlugin {
 
     fn render(
         &mut self,
-        render_ctx: &mut crate::plugin::RenderContext,
-        ctx: &mut gpui::Context<crate::FlowCanvas>,
+        _render_ctx: &mut crate::plugin::RenderContext,
+        _ctx: &mut gpui::Context<crate::FlowCanvas>,
     ) -> Option<gpui::AnyElement> {
         self.box_selection
             .as_ref()
@@ -104,7 +112,8 @@ pub struct BoxMoveDrag {
 impl InteractionHandler for PendingBoxSelect {
     fn on_mouse_move(&mut self, ev: &MouseMoveEvent, ctx: &mut PluginContext) -> InteractionResult {
         let delta = ev.position - self.start;
-        if delta.x > DRAG_THRESHOLD || delta.y > DRAG_THRESHOLD {
+        if delta.x > DRAG_THRESHOLD && delta.y > DRAG_THRESHOLD {
+            ctx.emit(FlowEvent::Custom(Box::new(BoxSelectClear {})));
             InteractionResult::Replace(Box::new(BoxSelectDrag {
                 start: self.start,
                 end: ev.position,
@@ -114,8 +123,7 @@ impl InteractionHandler for PendingBoxSelect {
         }
     }
     fn on_mouse_up(&mut self, _: &MouseUpEvent, ctx: &mut PluginContext) -> InteractionResult {
-        println!("PendingBoxSelect mouse up");
-        //ctx.cancel_interaction();
+        ctx.emit(FlowEvent::Custom(Box::new(BoxSelectClear {})));
         InteractionResult::End
     }
 }
@@ -126,15 +134,28 @@ impl InteractionHandler for BoxSelectDrag {
         event: &MouseMoveEvent,
         ctx: &mut PluginContext,
     ) -> InteractionResult {
-        println!("end render on_mouse_move");
         self.end = event.position;
+        ctx.notify();
         InteractionResult::Continue
     }
-    fn on_mouse_up(&mut self, event: &MouseUpEvent, ctx: &mut PluginContext) -> InteractionResult {
-        println!("end render box");
+    fn on_mouse_up(&mut self, _event: &MouseUpEvent, ctx: &mut PluginContext) -> InteractionResult {
         self.finalize_selection(ctx);
         ctx.notify();
         InteractionResult::End
+    }
+    fn render(&self, _ctx: &mut crate::plugin::RenderContext) -> Option<gpui::AnyElement> {
+        Some(
+            div()
+                .absolute()
+                .left(self.start.x)
+                .top(self.start.y)
+                .w(self.end.x - self.start.x)
+                .h(self.end.y - self.start.y)
+                .border(px(1.0))
+                .border_color(rgb(0x78A0FF))
+                .bg(rgba(0x78A0FF4c))
+                .into_any(),
+        )
     }
 }
 
@@ -168,7 +189,7 @@ impl BoxSelectDrag {
             ctx.graph.add_selected_node(*id, true);
         }
 
-        (ctx.emit)(FlowEvent::custom(BoxSelection {
+        ctx.emit(FlowEvent::custom(BoxSelection {
             start_mouse: self.start,
             bounds: rect,
             nodes: selected_ids,
@@ -188,3 +209,5 @@ impl InteractionHandler for BoxMoveDrag {
         todo!()
     }
 }
+
+struct BoxSelectClear {}
