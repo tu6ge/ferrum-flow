@@ -8,7 +8,9 @@ use gpui::{
 use crate::{
     Graph, Node, NodeId,
     canvas::{DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH, InteractionHandler, InteractionResult},
-    plugin::{EventResult, FlowEvent, InputEvent, Plugin, PluginContext, RenderContext},
+    plugin::{
+        EventResult, FlowEvent, InputEvent, Plugin, PluginContext, RenderContext, RenderLayer,
+    },
 };
 
 const DRAG_THRESHOLD: Pixels = px(2.0);
@@ -52,6 +54,12 @@ impl Plugin for SelectionPlugin {
         }
 
         EventResult::Continue
+    }
+    fn priority(&self) -> i32 {
+        50
+    }
+    fn render_layer(&self) -> RenderLayer {
+        RenderLayer::Selection
     }
 }
 

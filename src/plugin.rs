@@ -28,6 +28,10 @@ pub trait Plugin {
     fn priority(&self) -> i32 {
         0
     }
+
+    fn render_layer(&self) -> RenderLayer {
+        RenderLayer::Overlay
+    }
 }
 
 pub struct InitPluginContext<'a> {
@@ -179,11 +183,35 @@ impl<'a> RenderContext<'a> {
     }
 }
 
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum RenderLayer {
     Background,
     Edges,
     Nodes,
+    Selection,
+    Interaction,
     Overlay,
+}
+
+impl RenderLayer {
+    pub const ALL: [RenderLayer; 6] = [
+        RenderLayer::Background,
+        RenderLayer::Edges,
+        RenderLayer::Nodes,
+        RenderLayer::Selection,
+        RenderLayer::Interaction,
+        RenderLayer::Overlay,
+    ];
+    pub fn index(self) -> usize {
+        match self {
+            RenderLayer::Background => 0,
+            RenderLayer::Edges => 1,
+            RenderLayer::Nodes => 2,
+            RenderLayer::Selection => 3,
+            RenderLayer::Interaction => 4,
+            RenderLayer::Overlay => 5,
+        }
+    }
 }
 
 pub struct NodeRenderContext<'a> {
@@ -192,4 +220,19 @@ pub struct NodeRenderContext<'a> {
     pub hovered: bool,
     pub viewport: &'a Viewport,
     pub cx: &'a mut Context<'a, FlowCanvas>,
+}
+
+pub struct PluginRegistry {
+    pub plugins: Vec<Box<dyn Plugin>>,
+}
+
+impl PluginRegistry {
+    pub fn new() -> Self {
+        Self { plugins: vec![] }
+    }
+
+    pub fn add(mut self, plugin: impl Plugin + 'static) -> Self {
+        self.plugins.push(Box::new(plugin));
+        self
+    }
 }

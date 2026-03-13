@@ -4,7 +4,8 @@ use crate::{
     Edge, EdgeId, Node, NodeId, NodeRenderContext, NodeRenderer, Port, PortId, PortKind,
     graph::Graph,
     plugin::{
-        FlowEvent, InitPluginContext, InputEvent, Plugin, PluginContext, RenderContext, RenderLayer,
+        EventResult, FlowEvent, InitPluginContext, InputEvent, Plugin, PluginContext,
+        PluginRegistry, RenderContext, RenderLayer,
     },
     renderer::RendererRegistry,
     viewport::Viewport,
@@ -31,7 +32,7 @@ pub struct FlowCanvas {
 
     pub(crate) registry: RendererRegistry,
 
-    pub(crate) plugins: Vec<Box<dyn Plugin>>,
+    pub(crate) plugins_registry: PluginRegistry,
 
     pub(crate) focus_handle: FocusHandle,
 
@@ -48,7 +49,7 @@ impl Clone for FlowCanvas {
             drag_state: self.drag_state.clone(),
             viewport: self.viewport.clone(),
             registry: self.registry.clone(),
-            plugins: vec![],
+            plugins_registry: PluginRegistry::new(),
             focus_handle: self.focus_handle.clone(),
             interaction: InteractionState::new(),
             event_queue: vec![],
@@ -64,7 +65,7 @@ impl FlowCanvas {
             drag_state: DragState::None,
             viewport: Viewport::new(),
             registry: RendererRegistry::new(),
-            plugins: vec![],
+            plugins_registry: PluginRegistry::new(),
             focus_handle,
             interaction: InteractionState::new(),
             event_queue: vec![],
@@ -72,7 +73,7 @@ impl FlowCanvas {
     }
 
     pub fn plugin(mut self, plugin: impl Plugin + 'static) -> Self {
-        self.plugins.push(Box::new(plugin));
+        self.plugins_registry = self.plugins_registry.add(plugin);
         self
     }
 
@@ -82,7 +83,9 @@ impl FlowCanvas {
             viewport: &mut self.viewport,
         };
 
-        for plugin in &mut self.plugins.iter_mut() {
+        self.plugins_registry.plugins.sort_by_key(|p| -p.priority());
+
+        for plugin in &mut self.plugins_registry.plugins.iter_mut() {
             plugin.setup(&mut ctx);
         }
     }
@@ -147,8 +150,12 @@ impl FlowCanvas {
         );
 
         // 否则广播给 plugins
-        for plugin in &mut self.plugins {
-            plugin.on_event(&event, &mut ctx);
+        for plugin in &mut self.plugins_registry.plugins {
+            let result = plugin.on_event(&event, &mut ctx);
+            match result {
+                EventResult::Continue => {}
+                EventResult::Stop => break,
+            }
         }
     }
 
@@ -168,8 +175,12 @@ impl FlowCanvas {
                 &mut notify,
             );
 
-            for plugin in &mut self.plugins {
-                plugin.on_event(&event, &mut ctx);
+            for plugin in &mut self.plugins_registry.plugins {
+                let result = plugin.on_event(&event, &mut ctx);
+                match result {
+                    EventResult::Continue => {}
+                    EventResult::Stop => break,
+                }
             }
         }
     }
@@ -843,24 +854,27 @@ impl Render for FlowCanvas {
 
         let graph = &self.graph;
         let viewport = &self.viewport;
-        let plugin_elements: Vec<_> = self
-            .plugins
-            .iter_mut()
-            .filter_map(|plugin| {
-                let mut ctx = RenderContext::new(graph, viewport, RenderLayer::Overlay);
-                plugin.render(&mut ctx, this_cx)
-            })
-            .collect();
 
-        let interaction_render = self
-            .interaction
-            .handler
-            .as_ref()
-            .map(|i| {
-                let mut ctx = RenderContext::new(graph, viewport, RenderLayer::Overlay);
-                i.render(&mut ctx)
-            })
-            .flatten();
+        let mut layers: Vec<Vec<AnyElement>> =
+            (0..RenderLayer::ALL.len()).map(|_| Vec::new()).collect();
+
+        for plugin in self.plugins_registry.plugins.iter_mut() {
+            let layer = plugin.render_layer();
+
+            let mut ctx = RenderContext::new(graph, viewport, layer);
+
+            if let Some(el) = plugin.render(&mut ctx, this_cx) {
+                layers[layer.index()].push(el);
+            }
+        }
+
+        if let Some(i) = self.interaction.handler.as_ref() {
+            let mut ctx = RenderContext::new(graph, viewport, RenderLayer::Interaction);
+
+            if let Some(el) = i.render(&mut ctx) {
+                layers[RenderLayer::Interaction.index()].push(el);
+            }
+        }
 
         div()
             .size_full()
@@ -883,7 +897,10 @@ impl Render for FlowCanvas {
             .child(self.render_edges())
             .children(self.render_nodes(this_cx))
             .children(self.render_ports(this_cx))
-            .children(plugin_elements)
-            .children(interaction_render)
+            .children(
+                RenderLayer::ALL
+                    .iter()
+                    .map(|layer| div().absolute().children(layers[layer.index()].drain(..))),
+            )
     }
 }
