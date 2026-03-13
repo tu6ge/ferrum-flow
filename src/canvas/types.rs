@@ -1,6 +1,4 @@
-use std::collections::HashMap;
-
-use gpui::{AnyElement, Bounds, MouseMoveEvent, MouseUpEvent, Pixels, Point, px};
+use gpui::{AnyElement, MouseMoveEvent, MouseUpEvent, Pixels, Point};
 
 use crate::{
     NodeId, PortId,
@@ -11,7 +9,6 @@ use crate::{
 pub enum DragState {
     None,
     NodeDrag(NodeDrag),
-    BoxMove(BoxMoveDrag),
     Pan(Panning),
     PendingNode(PendingNode),
     EdgeDrag(Connecting),
@@ -88,21 +85,6 @@ pub struct NodeDrag {
 //         todo!()
 //     }
 // }
-
-#[deprecated]
-#[derive(Debug, Clone)]
-pub struct BoxMoveDrag {
-    pub(super) start_mouse: Point<Pixels>,
-    pub(super) start_bounds: Bounds<Pixels>,
-    pub(super) nodes: Vec<(NodeId, Point<Pixels>)>,
-}
-
-#[derive(Debug, Clone)]
-pub struct BoxSelection {
-    pub(super) start_mouse: Point<Pixels>,
-    pub(super) bounds: Bounds<Pixels>,
-    pub(super) nodes: HashMap<NodeId, Point<Pixels>>,
-}
 
 #[derive(Debug, Clone)]
 pub struct PendingNode {

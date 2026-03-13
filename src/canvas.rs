@@ -17,7 +17,7 @@ use edge::EdgeGeometry;
 use types::*;
 use utils::*;
 
-pub use types::{BoxSelection, InteractionHandler, InteractionResult, InteractionState};
+pub use types::{InteractionHandler, InteractionResult, InteractionState};
 
 pub const DEFAULT_NODE_WIDTH: Pixels = px(120.0);
 pub const DEFAULT_NODE_HEIGHT: Pixels = px(60.0);
@@ -35,8 +35,6 @@ pub struct FlowCanvas {
 
     pub(crate) focus_handle: FocusHandle,
 
-    pub(crate) box_selection: Option<BoxSelection>,
-
     pub(crate) interaction: InteractionState,
 
     pub event_queue: Vec<FlowEvent>,
@@ -52,7 +50,6 @@ impl Clone for FlowCanvas {
             registry: self.registry.clone(),
             plugins: vec![],
             focus_handle: self.focus_handle.clone(),
-            box_selection: self.box_selection.clone(),
             interaction: InteractionState::new(),
             event_queue: vec![],
         }
@@ -69,7 +66,6 @@ impl FlowCanvas {
             registry: RendererRegistry::new(),
             plugins: vec![],
             focus_handle,
-            box_selection: None,
             interaction: InteractionState::new(),
             event_queue: vec![],
         }
@@ -698,108 +694,6 @@ impl FlowCanvas {
         self.graph.node_order_mut().push(node_id);
     }
 
-    fn render_selected_box(
-        &self,
-        window: &mut Window,
-        this_cx: &mut Context<Self>,
-    ) -> impl IntoElement {
-        let Some(BoxSelection { bounds, .. }) = &self.box_selection else {
-            return div();
-        };
-        let this_entity = this_cx.entity();
-        div()
-            .absolute()
-            .left(bounds.origin.x)
-            .top(bounds.origin.y)
-            .w(bounds.size.width)
-            .h(bounds.size.height)
-            .border(px(1.0))
-            .border_color(rgb(0x78A0FF))
-            .bg(rgba(0x78A0FF4c))
-            .on_mouse_down(
-                MouseButton::Left,
-                window.listener_for(&this_entity, Self::box_on_mouse_down),
-            )
-            .on_mouse_move(window.listener_for(&this_entity, Self::box_on_mouse_move))
-            .on_mouse_up(
-                MouseButton::Left,
-                window.listener_for(&this_entity, Self::box_on_mouse_up),
-            )
-    }
-
-    fn box_on_mouse_down(&mut self, ev: &MouseDownEvent, _: &mut Window, cx: &mut Context<Self>) {
-        cx.stop_propagation();
-        if let Some(BoxSelection { bounds, nodes, .. }) = &self.box_selection {
-            self.drag_state = DragState::BoxMove(BoxMoveDrag {
-                start_mouse: ev.position,
-                start_bounds: *bounds,
-                nodes: nodes.iter().map(|(k, v)| (*k, *v)).collect(),
-            });
-
-            cx.notify();
-        }
-    }
-
-    fn box_on_mouse_move(&mut self, ev: &MouseMoveEvent, _: &mut Window, cx: &mut Context<Self>) {
-        cx.stop_propagation();
-        let DragState::BoxMove(BoxMoveDrag {
-            //start_bounds,
-            nodes,
-            start_mouse,
-            start_bounds,
-            ..
-        }) = &mut self.drag_state
-        else {
-            return;
-        };
-        let Some(BoxSelection {
-            bounds,
-            nodes: box_nodes,
-            ..
-        }) = &mut self.box_selection
-        else {
-            return;
-        };
-        {
-            let dx = (ev.position.x - start_mouse.x) / self.viewport.zoom;
-            let dy = (ev.position.y - start_mouse.y) / self.viewport.zoom;
-            for (id, point) in nodes.iter() {
-                if let Some(node) = self.graph.get_node_mut(*id) {
-                    node.x = point.x + dx;
-                    node.y = point.y + dy;
-                }
-                if let Some(node) = box_nodes.get_mut(id) {
-                    node.x = point.x + dx;
-                    node.y = point.y + dy;
-                }
-            }
-            //let box_bounds = Bounds::new(*box_start_mouse, bounds.size);
-
-            let dx = ev.position.x - start_mouse.x;
-            let dy = ev.position.y - start_mouse.y;
-            bounds.origin.x = start_bounds.origin.x + dx;
-            bounds.origin.y = start_bounds.origin.y + dy;
-
-            cx.notify();
-        }
-    }
-
-    fn box_on_mouse_up(&mut self, ev: &MouseUpEvent, _: &mut Window, cx: &mut Context<Self>) {
-        cx.stop_propagation();
-        if let DragState::BoxMove(_) = self.drag_state {
-            self.drag_state = DragState::None;
-            let Some(BoxSelection {
-                start_mouse: box_start_mouse,
-                ..
-            }) = &mut self.box_selection
-            else {
-                return;
-            };
-            *box_start_mouse = ev.position;
-            cx.notify();
-        }
-    }
-
     fn on_key_down(&mut self, ev: &KeyDownEvent, _: &mut Window, cx: &mut Context<Self>) {
         if ev.keystroke.key == "delete" || ev.keystroke.key == "backspace" {
             if self.graph.remove_selected_edge() {
@@ -893,7 +787,6 @@ impl FlowCanvas {
         }
 
         self.drag_state = DragState::None;
-        self.box_selection = None;
 
         let zoom_delta = if delta > 0.0 { 0.9 } else { 1.1 };
 
@@ -990,7 +883,6 @@ impl Render for FlowCanvas {
             .child(self.render_edges())
             .children(self.render_nodes(this_cx))
             .children(self.render_ports(this_cx))
-            .child(self.render_selected_box(window, this_cx))
             .children(plugin_elements)
             .children(interaction_render)
     }

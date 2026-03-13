@@ -69,7 +69,6 @@ enum SelectionState {
     },
     Selected {
         bounds: Bounds<Pixels>,
-        nodes: HashMap<NodeId, Point<Pixels>>,
     },
     Moving {
         start_mouse: Point<Pixels>,
@@ -174,10 +173,7 @@ impl InteractionHandler for SelectionInteraction {
 
                 let bounds = compute_nodes_bounds(&selected, ctx.graph);
 
-                self.state = SelectionState::Selected {
-                    bounds,
-                    nodes: selected,
-                };
+                self.state = SelectionState::Selected { bounds };
 
                 ctx.notify();
 
@@ -192,10 +188,7 @@ impl InteractionHandler for SelectionInteraction {
                     ctx.graph.add_selected_node(*id, true);
                 }
 
-                self.state = SelectionState::Selected {
-                    bounds,
-                    nodes: nodes.clone(),
-                };
+                self.state = SelectionState::Selected { bounds };
 
                 ctx.notify();
             }
