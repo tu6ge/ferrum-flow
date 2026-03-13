@@ -7,8 +7,6 @@ use crate::{
     plugin::{PluginContext, RenderContext},
 };
 
-const DRAG_THRESHOLD: Pixels = px(2.0);
-
 #[derive(Debug, Clone)]
 pub enum DragState {
     None,

@@ -6,7 +6,7 @@ use gpui::{
 };
 
 use crate::{
-    Node, NodeId,
+    Graph, Node, NodeId,
     canvas::{DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH, InteractionHandler, InteractionResult},
     plugin::{EventResult, FlowEvent, InputEvent, Plugin, PluginContext, RenderContext},
 };
@@ -25,7 +25,7 @@ impl Plugin for SelectionPlugin {
     fn name(&self) -> &'static str {
         "selection"
     }
-    fn setup(&mut self, ctx: &mut crate::plugin::InitPluginContext) {}
+    fn setup(&mut self, _ctx: &mut crate::plugin::InitPluginContext) {}
     fn on_event(
         &mut self,
         event: &FlowEvent,
@@ -33,20 +33,25 @@ impl Plugin for SelectionPlugin {
     ) -> EventResult {
         if let FlowEvent::Input(InputEvent::MouseDown(ev)) = event {
             if !ev.modifiers.shift {
-                ctx.start_interaction(SelectionInteraction::new(ev.position));
+                let start = ctx.viewport.screen_to_world(ev.position);
+                if let Some(selection) = ctx.graph.selection_bounds() {
+                    if selection.contains(&start) {
+                        let nodes = ctx.graph.selected_nodes_with_positions();
+
+                        ctx.start_interaction(SelectionInteraction::start_move(
+                            start, selection, nodes,
+                        ));
+
+                        return EventResult::Stop;
+                    }
+                }
+
+                ctx.start_interaction(SelectionInteraction::new(start));
                 return EventResult::Stop;
             }
         }
 
         EventResult::Continue
-    }
-
-    fn render(
-        &mut self,
-        _render_ctx: &mut crate::plugin::RenderContext,
-        _ctx: &mut gpui::Context<crate::FlowCanvas>,
-    ) -> Option<gpui::AnyElement> {
-        None
     }
 }
 
@@ -66,6 +71,12 @@ enum SelectionState {
         bounds: Bounds<Pixels>,
         nodes: HashMap<NodeId, Point<Pixels>>,
     },
+    Moving {
+        start_mouse: Point<Pixels>,
+        start_bounds: Bounds<Pixels>,
+        bounds: Bounds<Pixels>,
+        nodes: HashMap<NodeId, Point<Pixels>>,
+    },
 }
 
 impl SelectionInteraction {
@@ -74,18 +85,33 @@ impl SelectionInteraction {
             state: SelectionState::Pending { start },
         }
     }
+    pub fn start_move(
+        mouse: Point<Pixels>,
+        bounds: Bounds<Pixels>,
+        nodes: HashMap<NodeId, Point<Pixels>>,
+    ) -> Self {
+        Self {
+            state: SelectionState::Moving {
+                start_mouse: mouse,
+                start_bounds: bounds.clone(),
+                bounds: bounds,
+                nodes,
+            },
+        }
+    }
 }
 
 impl InteractionHandler for SelectionInteraction {
     fn on_mouse_move(&mut self, ev: &MouseMoveEvent, ctx: &mut PluginContext) -> InteractionResult {
+        let mouse_world = ctx.viewport.screen_to_world(ev.position);
         match &mut self.state {
             SelectionState::Pending { start } => {
-                let delta = ev.position - *start;
+                let delta = mouse_world - *start;
 
                 if delta.x.abs() > DRAG_THRESHOLD && delta.y.abs() > DRAG_THRESHOLD {
                     self.state = SelectionState::Selecting {
                         start: *start,
-                        end: ev.position,
+                        end: mouse_world,
                     };
 
                     ctx.notify();
@@ -93,11 +119,30 @@ impl InteractionHandler for SelectionInteraction {
             }
 
             SelectionState::Selecting { end, .. } => {
-                *end = ev.position;
+                *end = mouse_world;
                 ctx.notify();
             }
 
             SelectionState::Selected { .. } => {}
+
+            SelectionState::Moving {
+                start_mouse,
+                start_bounds,
+                bounds,
+                nodes,
+            } => {
+                let delta = mouse_world - *start_mouse;
+
+                for (id, start_pos) in nodes.iter() {
+                    if let Some(node) = ctx.graph.get_node_mut(*id) {
+                        node.x = start_pos.x + delta.x;
+                        node.y = start_pos.y + delta.y;
+                    }
+                }
+                *bounds = Bounds::new(start_bounds.origin + delta, start_bounds.size);
+
+                ctx.notify();
+            }
         }
 
         InteractionResult::Continue
@@ -116,7 +161,7 @@ impl InteractionHandler for SelectionInteraction {
                 ctx.graph.clear_selected_node();
 
                 for node in ctx.graph.nodes().values() {
-                    let bounds = node_screen_bounds(node, ctx);
+                    let bounds = node_world_bounds(node);
 
                     if rect.intersects(&bounds) {
                         selected.insert(node.id, node.point());
@@ -127,8 +172,10 @@ impl InteractionHandler for SelectionInteraction {
                     ctx.graph.add_selected_node(*id, true);
                 }
 
+                let bounds = compute_nodes_bounds(&selected, ctx.graph);
+
                 self.state = SelectionState::Selected {
-                    bounds: rect,
+                    bounds,
                     nodes: selected,
                 };
 
@@ -138,19 +185,57 @@ impl InteractionHandler for SelectionInteraction {
             }
 
             SelectionState::Selected { .. } => {}
+            SelectionState::Moving { bounds, nodes, .. } => {
+                let bounds = *bounds;
+
+                for (id, _) in nodes.iter() {
+                    ctx.graph.add_selected_node(*id, true);
+                }
+
+                self.state = SelectionState::Selected {
+                    bounds,
+                    nodes: nodes.clone(),
+                };
+
+                ctx.notify();
+            }
         }
 
         InteractionResult::Continue
     }
-    fn render(&self, _ctx: &mut RenderContext) -> Option<AnyElement> {
+    fn render(&self, ctx: &mut RenderContext) -> Option<AnyElement> {
         match &self.state {
             SelectionState::Selecting { start, end } => {
                 let rect = normalize_rect(*start, *end);
 
-                Some(render_rect(rect))
+                let top_left = ctx.viewport.world_to_screen(rect.origin);
+
+                let size = Size::new(
+                    rect.size.width * ctx.viewport.zoom,
+                    rect.size.height * ctx.viewport.zoom,
+                );
+
+                Some(render_rect(Bounds::new(top_left, size)))
             }
 
-            SelectionState::Selected { bounds, .. } => Some(render_rect(*bounds)),
+            SelectionState::Selected { bounds, .. } => {
+                let top_left = ctx.viewport.world_to_screen(bounds.origin);
+
+                let size = Size::new(
+                    bounds.size.width * ctx.viewport.zoom,
+                    bounds.size.height * ctx.viewport.zoom,
+                );
+                Some(render_rect(Bounds::new(top_left, size)))
+            }
+            SelectionState::Moving { bounds, .. } => {
+                let top_left = ctx.viewport.world_to_screen(bounds.origin);
+
+                let size = Size::new(
+                    bounds.size.width * ctx.viewport.zoom,
+                    bounds.size.height * ctx.viewport.zoom,
+                );
+                Some(render_rect(Bounds::new(top_left, size)))
+            }
 
             _ => None,
         }
@@ -180,11 +265,31 @@ fn render_rect(bounds: Bounds<Pixels>) -> AnyElement {
         .into_any()
 }
 
-fn node_screen_bounds(node: &Node, ctx: &PluginContext) -> Bounds<Pixels> {
-    let pos = ctx.viewport.screen_to_world(Point::new(node.x, node.y));
+fn node_world_bounds(node: &Node) -> Bounds<Pixels> {
+    Bounds::new(
+        Point::new(node.x, node.y),
+        Size::new(DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT),
+    )
+}
 
-    let w = DEFAULT_NODE_WIDTH * ctx.viewport.zoom;
-    let h = DEFAULT_NODE_HEIGHT * ctx.viewport.zoom;
+fn compute_nodes_bounds(nodes: &HashMap<NodeId, Point<Pixels>>, graph: &Graph) -> Bounds<Pixels> {
+    let mut min_x = f32::MAX;
+    let mut min_y = f32::MAX;
+    let mut max_x = f32::MIN;
+    let mut max_y = f32::MIN;
 
-    Bounds::new(pos, Size::new(w, h))
+    for id in nodes.keys() {
+        let node = &graph.nodes()[id];
+
+        min_x = min_x.min(node.x.into());
+        min_y = min_y.min(node.y.into());
+
+        max_x = max_x.max((node.x + DEFAULT_NODE_WIDTH).into());
+        max_y = max_y.max((node.y + DEFAULT_NODE_HEIGHT).into());
+    }
+
+    Bounds::new(
+        Point::new(px(min_x), px(min_y)),
+        Size::new(px(max_x - min_x), px(max_y - min_y)),
+    )
 }

@@ -1,5 +1,8 @@
 use std::collections::{HashMap, HashSet};
 
+use gpui::{Bounds, Pixels, Point, Size, px};
+
+use crate::canvas::{DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH};
 use crate::edge::{Edge, EdgeId};
 use crate::node::{Node, NodeId, Port, PortId};
 
@@ -158,5 +161,45 @@ impl Graph {
         }
         self.selected_edge.clear();
         return true;
+    }
+
+    pub fn selection_bounds(&self) -> Option<Bounds<Pixels>> {
+        let mut min_x = f32::MAX;
+        let mut min_y = f32::MAX;
+        let mut max_x = f32::MIN;
+        let mut max_y = f32::MIN;
+
+        let mut found = false;
+
+        for id in &self.selected_node {
+            let node = &self.nodes[id];
+
+            min_x = min_x.min(node.x.into());
+            min_y = min_y.min(node.y.into());
+
+            max_x = max_x.max((node.x + DEFAULT_NODE_WIDTH).into());
+            max_y = max_y.max((node.y + DEFAULT_NODE_HEIGHT).into());
+
+            found = true;
+        }
+
+        if !found {
+            return None;
+        }
+
+        Some(Bounds::new(
+            Point::new(px(min_x), px(min_y)),
+            Size::new(px(max_x - min_x), px(max_y - min_y)),
+        ))
+    }
+
+    pub fn selected_nodes_with_positions(&self) -> HashMap<NodeId, Point<Pixels>> {
+        self.selected_node
+            .iter()
+            .map(|id| {
+                let n = &self.nodes[id];
+                (*id, n.point())
+            })
+            .collect()
     }
 }
