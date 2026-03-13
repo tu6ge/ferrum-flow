@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use gpui::{prelude::FluentBuilder, *};
 
 use crate::{
@@ -700,67 +698,6 @@ impl FlowCanvas {
         self.graph.node_order_mut().push(node_id);
     }
 
-    fn selection_bounds_mouse(&self) -> Option<(Bounds<Pixels>, Point<Pixels>)> {
-        match self.drag_state {
-            DragState::BoxSelect(BoxSelectDrag { start, end, .. }) => {
-                let size = Size::new(end.x - start.x, end.y - start.y);
-                Some((Bounds::new(start, size), start))
-            }
-            _ => None,
-        }
-    }
-
-    fn finalize_selection(&mut self) {
-        let rect = self.selection_bounds_mouse();
-
-        let Some((rect, mouse)) = rect else {
-            return;
-        };
-
-        self.graph.clear_selected_node();
-
-        if rect.size.width < px(4.0) || rect.size.height < px(4.0) {
-            self.drag_state = DragState::None;
-            return;
-        }
-
-        let mut selected_ids = HashMap::new();
-
-        for node in self.graph.nodes().values() {
-            let pos = self.node_screen_bounds(node);
-
-            if rect.intersects(&pos) {
-                selected_ids.insert(node.id, node.point());
-            }
-        }
-
-        for (id, _) in selected_ids.iter() {
-            self.graph.add_selected_node(*id, true);
-        }
-
-        self.box_selection = Some(BoxSelection {
-            start_mouse: mouse,
-            bounds: rect,
-            nodes: selected_ids,
-        });
-        self.drag_state = DragState::None;
-    }
-
-    fn render_draging_select_box(&self) -> impl IntoElement {
-        let DragState::BoxSelect(BoxSelectDrag { start, end, .. }) = &self.drag_state else {
-            return div();
-        };
-        div()
-            .absolute()
-            .left(start.x)
-            .top(start.y)
-            .w(end.x - start.x)
-            .h(end.y - start.y)
-            .border(px(1.0))
-            .border_color(rgb(0x78A0FF))
-            .bg(rgba(0x78A0FF4c))
-    }
-
     fn render_selected_box(
         &self,
         window: &mut Window,
@@ -879,11 +816,8 @@ impl FlowCanvas {
         self.process_event_queue(cx);
         let shift = ev.modifiers.shift;
 
-        let mut selected_edge = false;
-
         if let Some(id) = self.hit_test_get_edge(ev.position) {
             self.graph.add_selected_edge(id, shift);
-            selected_edge = true;
         } else {
             if !shift {
                 self.graph.clear_selected_edge();
@@ -905,13 +839,6 @@ impl FlowCanvas {
             });
         }
 
-        // if !shift && !selected_edge {
-        //     self.drag_state = DragState::PendingBoxSelect(PendingBoxSelect { start: ev.position });
-        //     self.box_selection = None;
-        // }
-        if shift && let DragState::BoxSelect(_) = self.drag_state {
-            self.drag_state = DragState::None;
-        }
         cx.notify();
     }
 
@@ -934,19 +861,6 @@ impl FlowCanvas {
                 self.viewport.offset.y = start_offset.y + dy;
                 cx.notify();
             }
-            DragState::PendingBoxSelect(pending) => {
-                let delta = ev.position - pending.start;
-                if delta.x > DRAG_THRESHOLD || delta.y > DRAG_THRESHOLD {
-                    self.drag_state = DragState::BoxSelect(BoxSelectDrag {
-                        start: pending.start,
-                        end: ev.position,
-                    })
-                }
-            }
-            DragState::BoxSelect(selection_box) => {
-                selection_box.end = ev.position;
-                cx.notify();
-            }
             _ => (),
         }
     }
@@ -958,13 +872,8 @@ impl FlowCanvas {
             DragState::Pan(_)
             | DragState::NodeDrag(_)
             | DragState::PendingNode(_)
-            | DragState::EdgeDrag(_)
-            | DragState::PendingBoxSelect(_) => {
+            | DragState::EdgeDrag(_) => {
                 self.drag_state = DragState::None;
-                cx.notify();
-            }
-            DragState::BoxSelect(_) => {
-                self.finalize_selection();
                 cx.notify();
             }
             _ => (),
@@ -1081,7 +990,6 @@ impl Render for FlowCanvas {
             .child(self.render_edges())
             .children(self.render_nodes(this_cx))
             .children(self.render_ports(this_cx))
-            .child(self.render_draging_select_box())
             .child(self.render_selected_box(window, this_cx))
             .children(plugin_elements)
             .children(interaction_render)

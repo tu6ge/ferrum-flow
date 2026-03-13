@@ -13,8 +13,6 @@ const DRAG_THRESHOLD: Pixels = px(2.0);
 pub enum DragState {
     None,
     NodeDrag(NodeDrag),
-    PendingBoxSelect(PendingBoxSelect),
-    BoxSelect(BoxSelectDrag),
     BoxMove(BoxMoveDrag),
     Pan(Panning),
     PendingNode(PendingNode),
@@ -144,17 +142,4 @@ pub struct Connecting {
 pub struct Panning {
     pub(super) start_mouse: Point<Pixels>,
     pub(super) start_offset: Point<Pixels>,
-}
-
-#[deprecated]
-#[derive(Debug, Clone)]
-pub struct PendingBoxSelect {
-    pub(super) start: Point<Pixels>,
-}
-
-#[deprecated]
-#[derive(Debug, Clone)]
-pub struct BoxSelectDrag {
-    pub(super) start: Point<Pixels>,
-    pub(super) end: Point<Pixels>,
 }
