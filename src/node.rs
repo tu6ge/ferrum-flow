@@ -1,8 +1,10 @@
 use std::fmt::Display;
 
-use gpui::{Pixels, Point};
+use gpui::{Bounds, Pixels, Point, Size};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+
+use crate::canvas::{DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct NodeId(pub u64);
@@ -46,6 +48,14 @@ impl Node {
     pub fn point(&self) -> Point<Pixels> {
         Point::new(self.x, self.y)
     }
+
+    pub fn bounds(&self) -> Bounds<Pixels> {
+        Bounds::new(
+            self.point(),
+            Size::new(DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT),
+        )
+    }
+
     pub fn output(mut self, id: PortId) -> Self {
         self.outputs.push(id);
         self

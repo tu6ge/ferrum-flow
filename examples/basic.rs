@@ -18,7 +18,9 @@ fn main() {
 
         cx.open_window(WindowOptions::default(), |_, cx| {
             cx.new(|fc| {
-                let mut flow = FlowCanvas::new(graph, fc).plugin(SelectionPlugin::new());
+                let mut flow = FlowCanvas::new(graph, fc)
+                    .plugin(SelectionPlugin::new())
+                    .plugin(NodeInteractionPlugin::new());
                 flow.init_plugins();
                 flow
             })

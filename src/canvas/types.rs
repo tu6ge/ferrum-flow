@@ -8,9 +8,7 @@ use crate::{
 #[derive(Debug, Clone)]
 pub enum DragState {
     None,
-    NodeDrag(NodeDrag),
     Pan(Panning),
-    PendingNode(PendingNode),
     EdgeDrag(Connecting),
 }
 
@@ -36,17 +34,6 @@ impl InteractionState {
     }
 }
 
-// if let Some(handler) = &mut self.interaction.handler {
-
-//     handler.on_mouse_move(...)
-
-// } else {
-
-//     for plugin in plugins {
-//         plugin.on_event(...)
-//     }
-
-// }
 pub trait InteractionHandler {
     fn on_mouse_move(
         &mut self,
@@ -67,49 +54,11 @@ pub enum InteractionResult {
     Replace(Box<dyn InteractionHandler>),
 }
 
-#[derive(Debug, Clone)]
-pub struct NodeDrag {
-    pub(super) start_mouse: Point<Pixels>,
-    pub(super) start_positions: Vec<(NodeId, Point<Pixels>)>,
+impl InteractionResult {
+    pub fn replace(new_handler: impl InteractionHandler + 'static) -> Self {
+        Self::Replace(Box::new(new_handler))
+    }
 }
-
-// impl InteractionHandler for NodeDrag {
-//     fn on_mouse_move(
-//         &mut self,
-//         event: &MouseMoveEvent,
-//         ctx: &mut DragContext,
-//     ) -> InteractionResult {
-//         todo!()
-//     }
-//     fn on_mouse_up(&mut self, event: &MouseUpEvent, ctx: &mut DragContext) -> InteractionResult {
-//         todo!()
-//     }
-// }
-
-#[derive(Debug, Clone)]
-pub struct PendingNode {
-    pub(super) node_id: NodeId,
-    pub(super) start_mouse: Point<Pixels>,
-    pub(super) shift: bool,
-}
-
-// impl InteractionHandler for PendingNode {
-//     fn on_mouse_move(&mut self, ev: &MouseMoveEvent, ctx: &mut DragContext) -> InteractionResult {
-//         let node = &ctx.graph.nodes()[&self.node_id];
-//         let delta = ev.position - self.start_mouse;
-//         if delta.x > DRAG_THRESHOLD || delta.y > DRAG_THRESHOLD {
-//             InteractionResult::Replace(Box::new(NodeDrag {
-//                 start_mouse: ev.position,
-//                 start_positions: vec![(self.node_id.clone(), node.point())],
-//             }))
-//         } else {
-//             InteractionResult::Continue
-//         }
-//     }
-//     fn on_mouse_up(&mut self, event: &MouseUpEvent, ctx: &mut DragContext) -> InteractionResult {
-//         todo!()
-//     }
-// }
 
 #[derive(Debug, Clone)]
 pub struct Connecting {

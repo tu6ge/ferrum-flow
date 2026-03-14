@@ -202,4 +202,17 @@ impl Graph {
             })
             .collect()
     }
+
+    pub fn hit_node(&self, mouse: Point<Pixels>) -> Option<NodeId> {
+        self.nodes
+            .iter()
+            .find(|(_, n)| n.bounds().contains(&mouse))
+            .map(|(id, _)| *id)
+    }
+
+    pub fn bring_node_to_front(&mut self, node_id: NodeId) {
+        self.node_order_mut().retain(|id| *id != node_id);
+
+        self.node_order_mut().push(node_id);
+    }
 }
