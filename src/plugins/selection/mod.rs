@@ -66,11 +66,7 @@ impl Plugin for SelectionPlugin {
     fn render_layer(&self) -> RenderLayer {
         RenderLayer::Selection
     }
-    fn render(
-        &mut self,
-        ctx: &mut RenderContext,
-        _ctx: &mut gpui::Context<crate::FlowCanvas>,
-    ) -> Option<AnyElement> {
+    fn render(&mut self, ctx: &mut RenderContext) -> Option<AnyElement> {
         self.bounds.map(|bounds| {
             let top_left = ctx.viewport.world_to_screen(bounds.origin);
 

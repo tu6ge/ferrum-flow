@@ -1,10 +1,10 @@
 use gpui::{
-    AnyElement, Context, KeyDownEvent, KeyUpEvent, MouseDownEvent, MouseMoveEvent, MouseUpEvent,
-    Pixels, Point, ScrollWheelEvent,
+    AnyElement, KeyDownEvent, KeyUpEvent, MouseDownEvent, MouseMoveEvent, MouseUpEvent, Pixels,
+    Point, ScrollWheelEvent,
 };
 
 use crate::{
-    EdgeId, FlowCanvas, Graph, NodeId, PortId, Viewport,
+    EdgeId, Graph, NodeId, PortId, Viewport,
     canvas::{InteractionHandler, InteractionState},
 };
 
@@ -13,15 +13,11 @@ pub trait Plugin {
 
     fn setup(&mut self, ctx: &mut InitPluginContext);
 
-    fn on_event(&mut self, _event: &FlowEvent, _ctx: &mut PluginContext) -> EventResult {
+    fn on_event(&mut self, _event: &FlowEvent, _context: &mut PluginContext) -> EventResult {
         EventResult::Continue
     }
 
-    fn render(
-        &mut self,
-        _render_ctx: &mut RenderContext,
-        _ctx: &mut Context<FlowCanvas>,
-    ) -> Option<AnyElement> {
+    fn render(&mut self, _context: &mut RenderContext) -> Option<AnyElement> {
         None
     }
 

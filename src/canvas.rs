@@ -863,7 +863,7 @@ impl Render for FlowCanvas {
 
             let mut ctx = RenderContext::new(graph, viewport, layer);
 
-            if let Some(el) = plugin.render(&mut ctx, this_cx) {
+            if let Some(el) = plugin.render(&mut ctx) {
                 layers[layer.index()].push(el);
             }
         }
