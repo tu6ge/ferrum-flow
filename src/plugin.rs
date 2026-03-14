@@ -4,7 +4,7 @@ use gpui::{
 };
 
 use crate::{
-    EdgeId, FlowCanvas, Graph, Node, NodeId, PortId, Viewport,
+    EdgeId, FlowCanvas, Graph, NodeId, PortId, Viewport,
     canvas::{InteractionHandler, InteractionState},
 };
 
@@ -156,15 +156,16 @@ pub enum UiEvent {
     ViewportChanged { zoom: f32, pan: Point<Pixels> },
 }
 
-pub trait Command {
-    fn execute(&mut self, graph: &mut Graph);
-    fn undo(&mut self, graph: &mut Graph);
-}
+// TODO
+// pub trait Command {
+//     fn execute(&mut self, graph: &mut Graph);
+//     fn undo(&mut self, graph: &mut Graph);
+// }
 
-pub struct CommandQueue {
-    undo_stack: Vec<Box<dyn Command>>,
-    redo_stack: Vec<Box<dyn Command>>,
-}
+// pub struct CommandQueue {
+//     undo_stack: Vec<Box<dyn Command>>,
+//     redo_stack: Vec<Box<dyn Command>>,
+// }
 
 pub struct RenderContext<'a> {
     pub graph: &'a Graph,
@@ -214,13 +215,14 @@ impl RenderLayer {
     }
 }
 
-pub struct NodeRenderContext<'a> {
-    pub node: &'a Node,
-    pub selected: bool,
-    pub hovered: bool,
-    pub viewport: &'a Viewport,
-    pub cx: &'a mut Context<'a, FlowCanvas>,
-}
+// TODO
+// pub struct NodeRenderContext<'a> {
+//     pub node: &'a Node,
+//     pub selected: bool,
+//     pub hovered: bool,
+//     pub viewport: &'a Viewport,
+//     pub cx: &'a mut Context<'a, FlowCanvas>,
+// }
 
 pub struct PluginRegistry {
     pub plugins: Vec<Box<dyn Plugin>>,
