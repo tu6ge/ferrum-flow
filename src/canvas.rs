@@ -473,49 +473,6 @@ impl FlowCanvas {
         None
     }
 
-    fn render_grid(&self, win: &mut Window) -> impl IntoElement {
-        let base_grid = 40.0;
-        let zoom = self.viewport.zoom;
-
-        let grid = base_grid * zoom;
-
-        let offset = self.viewport.offset;
-
-        let start_x = f32::from(offset.x) % grid;
-        let start_y = f32::from(offset.y) % grid;
-
-        let mut dots = Vec::new();
-
-        let bounds = win.bounds();
-        let width = f32::from(bounds.size.width);
-        let height = f32::from(bounds.size.height);
-
-        let mut x = start_x;
-
-        while x < width {
-            let mut y = start_y;
-
-            while y < height {
-                dots.push(
-                    div()
-                        .absolute()
-                        .left(px(x))
-                        .top(px(y))
-                        .w(px(2.0))
-                        .h(px(2.0))
-                        .rounded_full()
-                        .bg(rgb(0x9F9FA7)),
-                );
-
-                y += grid;
-            }
-
-            x += grid;
-        }
-
-        div().absolute().size_full().children(dots)
-    }
-
     fn on_key_down(&mut self, ev: &KeyDownEvent, _: &mut Window, cx: &mut Context<Self>) {
         if ev.keystroke.key == "delete" || ev.keystroke.key == "backspace" {
             if self.graph.remove_selected_edge() {
@@ -620,7 +577,7 @@ impl Render for FlowCanvas {
         for plugin in self.plugins_registry.plugins.iter_mut() {
             let layer = plugin.render_layer();
 
-            let mut ctx = RenderContext::new(graph, viewport, layer);
+            let mut ctx = RenderContext::new(graph, viewport, window, layer);
 
             if let Some(el) = plugin.render(&mut ctx) {
                 layers[layer.index()].push(el);
@@ -628,7 +585,7 @@ impl Render for FlowCanvas {
         }
 
         if let Some(i) = self.interaction.handler.as_ref() {
-            let mut ctx = RenderContext::new(graph, viewport, RenderLayer::Interaction);
+            let mut ctx = RenderContext::new(graph, viewport, window, RenderLayer::Interaction);
 
             if let Some(el) = i.render(&mut ctx) {
                 layers[RenderLayer::Interaction.index()].push(el);
@@ -651,7 +608,6 @@ impl Render for FlowCanvas {
                 window.listener_for(&entity, Self::on_mouse_up),
             )
             .on_scroll_wheel(window.listener_for(&entity, Self::on_scroll_wheel))
-            .child(self.render_grid(window))
             .child(self.render_connecting_edge())
             .child(self.render_edges())
             .children(self.render_nodes(this_cx))

@@ -1,6 +1,6 @@
 use gpui::{
     AnyElement, KeyDownEvent, KeyUpEvent, MouseDownEvent, MouseMoveEvent, MouseUpEvent, Pixels,
-    Point, ScrollWheelEvent,
+    Point, ScrollWheelEvent, Window,
 };
 
 use crate::{
@@ -167,14 +167,22 @@ pub struct RenderContext<'a> {
     pub graph: &'a Graph,
     pub viewport: &'a Viewport,
 
+    pub window: &'a Window,
+
     pub layer: RenderLayer,
 }
 
 impl<'a> RenderContext<'a> {
-    pub fn new(graph: &'a Graph, viewport: &'a Viewport, layer: RenderLayer) -> Self {
+    pub fn new(
+        graph: &'a Graph,
+        viewport: &'a Viewport,
+        window: &'a Window,
+        layer: RenderLayer,
+    ) -> Self {
         Self {
             graph,
             viewport,
+            window,
             layer,
         }
     }

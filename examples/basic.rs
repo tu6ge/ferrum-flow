@@ -1,5 +1,5 @@
 use flow_rs::*;
-use gpui::*;
+use gpui::{AppContext as _, Application, WindowOptions};
 
 fn main() {
     Application::new().run(|cx| {
@@ -21,7 +21,8 @@ fn main() {
                 let mut flow = FlowCanvas::new(graph, fc)
                     .plugin(SelectionPlugin::new())
                     .plugin(NodeInteractionPlugin::new())
-                    .plugin(ViewportPlugin::new());
+                    .plugin(ViewportPlugin::new())
+                    .plugin(Background::new());
                 flow.init_plugins();
                 flow
             })
