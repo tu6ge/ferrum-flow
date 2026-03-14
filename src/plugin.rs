@@ -13,14 +13,14 @@ pub trait Plugin {
 
     fn setup(&mut self, ctx: &mut InitPluginContext);
 
-    fn on_event(&mut self, event: &FlowEvent, ctx: &mut PluginContext) -> EventResult {
+    fn on_event(&mut self, _event: &FlowEvent, _ctx: &mut PluginContext) -> EventResult {
         EventResult::Continue
     }
 
     fn render(
         &mut self,
-        render_ctx: &mut RenderContext,
-        ctx: &mut Context<FlowCanvas>,
+        _render_ctx: &mut RenderContext,
+        _ctx: &mut Context<FlowCanvas>,
     ) -> Option<AnyElement> {
         None
     }

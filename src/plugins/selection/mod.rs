@@ -15,11 +15,13 @@ use crate::{
 
 const DRAG_THRESHOLD: Pixels = px(2.0);
 
-pub struct SelectionPlugin {}
+pub struct SelectionPlugin {
+    bounds: Option<Bounds<Pixels>>,
+}
 
 impl SelectionPlugin {
     pub fn new() -> Self {
-        Self {}
+        Self { bounds: None }
     }
 }
 
@@ -36,7 +38,7 @@ impl Plugin for SelectionPlugin {
         if let FlowEvent::Input(InputEvent::MouseDown(ev)) = event {
             if !ev.modifiers.shift {
                 let start = ctx.viewport.screen_to_world(ev.position);
-                if let Some(selection) = ctx.graph.selection_bounds() {
+                if let Some(selection) = self.bounds.take() {
                     if selection.contains(&start) {
                         let nodes = ctx.graph.selected_nodes_with_positions();
 
@@ -51,6 +53,9 @@ impl Plugin for SelectionPlugin {
                 ctx.start_interaction(SelectionInteraction::new(start));
                 return EventResult::Stop;
             }
+        } else if let Some(SelectedEvent { bounds }) = event.as_custom() {
+            self.bounds = Some(*bounds);
+            return EventResult::Stop;
         }
 
         EventResult::Continue
@@ -60,6 +65,21 @@ impl Plugin for SelectionPlugin {
     }
     fn render_layer(&self) -> RenderLayer {
         RenderLayer::Selection
+    }
+    fn render(
+        &mut self,
+        ctx: &mut RenderContext,
+        _ctx: &mut gpui::Context<crate::FlowCanvas>,
+    ) -> Option<AnyElement> {
+        self.bounds.map(|bounds| {
+            let top_left = ctx.viewport.world_to_screen(bounds.origin);
+
+            let size = Size::new(
+                bounds.size.width * ctx.viewport.zoom,
+                bounds.size.height * ctx.viewport.zoom,
+            );
+            render_rect(Bounds::new(top_left, size))
+        })
     }
 }
 
@@ -75,15 +95,15 @@ enum SelectionState {
         start: Point<Pixels>,
         end: Point<Pixels>,
     },
-    Selected {
-        bounds: Bounds<Pixels>,
-    },
     Moving {
         start_mouse: Point<Pixels>,
         start_bounds: Bounds<Pixels>,
         bounds: Bounds<Pixels>,
         nodes: HashMap<NodeId, Point<Pixels>>,
     },
+}
+struct SelectedEvent {
+    bounds: Bounds<Pixels>,
 }
 
 impl SelectionInteraction {
@@ -129,8 +149,6 @@ impl InteractionHandler for SelectionInteraction {
                 *end = mouse_world;
                 ctx.notify();
             }
-
-            SelectionState::Selected { .. } => {}
 
             SelectionState::Moving {
                 start_mouse,
@@ -181,14 +199,12 @@ impl InteractionHandler for SelectionInteraction {
 
                 let bounds = compute_nodes_bounds(&selected, ctx.graph);
 
-                self.state = SelectionState::Selected { bounds };
+                ctx.cancel_interaction();
+                ctx.emit(FlowEvent::custom(SelectedEvent { bounds }));
 
-                ctx.notify();
-
-                return InteractionResult::Continue;
+                return InteractionResult::End;
             }
 
-            SelectionState::Selected { .. } => {}
             SelectionState::Moving { bounds, nodes, .. } => {
                 let bounds = *bounds;
 
@@ -196,13 +212,11 @@ impl InteractionHandler for SelectionInteraction {
                     ctx.graph.add_selected_node(*id, true);
                 }
 
-                self.state = SelectionState::Selected { bounds };
+                ctx.emit(FlowEvent::custom(SelectedEvent { bounds }));
 
-                ctx.notify();
+                return InteractionResult::End;
             }
         }
-
-        InteractionResult::Continue
     }
     fn render(&self, ctx: &mut RenderContext) -> Option<AnyElement> {
         match &self.state {
@@ -219,15 +233,6 @@ impl InteractionHandler for SelectionInteraction {
                 Some(render_rect(Bounds::new(top_left, size)))
             }
 
-            SelectionState::Selected { bounds, .. } => {
-                let top_left = ctx.viewport.world_to_screen(bounds.origin);
-
-                let size = Size::new(
-                    bounds.size.width * ctx.viewport.zoom,
-                    bounds.size.height * ctx.viewport.zoom,
-                );
-                Some(render_rect(Bounds::new(top_left, size)))
-            }
             SelectionState::Moving { bounds, .. } => {
                 let top_left = ctx.viewport.world_to_screen(bounds.origin);
 

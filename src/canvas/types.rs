@@ -56,7 +56,7 @@ pub trait InteractionHandler {
 
     fn on_mouse_up(&mut self, event: &MouseUpEvent, ctx: &mut PluginContext) -> InteractionResult;
 
-    fn render(&self, ctx: &mut RenderContext) -> Option<AnyElement> {
+    fn render(&self, _ctx: &mut RenderContext) -> Option<AnyElement> {
         None
     }
 }
