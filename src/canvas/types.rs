@@ -8,7 +8,6 @@ use crate::{
 #[derive(Debug, Clone)]
 pub enum DragState {
     None,
-    Pan(Panning),
     EdgeDrag(Connecting),
 }
 
@@ -65,10 +64,4 @@ pub struct Connecting {
     pub(super) node_id: NodeId,
     pub(super) port_id: PortId,
     pub(super) mouse: Point<Pixels>,
-}
-
-#[derive(Debug, Clone)]
-pub struct Panning {
-    pub(super) start_mouse: Point<Pixels>,
-    pub(super) start_offset: Point<Pixels>,
 }

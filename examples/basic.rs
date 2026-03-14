@@ -20,7 +20,8 @@ fn main() {
             cx.new(|fc| {
                 let mut flow = FlowCanvas::new(graph, fc)
                     .plugin(SelectionPlugin::new())
-                    .plugin(NodeInteractionPlugin::new());
+                    .plugin(NodeInteractionPlugin::new())
+                    .plugin(ViewportPlugin::new());
                 flow.init_plugins();
                 flow
             })

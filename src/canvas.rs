@@ -540,13 +540,6 @@ impl FlowCanvas {
             }
         }
 
-        if shift {
-            self.drag_state = DragState::Pan(Panning {
-                start_mouse: ev.position,
-                start_offset: self.viewport.offset,
-            });
-        }
-
         cx.notify();
     }
 
@@ -558,17 +551,6 @@ impl FlowCanvas {
                 connect.mouse = ev.position;
                 cx.notify();
             }
-            DragState::Pan(Panning {
-                start_mouse,
-                start_offset,
-            }) => {
-                let dx = ev.position.x - start_mouse.x;
-                let dy = ev.position.y - start_mouse.y;
-
-                self.viewport.offset.x = start_offset.x + dx;
-                self.viewport.offset.y = start_offset.y + dy;
-                cx.notify();
-            }
             _ => (),
         }
     }
@@ -577,7 +559,7 @@ impl FlowCanvas {
         self.handle_event(FlowEvent::Input(InputEvent::MouseUp(ev.clone())), cx);
         self.process_event_queue(cx);
         match &self.drag_state {
-            DragState::Pan(_) | DragState::EdgeDrag(_) => {
+            DragState::EdgeDrag(_) => {
                 self.drag_state = DragState::None;
                 cx.notify();
             }
@@ -588,29 +570,6 @@ impl FlowCanvas {
     fn on_scroll_wheel(&mut self, ev: &ScrollWheelEvent, _: &mut Window, cx: &mut Context<Self>) {
         self.handle_event(FlowEvent::Input(InputEvent::Wheel(ev.clone())), cx);
         self.process_event_queue(cx);
-        let cursor = ev.position;
-
-        let before = self.viewport.screen_to_world(cursor);
-
-        let delta = f32::from(ev.delta.pixel_delta(px(1.0)).y);
-        if delta == 0.0 {
-            return;
-        }
-
-        self.drag_state = DragState::None;
-
-        let zoom_delta = if delta > 0.0 { 0.9 } else { 1.1 };
-
-        self.viewport.zoom *= zoom_delta;
-
-        self.viewport.zoom = self.viewport.zoom.clamp(0.7, 3.0);
-
-        let after = self.viewport.world_to_screen(before);
-
-        self.viewport.offset.x += cursor.x - after.x;
-        self.viewport.offset.y += cursor.y - after.y;
-
-        cx.notify();
     }
 }
 
