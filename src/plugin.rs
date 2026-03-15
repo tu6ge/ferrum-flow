@@ -219,15 +219,6 @@ impl RenderLayer {
     }
 }
 
-// TODO
-// pub struct NodeRenderContext<'a> {
-//     pub node: &'a Node,
-//     pub selected: bool,
-//     pub hovered: bool,
-//     pub viewport: &'a Viewport,
-//     pub cx: &'a mut Context<'a, FlowCanvas>,
-// }
-
 pub struct PluginRegistry {
     pub plugins: Vec<Box<dyn Plugin>>,
 }

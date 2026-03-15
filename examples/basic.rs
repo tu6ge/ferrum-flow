@@ -22,7 +22,8 @@ fn main() {
                     .plugin(SelectionPlugin::new())
                     .plugin(NodeInteractionPlugin::new())
                     .plugin(ViewportPlugin::new())
-                    .plugin(Background::new());
+                    .plugin(Background::new())
+                    .plugin(NodePlugin::new());
                 flow.init_plugins();
                 flow
             })

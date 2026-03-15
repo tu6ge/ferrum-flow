@@ -7,7 +7,7 @@ use gpui::{
 
 use crate::{
     Graph, Node, NodeId,
-    canvas::{DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH, InteractionHandler, InteractionResult},
+    canvas::{InteractionHandler, InteractionResult},
     plugin::{
         EventResult, FlowEvent, InputEvent, Plugin, PluginContext, RenderContext, RenderLayer,
     },
@@ -285,10 +285,7 @@ fn render_rect(bounds: Bounds<Pixels>) -> AnyElement {
 }
 
 fn node_world_bounds(node: &Node) -> Bounds<Pixels> {
-    Bounds::new(
-        Point::new(node.x, node.y),
-        Size::new(DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT),
-    )
+    Bounds::new(Point::new(node.x, node.y), node.size)
 }
 
 fn compute_nodes_bounds(nodes: &HashMap<NodeId, Point<Pixels>>, graph: &Graph) -> Bounds<Pixels> {
@@ -303,8 +300,8 @@ fn compute_nodes_bounds(nodes: &HashMap<NodeId, Point<Pixels>>, graph: &Graph) -
         min_x = min_x.min(node.x.into());
         min_y = min_y.min(node.y.into());
 
-        max_x = max_x.max((node.x + DEFAULT_NODE_WIDTH).into());
-        max_y = max_y.max((node.y + DEFAULT_NODE_HEIGHT).into());
+        max_x = max_x.max((node.x + node.size.width).into());
+        max_y = max_y.max((node.y + node.size.height).into());
     }
 
     Bounds::new(

@@ -2,7 +2,6 @@ use std::collections::{HashMap, HashSet};
 
 use gpui::{Bounds, Pixels, Point, Size, px};
 
-use crate::canvas::{DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH};
 use crate::edge::{Edge, EdgeId};
 use crate::node::{Node, NodeId, Port, PortId};
 
@@ -177,8 +176,8 @@ impl Graph {
             min_x = min_x.min(node.x.into());
             min_y = min_y.min(node.y.into());
 
-            max_x = max_x.max((node.x + DEFAULT_NODE_WIDTH).into());
-            max_y = max_y.max((node.y + DEFAULT_NODE_HEIGHT).into());
+            max_x = max_x.max((node.x + node.size.width).into());
+            max_y = max_y.max((node.y + node.size.height).into());
 
             found = true;
         }

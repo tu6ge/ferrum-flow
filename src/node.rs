@@ -1,10 +1,11 @@
 use std::fmt::Display;
 
-use gpui::{Bounds, Pixels, Point, Size};
+use gpui::{Bounds, Pixels, Point, Size, px};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-use crate::canvas::{DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH};
+pub const DEFAULT_NODE_WIDTH: Pixels = px(120.0);
+pub const DEFAULT_NODE_HEIGHT: Pixels = px(60.0);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct NodeId(pub u64);
@@ -21,6 +22,7 @@ pub struct Node {
     pub node_type: String,
     pub x: Pixels,
     pub y: Pixels,
+    pub size: Size<Pixels>,
 
     pub inputs: Vec<PortId>,
     pub outputs: Vec<PortId>,
@@ -34,6 +36,10 @@ impl Node {
             node_type: String::new(),
             x: x.into(),
             y: y.into(),
+            size: Size {
+                width: DEFAULT_NODE_WIDTH,
+                height: DEFAULT_NODE_HEIGHT,
+            },
             inputs: vec![],
             outputs: vec![],
             data: json!({}),
@@ -50,10 +56,12 @@ impl Node {
     }
 
     pub fn bounds(&self) -> Bounds<Pixels> {
-        Bounds::new(
-            self.point(),
-            Size::new(DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT),
-        )
+        Bounds::new(self.point(), self.size)
+    }
+
+    pub fn set_size(mut self, size: Size<Pixels>) -> Self {
+        self.size = size;
+        self
     }
 
     pub fn output(mut self, id: PortId) -> Self {

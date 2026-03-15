@@ -1,13 +1,12 @@
-use gpui::{prelude::FluentBuilder, *};
+use gpui::*;
 
 use crate::{
-    Edge, EdgeId, Node, NodeRenderContext, NodeRenderer, Port, PortId, PortKind,
+    Edge, EdgeId, Node, Port, PortId, PortKind,
     graph::Graph,
     plugin::{
         EventResult, FlowEvent, InitPluginContext, InputEvent, Plugin, PluginContext,
         PluginRegistry, RenderContext, RenderLayer,
     },
-    renderer::RendererRegistry,
     viewport::Viewport,
 };
 
@@ -20,16 +19,11 @@ use utils::*;
 
 pub use types::{InteractionHandler, InteractionResult, InteractionState};
 
-pub const DEFAULT_NODE_WIDTH: Pixels = px(120.0);
-pub const DEFAULT_NODE_HEIGHT: Pixels = px(60.0);
-
 pub struct FlowCanvas {
     pub graph: Graph,
     drag_state: DragState,
 
     pub(crate) viewport: Viewport,
-
-    pub(crate) registry: RendererRegistry,
 
     pub(crate) plugins_registry: PluginRegistry,
 
@@ -47,7 +41,6 @@ impl Clone for FlowCanvas {
             graph: self.graph.clone(),
             drag_state: self.drag_state.clone(),
             viewport: self.viewport.clone(),
-            registry: self.registry.clone(),
             plugins_registry: PluginRegistry::new(),
             focus_handle: self.focus_handle.clone(),
             interaction: InteractionState::new(),
@@ -63,7 +56,6 @@ impl FlowCanvas {
             graph,
             drag_state: DragState::None,
             viewport: Viewport::new(),
-            registry: RendererRegistry::new(),
             plugins_registry: PluginRegistry::new(),
             focus_handle,
             interaction: InteractionState::new(),
@@ -184,92 +176,6 @@ impl FlowCanvas {
         }
     }
 
-    pub fn register_node<R>(mut self, name: impl Into<String>, renderer: R) -> Self
-    where
-        R: NodeRenderer + 'static,
-    {
-        self.registry.register(name, renderer);
-        self
-    }
-
-    fn render_nodes(&self, _: &mut Context<Self>) -> Vec<impl IntoElement> {
-        let nodes = self.graph.nodes();
-        self.graph
-            .node_order()
-            .iter()
-            .map(|node_id| {
-                let node = nodes[node_id].clone();
-
-                // custom node render
-                if let Some(renderer) = self.registry.get(&node.node_type) {
-                    let world_pos = Point::new(node.x, node.y);
-
-                    let screen = self.viewport.world_to_screen(world_pos);
-
-                    let size = renderer.size(&node);
-
-                    let screen_w = size.width * self.viewport.zoom;
-
-                    let screen_h = size.height * self.viewport.zoom;
-
-                    let mut ctx = NodeRenderContext {
-                        zoom: self.viewport.zoom,
-                        rounded: px(5.0),
-                    };
-
-                    let inner = renderer.render(&node, &mut ctx);
-
-                    let node_id_clone = node_id.clone();
-                    let selected = self
-                        .graph
-                        .selected_node
-                        .iter()
-                        .find(|id| **id == node_id_clone)
-                        .is_some();
-
-                    div()
-                        .absolute()
-                        .left(screen.x)
-                        .top(screen.y)
-                        .w(screen_w)
-                        .h(screen_h)
-                        .rounded(px(6.0))
-                        .border(px(1.5))
-                        .when(selected, |div| div.border_color(rgb(0xFF7800)))
-                        .child(div().absolute().size_full().child(inner))
-                } else {
-                    // default node render
-                    let node_id = node.id;
-                    let screen = self.viewport.world_to_screen(node.point());
-                    let node_x = screen.x;
-                    let node_y = screen.y;
-                    let selected = self
-                        .graph
-                        .selected_node
-                        .iter()
-                        .find(|id| **id == node_id)
-                        .is_some();
-
-                    div()
-                        .absolute()
-                        .left(node_x)
-                        .top(node_y)
-                        .w(DEFAULT_NODE_WIDTH * self.viewport.zoom)
-                        .h(DEFAULT_NODE_HEIGHT * self.viewport.zoom)
-                        .bg(white())
-                        .rounded(px(6.0))
-                        .border(px(1.5))
-                        .border_color(rgb(if selected { 0xFF7800 } else { 0x1A192B }))
-                        .child(
-                            div()
-                                .child(format!("Node {}", node_id))
-                                .text_color(rgb(0x1A192B)),
-                        )
-                }
-            })
-            .collect()
-    }
-
     fn render_ports(&self, this_cx: &mut Context<Self>) -> Vec<impl IntoElement> {
         self.graph
             .ports
@@ -344,15 +250,7 @@ impl FlowCanvas {
         }
     }
     fn port_offset(&self, node: &Node, port: &Port) -> Point<Pixels> {
-        let node_size = if node.node_type.is_empty() {
-            Size::new(DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT)
-        } else {
-            if let Some(render) = self.registry.get(&node.node_type) {
-                render.size(node)
-            } else {
-                Size::new(DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT)
-            }
-        };
+        let node_size = node.size;
 
         match port.kind {
             PortKind::Input => Point::new(px(0.0), node_size.height / 2.0),
@@ -610,7 +508,7 @@ impl Render for FlowCanvas {
             .on_scroll_wheel(window.listener_for(&entity, Self::on_scroll_wheel))
             .child(self.render_connecting_edge())
             .child(self.render_edges())
-            .children(self.render_nodes(this_cx))
+            //.children(self.render_nodes(this_cx))
             .children(self.render_ports(this_cx))
             .children(
                 RenderLayer::ALL
