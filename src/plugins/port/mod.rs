@@ -31,17 +31,21 @@ impl Plugin for PortPlugin {
             .graph
             .ports
             .iter()
-            .map(|(_, Port { id, .. })| {
-                let position = port_screen_position(*id, &ctx);
+            .filter_map(|(_, Port { id, .. })| {
+                let Some(position) = port_screen_position(*id, &ctx) else {
+                    return None;
+                };
 
-                div()
-                    .absolute()
-                    .left(position.x - px(6.0 * ctx.viewport.zoom))
-                    .top(position.y - px(6.0 * ctx.viewport.zoom))
-                    .w(px(12.0 * ctx.viewport.zoom))
-                    .h(px(12.0 * ctx.viewport.zoom))
-                    .rounded_full()
-                    .bg(rgb(0x1A192B))
+                Some(
+                    div()
+                        .absolute()
+                        .left(position.x - px(6.0 * ctx.viewport.zoom))
+                        .top(position.y - px(6.0 * ctx.viewport.zoom))
+                        .w(px(12.0 * ctx.viewport.zoom))
+                        .h(px(12.0 * ctx.viewport.zoom))
+                        .rounded_full()
+                        .bg(rgb(0x1A192B)),
+                )
             })
             .collect();
 

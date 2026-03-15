@@ -95,8 +95,12 @@ fn edge_geometry(edge: &Edge, ctx: &PluginContext) -> Option<EdgeGeometry> {
         ..
     } = edge;
 
-    let start = port_screen_position(*source_port, &ctx);
-    let end = port_screen_position(*target_port, &ctx);
+    let Some(start) = port_screen_position(*source_port, &ctx) else {
+        return None;
+    };
+    let Some(end) = port_screen_position(*target_port, &ctx) else {
+        return None;
+    };
 
     Some(EdgeGeometry {
         start,
@@ -113,8 +117,12 @@ fn edge_geometry2(edge: &Edge, ctx: &RenderContext) -> Option<EdgeGeometry> {
         ..
     } = edge;
 
-    let start = port_screen_position2(*source_port, &ctx);
-    let end = port_screen_position2(*target_port, &ctx);
+    let Some(start) = port_screen_position2(*source_port, &ctx) else {
+        return None;
+    };
+    let Some(end) = port_screen_position2(*target_port, &ctx) else {
+        return None;
+    };
 
     Some(EdgeGeometry {
         start,
@@ -124,25 +132,29 @@ fn edge_geometry2(edge: &Edge, ctx: &RenderContext) -> Option<EdgeGeometry> {
     })
 }
 
-fn port_screen_position(port_id: PortId, ctx: &PluginContext) -> Point<Pixels> {
+fn port_screen_position(port_id: PortId, ctx: &PluginContext) -> Option<Point<Pixels>> {
     let port = &ctx.graph.ports[&port_id];
-    let node = &ctx.graph.nodes()[&port.node_id];
+    let Some(node) = &ctx.graph.nodes().get(&port.node_id) else {
+        return None;
+    };
 
     let node_pos = node.point();
 
     let offset = port_offset(node, port);
 
-    ctx.viewport.world_to_screen(node_pos + offset)
+    Some(ctx.viewport.world_to_screen(node_pos + offset))
 }
-fn port_screen_position2(port_id: PortId, ctx: &RenderContext) -> Point<Pixels> {
+fn port_screen_position2(port_id: PortId, ctx: &RenderContext) -> Option<Point<Pixels>> {
     let port = &ctx.graph.ports[&port_id];
-    let node = &ctx.graph.nodes()[&port.node_id];
+    let Some(node) = &ctx.graph.nodes().get(&port.node_id) else {
+        return None;
+    };
 
     let node_pos = node.point();
 
     let offset = port_offset(node, port);
 
-    ctx.viewport.world_to_screen(node_pos + offset)
+    Some(ctx.viewport.world_to_screen(node_pos + offset))
 }
 
 pub fn port_offset(node: &Node, port: &Port) -> Point<Pixels> {

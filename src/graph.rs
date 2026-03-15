@@ -95,6 +95,8 @@ impl Graph {
             if let Some((&edge_id, _)) = edge2 {
                 self.edges.remove(&edge_id);
             }
+
+            self.ports.remove(port_id);
         }
     }
 

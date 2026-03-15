@@ -31,7 +31,10 @@ impl Plugin for PortInteractionPlugin {
                 .graph
                 .ports
                 .iter()
-                .find(|(id, _)| port_screen_bounds(**id, ctx).contains(&mouse_world))
+                .find(|(id, _)| match port_screen_bounds(**id, ctx) {
+                    Some(b) => b.contains(&mouse_world),
+                    None => false,
+                })
                 .map(|(_, p)| (p.node_id, p.id))
             {
                 ctx.start_interaction(PortConnecting {
@@ -88,7 +91,10 @@ impl InteractionHandler for PortConnecting {
             .graph
             .ports
             .iter()
-            .find(|(id, _)| port_screen_bounds(**id, ctx).contains(&mouse_world))
+            .find(|(id, _)| match port_screen_bounds(**id, ctx) {
+                Some(b) => b.contains(&mouse_world),
+                None => false,
+            })
             .map(|(_, p)| (p.node_id, p.id))
         {
             if node_id == self.node_id {
@@ -121,7 +127,9 @@ impl InteractionHandler for PortConnecting {
         }
 
         let mouse: Point<Pixels> = self.mouse;
-        let start = port_screen_position(self.port_id, &ctx);
+        let Some(start) = port_screen_position(self.port_id, &ctx) else {
+            return None;
+        };
         Some(
             canvas(
                 |_, _, _| {},

@@ -26,7 +26,8 @@ fn main() {
                     .plugin(NodePlugin::new())
                     .plugin(PortInteractionPlugin::new())
                     .plugin(PortPlugin::new())
-                    .plugin(EdgePlugin::new());
+                    .plugin(EdgePlugin::new())
+                    .plugin(DeletePlugin::new());
                 flow.init_plugins();
                 flow
             })

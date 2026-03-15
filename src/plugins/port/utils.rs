@@ -12,29 +12,36 @@ pub fn port_offset(node: &Node, port: &Port) -> Point<Pixels> {
     }
 }
 
-pub fn port_screen_position(port_id: PortId, ctx: &RenderContext) -> Point<Pixels> {
+pub fn port_screen_position(port_id: PortId, ctx: &RenderContext) -> Option<Point<Pixels>> {
     let port = &ctx.graph.ports[&port_id];
-    let node = &ctx.graph.nodes()[&port.node_id];
+    let Some(node) = &ctx.graph.nodes().get(&port.node_id) else {
+        return None;
+    };
 
     let node_pos = node.point();
 
     let offset = port_offset(node, port);
 
-    ctx.viewport.world_to_screen(node_pos + offset)
+    Some(ctx.viewport.world_to_screen(node_pos + offset))
 }
 
-pub fn port_screen_bounds(port_id: PortId, ctx: &crate::plugin::PluginContext) -> Bounds<Pixels> {
+pub fn port_screen_bounds(
+    port_id: PortId,
+    ctx: &crate::plugin::PluginContext,
+) -> Option<Bounds<Pixels>> {
     let port = &ctx.graph.ports[&port_id];
-    let node = &ctx.graph.nodes()[&port.node_id];
+    let Some(node) = &ctx.graph.nodes().get(&port.node_id) else {
+        return None;
+    };
 
     let node_pos = node.point();
 
     let offset = port_offset(node, port);
 
-    Bounds::new(
+    Some(Bounds::new(
         node_pos + offset - Point::new(px(6.0), px(6.0)),
         Size::new(px(12.0), px(12.0)),
-    )
+    ))
 }
 
 pub fn edge_bezier(

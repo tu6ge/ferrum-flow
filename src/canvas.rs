@@ -168,14 +168,8 @@ impl FlowCanvas {
     }
 
     fn on_key_down(&mut self, ev: &KeyDownEvent, _: &mut Window, cx: &mut Context<Self>) {
-        if ev.keystroke.key == "delete" || ev.keystroke.key == "backspace" {
-            if self.graph.remove_selected_edge() {
-                cx.notify();
-            }
-            if self.graph.remove_selected_node() {
-                cx.notify();
-            }
-        }
+        self.handle_event(FlowEvent::Input(InputEvent::KeyDown(ev.clone())), cx);
+        self.process_event_queue(cx);
     }
 
     fn on_mouse_down(&mut self, ev: &MouseDownEvent, _: &mut Window, cx: &mut Context<Self>) {
