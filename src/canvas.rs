@@ -1,7 +1,6 @@
 use gpui::*;
 
 use crate::{
-    Edge, EdgeId, Node, Port, PortId, PortKind,
     graph::Graph,
     plugin::{
         EventResult, FlowEvent, InitPluginContext, InputEvent, Plugin, PluginContext,
@@ -10,11 +9,7 @@ use crate::{
     viewport::Viewport,
 };
 
-mod edge;
 mod types;
-mod utils;
-use edge::EdgeGeometry;
-use utils::*;
 
 pub use types::{InteractionHandler, InteractionResult, InteractionState};
 
@@ -32,19 +27,19 @@ pub struct FlowCanvas {
     pub event_queue: Vec<FlowEvent>,
 }
 
-// TODO
-impl Clone for FlowCanvas {
-    fn clone(&self) -> Self {
-        Self {
-            graph: self.graph.clone(),
-            viewport: self.viewport.clone(),
-            plugins_registry: PluginRegistry::new(),
-            focus_handle: self.focus_handle.clone(),
-            interaction: InteractionState::new(),
-            event_queue: vec![],
-        }
-    }
-}
+// // TODO
+// impl Clone for FlowCanvas {
+//     fn clone(&self) -> Self {
+//         Self {
+//             graph: self.graph.clone(),
+//             viewport: self.viewport.clone(),
+//             plugins_registry: PluginRegistry::new(),
+//             focus_handle: self.focus_handle.clone(),
+//             interaction: InteractionState::new(),
+//             event_queue: vec![],
+//         }
+//     }
+// }
 
 impl FlowCanvas {
     pub fn new(graph: Graph, cx: &mut Context<Self>) -> Self {
@@ -172,112 +167,6 @@ impl FlowCanvas {
         }
     }
 
-    fn port_offset(&self, node: &Node, port: &Port) -> Point<Pixels> {
-        let node_size = node.size;
-
-        match port.kind {
-            PortKind::Input => Point::new(px(0.0), node_size.height / 2.0),
-
-            PortKind::Output => Point::new(node_size.width, node_size.height / 2.0),
-        }
-    }
-
-    fn port_screen_position(&self, port_id: PortId) -> Point<Pixels> {
-        let port = &self.graph.ports[&port_id];
-        let node = &self.graph.nodes()[&port.node_id];
-
-        let node_pos = node.point();
-
-        let offset = self.port_offset(node, port);
-
-        self.viewport.world_to_screen(node_pos + offset)
-    }
-
-    fn render_edges(&self) -> impl IntoElement {
-        let this = self.clone();
-        canvas(
-            |_, _, _| this,
-            move |_, this, win, _| {
-                for (_, edge) in this.graph.edges.iter() {
-                    let geometry = this.edge_geometry(edge);
-
-                    let selected = this
-                        .graph
-                        .selected_edge
-                        .iter()
-                        .find(|e| **e == edge.id)
-                        .is_some();
-
-                    let Some(EdgeGeometry { start, c1, c2, end }) = geometry else {
-                        return;
-                    };
-                    let mut line = PathBuilder::stroke(px(1.0));
-                    line.move_to(start);
-                    line.cubic_bezier_to(end, c1, c2);
-
-                    if let Ok(line) = line.build() {
-                        win.paint_path(line, rgb(if selected { 0xFF7800 } else { 0xb1b1b8 }));
-                    }
-                }
-            },
-        )
-    }
-
-    fn edge_geometry(&self, edge: &Edge) -> Option<EdgeGeometry> {
-        let Edge {
-            source_port,
-            target_port,
-            ..
-        } = edge;
-
-        let start = self.port_screen_position(*source_port);
-        let end = self.port_screen_position(*target_port);
-
-        Some(EdgeGeometry {
-            start,
-            c1: start + Point::new(px(50.0), px(0.0)),
-            c2: end - Point::new(px(50.0), px(0.0)),
-            end,
-        })
-    }
-
-    fn hit_test_edge(&self, mouse: Point<Pixels>, edge: &Edge) -> bool {
-        let Some(geom) = self.edge_geometry(edge) else {
-            return false;
-        };
-
-        let points = sample_bezier(&geom, 20);
-
-        for segment in points.windows(2) {
-            let d = distance_to_segment(mouse, segment[0], segment[1]);
-
-            if d < 8.0 {
-                return true;
-            }
-        }
-
-        false
-    }
-
-    fn hit_test_get_edge(&self, mouse: Point<Pixels>) -> Option<EdgeId> {
-        for edge in self.graph.edges.values() {
-            let Some(geom) = self.edge_geometry(edge) else {
-                continue;
-            };
-
-            let bound = edge_bounds(&geom);
-            if !bound.contains(&mouse) {
-                continue;
-            }
-
-            if self.hit_test_edge(mouse, edge) {
-                return Some(edge.id);
-            }
-        }
-
-        None
-    }
-
     fn on_key_down(&mut self, ev: &KeyDownEvent, _: &mut Window, cx: &mut Context<Self>) {
         if ev.keystroke.key == "delete" || ev.keystroke.key == "backspace" {
             if self.graph.remove_selected_edge() {
@@ -292,17 +181,6 @@ impl FlowCanvas {
     fn on_mouse_down(&mut self, ev: &MouseDownEvent, _: &mut Window, cx: &mut Context<Self>) {
         self.handle_event(FlowEvent::Input(InputEvent::MouseDown(ev.clone())), cx);
         self.process_event_queue(cx);
-        let shift = ev.modifiers.shift;
-
-        if let Some(id) = self.hit_test_get_edge(ev.position) {
-            self.graph.add_selected_edge(id, shift);
-        } else {
-            if !shift {
-                self.graph.clear_selected_edge();
-            }
-        }
-
-        cx.notify();
     }
 
     fn on_mouse_move(&mut self, ev: &MouseMoveEvent, _: &mut Window, cx: &mut Context<Self>) {
@@ -319,28 +197,6 @@ impl FlowCanvas {
         self.handle_event(FlowEvent::Input(InputEvent::Wheel(ev.clone())), cx);
         self.process_event_queue(cx);
     }
-}
-
-fn sample_bezier(geom: &EdgeGeometry, steps: usize) -> Vec<Point<Pixels>> {
-    let mut points = Vec::new();
-
-    for i in 0..=steps {
-        let t = i as f32 / steps as f32;
-
-        let x = (1.0 - t).powi(3) * geom.start.x
-            + 3.0 * (1.0 - t).powi(2) * t * geom.c1.x
-            + 3.0 * (1.0 - t) * t * t * geom.c2.x
-            + t.powi(3) * geom.end.x;
-
-        let y = (1.0 - t).powi(3) * geom.start.y
-            + 3.0 * (1.0 - t).powi(2) * t * geom.c1.y
-            + 3.0 * (1.0 - t) * t * t * geom.c2.y
-            + t.powi(3) * geom.end.y;
-
-        points.push(Point::new(x, y));
-    }
-
-    points
 }
 
 impl Render for FlowCanvas {
@@ -387,7 +243,6 @@ impl Render for FlowCanvas {
                 window.listener_for(&entity, Self::on_mouse_up),
             )
             .on_scroll_wheel(window.listener_for(&entity, Self::on_scroll_wheel))
-            .child(self.render_edges())
             .children(
                 RenderLayer::ALL
                     .iter()
