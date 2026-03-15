@@ -88,7 +88,7 @@ impl InteractionHandler for NodeDragInteraction {
                 start_mouse,
                 ..
             } => {
-                let delta = ev.position - *start_mouse;
+                let delta = ctx.viewport.screen_to_world(ev.position) - *start_mouse;
                 if delta.x.abs() > DRAG_THRESHOLD || delta.y.abs() > DRAG_THRESHOLD {
                     let mut nodes = vec![];
 
