@@ -1,9 +1,11 @@
 mod background;
 mod node;
+mod port;
 mod selection;
 mod viewport;
 
 pub use background::Background;
 pub use node::{NodeInteractionPlugin, NodePlugin, NodeRenderer, RendererRegistry};
+pub use port::{PortInteractionPlugin, PortPlugin};
 pub use selection::SelectionPlugin;
 pub use viewport::ViewportPlugin;

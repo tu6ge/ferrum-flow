@@ -67,7 +67,7 @@ impl Plugin for SelectionPlugin {
         EventResult::Continue
     }
     fn priority(&self) -> i32 {
-        50
+        100
     }
     fn render_layer(&self) -> RenderLayer {
         RenderLayer::Selection

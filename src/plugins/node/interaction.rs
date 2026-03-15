@@ -44,7 +44,7 @@ impl Plugin for NodeInteractionPlugin {
     }
 
     fn priority(&self) -> i32 {
-        100
+        120
     }
 }
 

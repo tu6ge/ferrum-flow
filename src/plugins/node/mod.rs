@@ -40,7 +40,7 @@ impl Plugin for NodePlugin {
         crate::plugin::EventResult::Continue
     }
     fn priority(&self) -> i32 {
-        10
+        60
     }
     fn render_layer(&self) -> crate::plugin::RenderLayer {
         crate::plugin::RenderLayer::Nodes
