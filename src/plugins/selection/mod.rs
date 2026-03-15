@@ -16,12 +16,17 @@ use crate::{
 const DRAG_THRESHOLD: Pixels = px(2.0);
 
 pub struct SelectionPlugin {
-    bounds: Option<Bounds<Pixels>>,
+    selected: Option<Selected>,
+}
+
+struct Selected {
+    bounds: Bounds<Pixels>,
+    nodes: HashMap<NodeId, Point<Pixels>>,
 }
 
 impl SelectionPlugin {
     pub fn new() -> Self {
-        Self { bounds: None }
+        Self { selected: None }
     }
 }
 
@@ -38,12 +43,10 @@ impl Plugin for SelectionPlugin {
         if let FlowEvent::Input(InputEvent::MouseDown(ev)) = event {
             if !ev.modifiers.shift {
                 let start = ctx.viewport.screen_to_world(ev.position);
-                if let Some(selection) = self.bounds.take() {
-                    if selection.contains(&start) {
-                        let nodes = ctx.graph.selected_nodes_with_positions();
-
+                if let Some(Selected { bounds, nodes }) = self.selected.take() {
+                    if bounds.contains(&start) {
                         ctx.start_interaction(SelectionInteraction::start_move(
-                            start, selection, nodes,
+                            start, bounds, nodes,
                         ));
 
                         return EventResult::Stop;
@@ -53,8 +56,11 @@ impl Plugin for SelectionPlugin {
                 ctx.start_interaction(SelectionInteraction::new(start));
                 return EventResult::Stop;
             }
-        } else if let Some(SelectedEvent { bounds }) = event.as_custom() {
-            self.bounds = Some(*bounds);
+        } else if let Some(SelectedEvent { bounds, nodes }) = event.as_custom() {
+            self.selected = Some(Selected {
+                bounds: *bounds,
+                nodes: nodes.clone(),
+            });
             return EventResult::Stop;
         }
 
@@ -67,7 +73,7 @@ impl Plugin for SelectionPlugin {
         RenderLayer::Selection
     }
     fn render(&mut self, ctx: &mut RenderContext) -> Option<AnyElement> {
-        self.bounds.map(|bounds| {
+        self.selected.as_ref().map(|Selected { bounds, .. }| {
             let top_left = ctx.viewport.world_to_screen(bounds.origin);
 
             let size = Size::new(
@@ -100,6 +106,7 @@ enum SelectionState {
 }
 struct SelectedEvent {
     bounds: Bounds<Pixels>,
+    nodes: HashMap<NodeId, Point<Pixels>>,
 }
 
 impl SelectionInteraction {
@@ -154,7 +161,7 @@ impl InteractionHandler for SelectionInteraction {
             } => {
                 let delta = mouse_world - *start_mouse;
 
-                for (id, start_pos) in nodes.iter() {
+                for (id, start_pos) in nodes.iter_mut() {
                     if let Some(node) = ctx.graph.get_node_mut(*id) {
                         node.x = start_pos.x + delta.x;
                         node.y = start_pos.y + delta.y;
@@ -196,7 +203,10 @@ impl InteractionHandler for SelectionInteraction {
                 let bounds = compute_nodes_bounds(&selected, ctx.graph);
 
                 ctx.cancel_interaction();
-                ctx.emit(FlowEvent::custom(SelectedEvent { bounds }));
+                ctx.emit(FlowEvent::custom(SelectedEvent {
+                    bounds,
+                    nodes: selected,
+                }));
 
                 return InteractionResult::End;
             }
@@ -204,11 +214,18 @@ impl InteractionHandler for SelectionInteraction {
             SelectionState::Moving { bounds, nodes, .. } => {
                 let bounds = *bounds;
 
+                let mut new_nodes = HashMap::new();
                 for (id, _) in nodes.iter() {
                     ctx.graph.add_selected_node(*id, true);
+                    if let Some(node) = ctx.graph.nodes().get(id) {
+                        new_nodes.insert(id.clone(), node.point());
+                    }
                 }
 
-                ctx.emit(FlowEvent::custom(SelectedEvent { bounds }));
+                ctx.emit(FlowEvent::custom(SelectedEvent {
+                    bounds,
+                    nodes: new_nodes,
+                }));
 
                 return InteractionResult::End;
             }
