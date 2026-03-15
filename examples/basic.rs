@@ -23,7 +23,8 @@ fn main() {
                     .plugin(NodeInteractionPlugin::new())
                     .plugin(ViewportPlugin::new())
                     .plugin(Background::new())
-                    .plugin(NodePlugin::new());
+                    .plugin(NodePlugin::new())
+                    .plugin(PortInteractionPlugin::new());
                 flow.init_plugins();
                 flow
             })

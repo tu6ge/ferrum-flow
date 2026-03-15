@@ -14,14 +14,12 @@ mod edge;
 mod types;
 mod utils;
 use edge::EdgeGeometry;
-use types::*;
 use utils::*;
 
 pub use types::{InteractionHandler, InteractionResult, InteractionState};
 
 pub struct FlowCanvas {
     pub graph: Graph,
-    drag_state: DragState,
 
     pub(crate) viewport: Viewport,
 
@@ -39,7 +37,6 @@ impl Clone for FlowCanvas {
     fn clone(&self) -> Self {
         Self {
             graph: self.graph.clone(),
-            drag_state: self.drag_state.clone(),
             viewport: self.viewport.clone(),
             plugins_registry: PluginRegistry::new(),
             focus_handle: self.focus_handle.clone(),
@@ -54,7 +51,6 @@ impl FlowCanvas {
         let focus_handle = cx.focus_handle();
         Self {
             graph,
-            drag_state: DragState::None,
             viewport: Viewport::new(),
             plugins_registry: PluginRegistry::new(),
             focus_handle,
@@ -176,79 +172,25 @@ impl FlowCanvas {
         }
     }
 
-    fn render_ports(&self, this_cx: &mut Context<Self>) -> Vec<impl IntoElement> {
+    fn render_ports(&self, _: &mut Context<Self>) -> Vec<impl IntoElement> {
         self.graph
             .ports
             .iter()
-            .map(
-                |(
-                    _,
-                    Port {
-                        id, node_id, kind, ..
-                    },
-                )| {
-                    let node_id_clone = node_id.clone();
-                    let position = self.port_screen_position(*id);
-                    let port_id_clone = id.clone();
-                    let entity = this_cx.entity();
-                    let entity_up = entity.clone();
-                    let kind_clone = kind.clone();
+            .map(|(_, Port { id, .. })| {
+                let position = self.port_screen_position(*id);
 
-                    div()
-                        .absolute()
-                        .left(position.x - px(6.0 * self.viewport.zoom))
-                        .top(position.y - px(6.0 * self.viewport.zoom))
-                        .w(px(12.0 * self.viewport.zoom))
-                        .h(px(12.0 * self.viewport.zoom))
-                        .rounded_full()
-                        .bg(rgb(0x1A192B))
-                        .on_mouse_down(MouseButton::Left, move |event, _, cx| {
-                            cx.stop_propagation();
-                            cx.update_entity(&entity, |this, cx| {
-                                this.drag_state = DragState::EdgeDrag(Connecting {
-                                    node_id: node_id_clone,
-                                    port_id: port_id_clone,
-                                    mouse: event.position,
-                                });
-                                cx.notify();
-                            });
-                        })
-                        .on_mouse_up(MouseButton::Left, move |_, _, cx| {
-                            cx.stop_propagation();
-                            cx.update_entity(&entity_up, |this, cx| {
-                                if let DragState::EdgeDrag(connecting) = &this.drag_state {
-                                    if connecting.node_id == node_id_clone {
-                                        return;
-                                    }
-                                    let connecting_port = &this.graph.ports[&connecting.port_id];
-                                    if connecting_port.kind.clone() == kind_clone {
-                                        return;
-                                    }
-
-                                    let edge = this
-                                        .graph
-                                        .new_edge()
-                                        .source(connecting.port_id.clone())
-                                        .target(port_id_clone);
-
-                                    this.graph.add_edge(edge);
-                                    this.drag_state = DragState::None;
-                                    cx.notify();
-                                }
-                            });
-                        })
-                },
-            )
+                div()
+                    .absolute()
+                    .left(position.x - px(6.0 * self.viewport.zoom))
+                    .top(position.y - px(6.0 * self.viewport.zoom))
+                    .w(px(12.0 * self.viewport.zoom))
+                    .h(px(12.0 * self.viewport.zoom))
+                    .rounded_full()
+                    .bg(rgb(0x1A192B))
+            })
             .collect()
     }
 
-    fn port_position(&self) -> Option<Point<Pixels>> {
-        if let DragState::EdgeDrag(Connecting { port_id, .. }) = &self.drag_state {
-            Some(self.port_screen_position(*port_id))
-        } else {
-            None
-        }
-    }
     fn port_offset(&self, node: &Node, port: &Port) -> Point<Pixels> {
         let node_size = node.size;
 
@@ -269,23 +211,7 @@ impl FlowCanvas {
 
         self.viewport.world_to_screen(node_pos + offset)
     }
-    fn render_connecting_edge(&self) -> impl IntoElement {
-        if let DragState::EdgeDrag(connect) = &self.drag_state
-            && let Some(start) = self.port_position()
-        {
-            let mouse: Point<Pixels> = connect.mouse;
-            canvas(
-                |_, _, _| {},
-                move |_, _, win, _| {
-                    if let Ok(line) = edge_bezier(start, mouse) {
-                        win.paint_path(line, rgb(0xb1b1b8));
-                    }
-                },
-            )
-        } else {
-            canvas(|_, _, _| {}, |_, _, _, _| {})
-        }
-    }
+
     fn render_edges(&self) -> impl IntoElement {
         let this = self.clone();
         canvas(
@@ -401,43 +327,17 @@ impl FlowCanvas {
     fn on_mouse_move(&mut self, ev: &MouseMoveEvent, _: &mut Window, cx: &mut Context<Self>) {
         self.handle_event(FlowEvent::Input(InputEvent::MouseMove(ev.clone())), cx);
         self.process_event_queue(cx);
-        match &mut self.drag_state {
-            DragState::EdgeDrag(connect) => {
-                connect.mouse = ev.position;
-                cx.notify();
-            }
-            _ => (),
-        }
     }
 
     fn on_mouse_up(&mut self, ev: &MouseUpEvent, _: &mut Window, cx: &mut Context<Self>) {
         self.handle_event(FlowEvent::Input(InputEvent::MouseUp(ev.clone())), cx);
         self.process_event_queue(cx);
-        match &self.drag_state {
-            DragState::EdgeDrag(_) => {
-                self.drag_state = DragState::None;
-                cx.notify();
-            }
-            _ => (),
-        };
     }
 
     fn on_scroll_wheel(&mut self, ev: &ScrollWheelEvent, _: &mut Window, cx: &mut Context<Self>) {
         self.handle_event(FlowEvent::Input(InputEvent::Wheel(ev.clone())), cx);
         self.process_event_queue(cx);
     }
-}
-
-fn edge_bezier(start: Point<Pixels>, end: Point<Pixels>) -> Result<Path<Pixels>, anyhow::Error> {
-    let mut line = PathBuilder::stroke(px(1.0));
-    line.move_to(start);
-    line.cubic_bezier_to(
-        end,
-        Point::new(start.x + px(50.0), start.y),
-        Point::new(end.x - px(50.0), end.y),
-    );
-
-    line.build()
 }
 
 fn sample_bezier(geom: &EdgeGeometry, steps: usize) -> Vec<Point<Pixels>> {
@@ -506,7 +406,6 @@ impl Render for FlowCanvas {
                 window.listener_for(&entity, Self::on_mouse_up),
             )
             .on_scroll_wheel(window.listener_for(&entity, Self::on_scroll_wheel))
-            .child(self.render_connecting_edge())
             .child(self.render_edges())
             //.children(self.render_nodes(this_cx))
             .children(self.render_ports(this_cx))

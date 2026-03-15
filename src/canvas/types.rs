@@ -1,15 +1,6 @@
-use gpui::{AnyElement, MouseMoveEvent, MouseUpEvent, Pixels, Point};
+use gpui::{AnyElement, MouseMoveEvent, MouseUpEvent};
 
-use crate::{
-    NodeId, PortId,
-    plugin::{PluginContext, RenderContext},
-};
-
-#[derive(Debug, Clone)]
-pub enum DragState {
-    None,
-    EdgeDrag(Connecting),
-}
+use crate::plugin::{PluginContext, RenderContext};
 
 pub struct InteractionState {
     pub handler: Option<Box<dyn InteractionHandler>>,
@@ -57,11 +48,4 @@ impl InteractionResult {
     pub fn replace(new_handler: impl InteractionHandler + 'static) -> Self {
         Self::Replace(Box::new(new_handler))
     }
-}
-
-#[derive(Debug, Clone)]
-pub struct Connecting {
-    pub(super) node_id: NodeId,
-    pub(super) port_id: PortId,
-    pub(super) mouse: Point<Pixels>,
 }
