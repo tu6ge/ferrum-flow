@@ -24,7 +24,8 @@ fn main() {
                     .plugin(ViewportPlugin::new())
                     .plugin(Background::new())
                     .plugin(NodePlugin::new())
-                    .plugin(PortInteractionPlugin::new());
+                    .plugin(PortInteractionPlugin::new())
+                    .plugin(PortPlugin::new());
                 flow.init_plugins();
                 flow
             })

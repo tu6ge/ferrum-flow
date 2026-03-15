@@ -172,25 +172,6 @@ impl FlowCanvas {
         }
     }
 
-    fn render_ports(&self, _: &mut Context<Self>) -> Vec<impl IntoElement> {
-        self.graph
-            .ports
-            .iter()
-            .map(|(_, Port { id, .. })| {
-                let position = self.port_screen_position(*id);
-
-                div()
-                    .absolute()
-                    .left(position.x - px(6.0 * self.viewport.zoom))
-                    .top(position.y - px(6.0 * self.viewport.zoom))
-                    .w(px(12.0 * self.viewport.zoom))
-                    .h(px(12.0 * self.viewport.zoom))
-                    .rounded_full()
-                    .bg(rgb(0x1A192B))
-            })
-            .collect()
-    }
-
     fn port_offset(&self, node: &Node, port: &Port) -> Point<Pixels> {
         let node_size = node.size;
 
@@ -407,8 +388,6 @@ impl Render for FlowCanvas {
             )
             .on_scroll_wheel(window.listener_for(&entity, Self::on_scroll_wheel))
             .child(self.render_edges())
-            //.children(self.render_nodes(this_cx))
-            .children(self.render_ports(this_cx))
             .children(
                 RenderLayer::ALL
                     .iter()
