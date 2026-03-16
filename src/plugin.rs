@@ -5,7 +5,7 @@ use gpui::{
 
 use crate::{
     EdgeId, Graph, NodeId, PortId, Viewport,
-    canvas::{History, InteractionHandler, InteractionState},
+    canvas::{CanvasState, Command, History, InteractionHandler, InteractionState},
 };
 
 pub trait Plugin {
@@ -91,6 +91,39 @@ impl<'a> PluginContext<'a> {
 
     pub fn emit(&mut self, event: FlowEvent) {
         (self.emit)(event);
+        self.notify();
+    }
+
+    pub fn execute_command(&mut self, command: impl Command + 'static) {
+        let mut canvas = CanvasState {
+            graph: self.graph,
+            viewport: self.viewport,
+        };
+
+        self.history.execute(Box::new(command), &mut canvas);
+
+        self.notify();
+    }
+
+    pub fn undo(&mut self) {
+        let mut canvas = CanvasState {
+            graph: self.graph,
+            viewport: self.viewport,
+        };
+
+        self.history.undo(&mut canvas);
+
+        self.notify();
+    }
+
+    pub fn redo(&mut self) {
+        let mut canvas = CanvasState {
+            graph: self.graph,
+            viewport: self.viewport,
+        };
+
+        self.history.redo(&mut canvas);
+
         self.notify();
     }
 }

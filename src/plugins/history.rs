@@ -1,7 +1,4 @@
-use crate::{
-    canvas::CanvasState,
-    plugin::{FlowEvent, Plugin},
-};
+use crate::plugin::{FlowEvent, Plugin};
 
 pub struct HistoryPlugin;
 
@@ -26,18 +23,10 @@ impl Plugin for HistoryPlugin {
                 && ev.keystroke.modifiers.platform
                 && ev.keystroke.modifiers.shift
             {
-                let mut state = CanvasState {
-                    graph: &mut ctx.graph,
-                    viewport: &mut ctx.viewport,
-                };
-                ctx.history.redo(&mut state);
+                ctx.redo();
                 return crate::plugin::EventResult::Stop;
             } else if ev.keystroke.key == "z" && ev.keystroke.modifiers.platform {
-                let mut state = CanvasState {
-                    graph: &mut ctx.graph,
-                    viewport: &mut ctx.viewport,
-                };
-                ctx.history.undo(&mut state);
+                ctx.undo();
                 return crate::plugin::EventResult::Stop;
             }
         }
