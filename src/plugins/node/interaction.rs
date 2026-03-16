@@ -4,6 +4,7 @@ use crate::{
     NodeId,
     canvas::{InteractionHandler, InteractionResult},
     plugin::{EventResult, FlowEvent, InitPluginContext, InputEvent, Plugin, PluginContext},
+    plugins::node::command::SelecteNode,
 };
 
 const DRAG_THRESHOLD: Pixels = px(2.0);
@@ -135,12 +136,7 @@ impl InteractionHandler for NodeDragInteraction {
     ) -> crate::canvas::InteractionResult {
         match &self.state {
             NodeDragState::Pending { node_id, shift, .. } => {
-                if !shift {
-                    ctx.graph.clear_selected_edge();
-                }
-                ctx.graph.add_selected_node(*node_id, *shift);
-                ctx.graph.bring_node_to_front(*node_id);
-                ctx.notify();
+                ctx.execute_command(SelecteNode::new(*node_id, *shift, ctx));
                 InteractionResult::End
             }
             NodeDragState::Draging { .. } => InteractionResult::End,

@@ -2,8 +2,8 @@ use crate::{Graph, Viewport};
 
 pub trait Command {
     fn name(&self) -> &'static str;
-    fn execute(&mut self, state: &mut CanvasState);
-    fn undo(&mut self, state: &mut CanvasState);
+    fn execute(&mut self, ctx: &mut CanvasState);
+    fn undo(&mut self, ctx: &mut CanvasState);
 }
 
 pub struct CanvasState<'a> {

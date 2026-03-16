@@ -1,3 +1,4 @@
+mod command;
 mod interaction;
 mod renderer;
 
@@ -48,11 +49,12 @@ impl Plugin for NodePlugin {
     fn render(&mut self, ctx: &mut crate::plugin::RenderContext) -> Option<gpui::AnyElement> {
         let list: Vec<_> = ctx
             .graph
-            .nodes()
+            .node_order()
             .iter()
-            .map(|(_, node)| {
+            .filter_map(|node_id| {
+                let node = ctx.graph.nodes().get(node_id)?;
                 let render = self.renderers.get(&node.node_type);
-                render.render(node, ctx)
+                Some(render.render(node, ctx))
             })
             .collect();
 
