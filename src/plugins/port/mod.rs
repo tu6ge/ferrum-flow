@@ -32,9 +32,7 @@ impl Plugin for PortPlugin {
             .ports
             .iter()
             .filter_map(|(_, Port { id, .. })| {
-                let Some(position) = port_screen_position(*id, &ctx) else {
-                    return None;
-                };
+                let position = port_screen_position(*id, &ctx)?;
 
                 Some(
                     div()

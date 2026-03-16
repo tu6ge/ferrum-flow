@@ -95,12 +95,8 @@ fn edge_geometry(edge: &Edge, ctx: &PluginContext) -> Option<EdgeGeometry> {
         ..
     } = edge;
 
-    let Some(start) = port_screen_position(*source_port, &ctx) else {
-        return None;
-    };
-    let Some(end) = port_screen_position(*target_port, &ctx) else {
-        return None;
-    };
+    let start = port_screen_position(*source_port, &ctx)?;
+    let end = port_screen_position(*target_port, &ctx)?;
 
     Some(EdgeGeometry {
         start,
@@ -117,12 +113,8 @@ fn edge_geometry2(edge: &Edge, ctx: &RenderContext) -> Option<EdgeGeometry> {
         ..
     } = edge;
 
-    let Some(start) = port_screen_position2(*source_port, &ctx) else {
-        return None;
-    };
-    let Some(end) = port_screen_position2(*target_port, &ctx) else {
-        return None;
-    };
+    let start = port_screen_position2(*source_port, &ctx)?;
+    let end = port_screen_position2(*target_port, &ctx)?;
 
     Some(EdgeGeometry {
         start,
@@ -134,9 +126,7 @@ fn edge_geometry2(edge: &Edge, ctx: &RenderContext) -> Option<EdgeGeometry> {
 
 fn port_screen_position(port_id: PortId, ctx: &PluginContext) -> Option<Point<Pixels>> {
     let port = &ctx.graph.ports[&port_id];
-    let Some(node) = &ctx.graph.nodes().get(&port.node_id) else {
-        return None;
-    };
+    let node = &ctx.graph.nodes().get(&port.node_id)?;
 
     let node_pos = node.point();
 
@@ -146,9 +136,7 @@ fn port_screen_position(port_id: PortId, ctx: &PluginContext) -> Option<Point<Pi
 }
 fn port_screen_position2(port_id: PortId, ctx: &RenderContext) -> Option<Point<Pixels>> {
     let port = &ctx.graph.ports[&port_id];
-    let Some(node) = &ctx.graph.nodes().get(&port.node_id) else {
-        return None;
-    };
+    let node = &ctx.graph.nodes().get(&port.node_id)?;
 
     let node_pos = node.point();
 

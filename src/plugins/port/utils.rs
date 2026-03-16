@@ -14,9 +14,7 @@ pub fn port_offset(node: &Node, port: &Port) -> Point<Pixels> {
 
 pub fn port_screen_position(port_id: PortId, ctx: &RenderContext) -> Option<Point<Pixels>> {
     let port = &ctx.graph.ports[&port_id];
-    let Some(node) = &ctx.graph.nodes().get(&port.node_id) else {
-        return None;
-    };
+    let node = &ctx.graph.nodes().get(&port.node_id)?;
 
     let node_pos = node.point();
 
@@ -30,9 +28,7 @@ pub fn port_screen_bounds(
     ctx: &crate::plugin::PluginContext,
 ) -> Option<Bounds<Pixels>> {
     let port = &ctx.graph.ports[&port_id];
-    let Some(node) = &ctx.graph.nodes().get(&port.node_id) else {
-        return None;
-    };
+    let node = &ctx.graph.nodes().get(&port.node_id)?;
 
     let node_pos = node.point();
 
