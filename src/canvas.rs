@@ -224,8 +224,6 @@ impl Render for FlowCanvas {
         div()
             .size_full()
             .track_focus(&self.focus_handle)
-            // bg point 9F9FA7
-            .bg(gpui::rgb(0xf8f9fb))
             .on_mouse_down(
                 MouseButton::Left,
                 window.listener_for(&entity, Self::on_mouse_down),

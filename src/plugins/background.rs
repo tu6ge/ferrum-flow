@@ -67,6 +67,14 @@ impl Plugin for Background {
 
             x += grid;
         }
-        Some(div().absolute().size_full().children(dots).into_any())
+        Some(
+            div()
+                .absolute()
+                .w(px(width))
+                .h(px(height))
+                .bg(gpui::rgb(0xf8f9fb))
+                .children(dots)
+                .into_any(),
+        )
     }
 }
