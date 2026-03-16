@@ -172,6 +172,11 @@ impl FlowCanvas {
         self.process_event_queue(cx);
     }
 
+    fn on_key_up(&mut self, ev: &KeyUpEvent, _: &mut Window, cx: &mut Context<Self>) {
+        self.handle_event(FlowEvent::Input(InputEvent::KeyUp(ev.clone())), cx);
+        self.process_event_queue(cx);
+    }
+
     fn on_mouse_down(&mut self, ev: &MouseDownEvent, _: &mut Window, cx: &mut Context<Self>) {
         self.handle_event(FlowEvent::Input(InputEvent::MouseDown(ev.clone())), cx);
         self.process_event_queue(cx);
@@ -224,11 +229,12 @@ impl Render for FlowCanvas {
         div()
             .size_full()
             .track_focus(&self.focus_handle)
+            .on_key_down(window.listener_for(&entity, Self::on_key_down))
+            .on_key_up(window.listener_for(&entity, Self::on_key_up))
             .on_mouse_down(
                 MouseButton::Left,
                 window.listener_for(&entity, Self::on_mouse_down),
             )
-            .on_key_down(window.listener_for(&entity, Self::on_key_down))
             .on_mouse_move(window.listener_for(&entity, Self::on_mouse_move))
             .on_mouse_up(
                 MouseButton::Left,
