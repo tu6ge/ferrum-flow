@@ -10,6 +10,9 @@ use crate::{
 };
 
 mod types;
+mod undo;
+
+pub use undo::{CanvasState, Command, CompositeCommand, History};
 
 pub use types::{InteractionHandler, InteractionResult, InteractionState};
 
@@ -23,6 +26,8 @@ pub struct FlowCanvas {
     pub(crate) focus_handle: FocusHandle,
 
     pub(crate) interaction: InteractionState,
+
+    pub history: History,
 
     pub event_queue: Vec<FlowEvent>,
 }
@@ -50,6 +55,7 @@ impl FlowCanvas {
             plugins_registry: PluginRegistry::new(),
             focus_handle,
             interaction: InteractionState::new(),
+            history: History::new(),
             event_queue: vec![],
         }
     }
@@ -89,6 +95,7 @@ impl FlowCanvas {
                 &mut self.graph,
                 &mut self.viewport,
                 &mut self.interaction,
+                &mut self.history,
                 &mut emit,
                 &mut notify,
             );
@@ -127,6 +134,7 @@ impl FlowCanvas {
             &mut self.graph,
             &mut self.viewport,
             &mut self.interaction,
+            &mut self.history,
             &mut emit,
             &mut notify,
         );
@@ -153,6 +161,7 @@ impl FlowCanvas {
                 &mut self.graph,
                 &mut self.viewport,
                 &mut self.interaction,
+                &mut self.history,
                 &mut emit,
                 &mut notify,
             );

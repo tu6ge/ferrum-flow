@@ -5,7 +5,7 @@ use gpui::{
 
 use crate::{
     EdgeId, Graph, NodeId, PortId, Viewport,
-    canvas::{InteractionHandler, InteractionState},
+    canvas::{History, InteractionHandler, InteractionState},
 };
 
 pub trait Plugin {
@@ -40,7 +40,7 @@ pub struct PluginContext<'a> {
     pub viewport: &'a mut Viewport,
     pub(crate) interaction: &'a mut InteractionState,
 
-    //pub commands: &'a mut CommandQueue,
+    pub history: &'a mut History,
     emit: &'a mut dyn FnMut(FlowEvent),
     notify: &'a mut dyn FnMut(),
 }
@@ -55,6 +55,7 @@ impl<'a> PluginContext<'a> {
         graph: &'a mut Graph,
         viewport: &'a mut Viewport,
         interaction: &'a mut InteractionState,
+        history: &'a mut History,
         emit: &'a mut dyn FnMut(FlowEvent),
         notify: &'a mut dyn FnMut(),
     ) -> Self {
@@ -62,7 +63,7 @@ impl<'a> PluginContext<'a> {
             graph,
             viewport,
             interaction,
-            //commands: ,
+            history,
             emit,
             notify,
         }
