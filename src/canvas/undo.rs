@@ -59,6 +59,17 @@ pub struct CompositeCommand {
     commands: Vec<Box<dyn Command>>,
 }
 
+impl CompositeCommand {
+    pub fn new() -> Self {
+        Self {
+            commands: Vec::new(),
+        }
+    }
+    pub fn push(&mut self, command: impl Command + 'static) {
+        self.commands.push(Box::new(command));
+    }
+}
+
 impl Command for CompositeCommand {
     fn name(&self) -> &'static str {
         "composite"
