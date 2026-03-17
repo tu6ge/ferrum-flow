@@ -64,8 +64,8 @@ impl Graph {
         self.nodes.get(id)
     }
 
-    pub fn get_node_mut(&mut self, id: NodeId) -> Option<&mut Node> {
-        self.nodes.get_mut(&id)
+    pub fn get_node_mut(&mut self, id: &NodeId) -> Option<&mut Node> {
+        self.nodes.get_mut(id)
     }
 
     pub fn remove_node(&mut self, id: &NodeId) {

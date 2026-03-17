@@ -162,7 +162,7 @@ impl InteractionHandler for SelectionInteraction {
                 let delta = mouse_world - *start_mouse;
 
                 for (id, start_pos) in nodes.iter_mut() {
-                    if let Some(node) = ctx.graph.get_node_mut(*id) {
+                    if let Some(node) = ctx.graph.get_node_mut(id) {
                         node.x = start_pos.x + delta.x;
                         node.y = start_pos.y + delta.y;
                     }

@@ -119,7 +119,7 @@ impl InteractionHandler for NodeDragInteraction {
                 let dx = (ev.position.x - start_mouse.x) / ctx.viewport.zoom;
                 let dy = (ev.position.y - start_mouse.y) / ctx.viewport.zoom;
                 for (id, point) in start_positions.iter() {
-                    if let Some(node) = ctx.graph.get_node_mut(*id) {
+                    if let Some(node) = ctx.graph.get_node_mut(id) {
                         node.x = point.x + dx;
                         node.y = point.y + dy;
                     }
