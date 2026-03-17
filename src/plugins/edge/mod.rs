@@ -3,7 +3,12 @@ use gpui::{Bounds, Element, PathBuilder, Pixels, Point, canvas, px, rgb};
 use crate::{
     Edge, EdgeId, Node, Port, PortId, PortKind, RenderContext,
     plugin::{FlowEvent, Plugin, PluginContext},
+    plugins::edge::command::ClearEdgeCommand,
 };
+
+mod command;
+
+use command::SelectEdgeCommand;
 
 pub struct EdgePlugin;
 
@@ -26,16 +31,11 @@ impl Plugin for EdgePlugin {
         if let FlowEvent::Input(crate::plugin::InputEvent::MouseDown(ev)) = event {
             let shift = ev.modifiers.shift;
             if let Some(id) = hit_test_get_edge(ev.position, &ctx) {
-                if !shift {
-                    ctx.graph.clear_selected_node();
-                }
-                ctx.graph.add_selected_edge(id, shift);
-                ctx.notify();
+                ctx.execute_command(SelectEdgeCommand::new(id, shift, &ctx));
                 return crate::plugin::EventResult::Stop;
             } else {
                 if !shift {
-                    ctx.graph.clear_selected_edge();
-                    ctx.notify();
+                    ctx.execute_command(ClearEdgeCommand::new(&ctx));
                 }
             }
         }
