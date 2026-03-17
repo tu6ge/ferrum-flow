@@ -7,6 +7,8 @@ pub use utils::*;
 use gpui::{Element, ParentElement, Styled as _, div, px, rgb};
 pub use interaction::PortInteractionPlugin;
 
+mod command;
+
 pub struct PortPlugin;
 
 impl PortPlugin {

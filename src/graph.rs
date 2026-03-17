@@ -60,6 +60,10 @@ impl Graph {
         self.edges.insert(edge.id, edge);
     }
 
+    pub fn remove_edge(&mut self, edge_id: EdgeId) {
+        self.edges.remove(&edge_id);
+    }
+
     pub fn get_node(&self, id: &NodeId) -> Option<&Node> {
         self.nodes.get(id)
     }

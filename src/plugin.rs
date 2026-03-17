@@ -162,6 +162,10 @@ impl<'a> PluginContext<'a> {
         self.graph.add_edge(edge);
     }
 
+    pub fn remove_edge(&mut self, edge_id: EdgeId) {
+        self.graph.remove_edge(edge_id);
+    }
+
     pub fn add_selected_node(&mut self, id: NodeId, shift: bool) {
         self.graph.add_selected_node(id, shift);
     }

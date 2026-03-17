@@ -7,6 +7,8 @@ use crate::{
     plugins::port::{edge_bezier, port_screen_bounds, port_screen_position},
 };
 
+use super::command::CreateEdge;
+
 pub struct PortInteractionPlugin;
 
 impl PortInteractionPlugin {
@@ -115,10 +117,9 @@ impl InteractionHandler for PortConnecting {
                 .source(self.port_id.clone())
                 .target(port_id);
 
-            ctx.graph.add_edge(edge);
+            ctx.execute_command(CreateEdge::new(edge));
         }
         ctx.cancel_interaction();
-        ctx.notify();
         crate::canvas::InteractionResult::End
     }
     fn render(&self, ctx: &mut crate::RenderContext) -> Option<gpui::AnyElement> {
