@@ -1,7 +1,7 @@
 use gpui::{Pixels, Point, px};
 
 use crate::{
-    canvas::{InteractionHandler, InteractionResult},
+    canvas::{Command, InteractionHandler, InteractionResult},
     plugin::{EventResult, FlowEvent, InputEvent, Plugin},
 };
 
@@ -88,10 +88,33 @@ impl InteractionHandler for Panning {
         _event: &gpui::MouseUpEvent,
         ctx: &mut crate::plugin::PluginContext,
     ) -> crate::canvas::InteractionResult {
+        ctx.execute_command(PanningCommand {
+            from: self.start_offset,
+            to: ctx.viewport.offset,
+        });
         ctx.cancel_interaction();
         InteractionResult::End
     }
     fn render(&self, _ctx: &mut crate::plugin::RenderContext) -> Option<gpui::AnyElement> {
         None
+    }
+}
+
+struct PanningCommand {
+    from: Point<Pixels>,
+    to: Point<Pixels>,
+}
+
+impl Command for PanningCommand {
+    fn name(&self) -> &'static str {
+        "panning"
+    }
+    fn execute(&mut self, ctx: &mut crate::canvas::CanvasState) {
+        ctx.viewport.offset.x = self.to.x;
+        ctx.viewport.offset.y = self.to.y;
+    }
+    fn undo(&mut self, ctx: &mut crate::canvas::CanvasState) {
+        ctx.viewport.offset.x = self.from.x;
+        ctx.viewport.offset.y = self.from.y;
     }
 }
