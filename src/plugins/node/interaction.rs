@@ -4,7 +4,7 @@ use crate::{
     NodeId,
     canvas::{InteractionHandler, InteractionResult},
     plugin::{EventResult, FlowEvent, InitPluginContext, InputEvent, Plugin, PluginContext},
-    plugins::node::command::SelecteNode,
+    plugins::node::command::{DragNodes, SelecteNode},
 };
 
 const DRAG_THRESHOLD: Pixels = px(2.0);
@@ -139,7 +139,12 @@ impl InteractionHandler for NodeDragInteraction {
                 ctx.execute_command(SelecteNode::new(*node_id, *shift, ctx));
                 InteractionResult::End
             }
-            NodeDragState::Draging { .. } => InteractionResult::End,
+            NodeDragState::Draging {
+                start_positions, ..
+            } => {
+                ctx.execute_command(DragNodes::new(start_positions, &ctx));
+                InteractionResult::End
+            }
         }
     }
     fn render(&self, _ctx: &mut crate::plugin::RenderContext) -> Option<gpui::AnyElement> {

@@ -1,5 +1,7 @@
 use std::collections::HashSet;
 
+use gpui::{Pixels, Point};
+
 use crate::{EdgeId, NodeId, canvas::Command, plugin::PluginContext};
 
 pub struct SelecteNode {
@@ -38,5 +40,47 @@ impl Command for SelecteNode {
         ctx.graph.selected_edge = self.old_selected_edge.clone();
         let a = ctx.graph.node_order_mut();
         *a = self.old_node_order.clone();
+    }
+}
+
+pub struct DragNodes {
+    from: Vec<(NodeId, Point<Pixels>)>,
+    to: Vec<(NodeId, Point<Pixels>)>,
+}
+
+impl DragNodes {
+    pub fn new(start_positions: &Vec<(NodeId, Point<Pixels>)>, ctx: &PluginContext) -> Self {
+        let mut to = Vec::new();
+        for (node_id, _) in start_positions.iter() {
+            if let Some(node) = ctx.get_node(node_id) {
+                to.push((*node_id, node.point()));
+            }
+        }
+        Self {
+            from: start_positions.clone(),
+            to,
+        }
+    }
+}
+
+impl Command for DragNodes {
+    fn name(&self) -> &'static str {
+        "drag_nodes"
+    }
+    fn execute(&mut self, ctx: &mut crate::canvas::CanvasState) {
+        for (id, point) in self.to.iter() {
+            if let Some(node) = ctx.get_node_mut(id) {
+                node.x = point.x;
+                node.y = point.y;
+            }
+        }
+    }
+    fn undo(&mut self, ctx: &mut crate::canvas::CanvasState) {
+        for (id, point) in self.from.iter() {
+            if let Some(node) = ctx.get_node_mut(id) {
+                node.x = point.x;
+                node.y = point.y;
+            }
+        }
     }
 }
