@@ -7,7 +7,7 @@ use gpui::{
 
 use crate::{
     Edge, EdgeId, Graph, Node, NodeBuilder, NodeId, Port, PortId, Viewport,
-    canvas::{CanvasState, Command, History, InteractionHandler, InteractionState},
+    canvas::{CanvasState, Command, History, Interaction, InteractionState},
 };
 
 pub trait Plugin {
@@ -170,7 +170,7 @@ impl<'a> PluginContext<'a> {
         }
     }
 
-    pub fn start_interaction(&mut self, handler: impl InteractionHandler + 'static) {
+    pub fn start_interaction(&mut self, handler: impl Interaction + 'static) {
         self.interaction.handler = Some(Box::new(handler));
     }
 

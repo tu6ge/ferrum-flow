@@ -2,7 +2,7 @@ use gpui::{Element, Pixels, Point, canvas, rgb};
 
 use crate::{
     NodeId, PortId,
-    canvas::InteractionHandler,
+    canvas::Interaction,
     plugin::{FlowEvent, InputEvent, Plugin},
     plugins::port::{edge_bezier, port_screen_bounds, port_screen_position},
 };
@@ -71,7 +71,7 @@ struct PortConnecting {
 
 impl PortConnecting {}
 
-impl InteractionHandler for PortConnecting {
+impl Interaction for PortConnecting {
     fn on_mouse_move(
         &mut self,
         event: &gpui::MouseMoveEvent,

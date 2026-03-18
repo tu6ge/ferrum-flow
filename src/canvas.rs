@@ -14,7 +14,7 @@ mod undo;
 
 pub use undo::{CanvasState, Command, CompositeCommand, History};
 
-pub use types::{InteractionHandler, InteractionResult, InteractionState};
+pub use types::{Interaction, InteractionResult, InteractionState};
 
 pub struct FlowCanvas {
     pub graph: Graph,

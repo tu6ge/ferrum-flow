@@ -1,7 +1,7 @@
 use gpui::{Pixels, Point, px};
 
 use crate::{
-    canvas::{Command, InteractionHandler, InteractionResult},
+    canvas::{Command, Interaction, InteractionResult},
     plugin::{EventResult, FlowEvent, InputEvent, Plugin},
 };
 
@@ -68,7 +68,7 @@ struct Panning {
     start_offset: Point<Pixels>,
 }
 
-impl InteractionHandler for Panning {
+impl Interaction for Panning {
     fn on_mouse_move(
         &mut self,
         ev: &gpui::MouseMoveEvent,

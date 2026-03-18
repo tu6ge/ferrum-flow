@@ -2,7 +2,7 @@ use gpui::{Pixels, Point, px};
 
 use crate::{
     NodeId,
-    canvas::{InteractionHandler, InteractionResult},
+    canvas::{Interaction, InteractionResult},
     plugin::{EventResult, FlowEvent, InitPluginContext, InputEvent, Plugin, PluginContext},
     plugins::node::command::{DragNodes, SelecteNode},
 };
@@ -77,7 +77,7 @@ impl NodeDragInteraction {
     }
 }
 
-impl InteractionHandler for NodeDragInteraction {
+impl Interaction for NodeDragInteraction {
     fn on_mouse_move(
         &mut self,
         ev: &gpui::MouseMoveEvent,

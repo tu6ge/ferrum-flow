@@ -7,7 +7,7 @@ use gpui::{
 
 use crate::{
     Graph, Node, NodeId,
-    canvas::{InteractionHandler, InteractionResult},
+    canvas::{Interaction, InteractionResult},
     plugin::{
         EventResult, FlowEvent, InputEvent, Plugin, PluginContext, RenderContext, RenderLayer,
     },
@@ -131,7 +131,7 @@ impl SelectionInteraction {
     }
 }
 
-impl InteractionHandler for SelectionInteraction {
+impl Interaction for SelectionInteraction {
     fn on_mouse_move(&mut self, ev: &MouseMoveEvent, ctx: &mut PluginContext) -> InteractionResult {
         let mouse_world = ctx.viewport.screen_to_world(ev.position);
         match &mut self.state {

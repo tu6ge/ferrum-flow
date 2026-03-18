@@ -3,7 +3,7 @@ use gpui::{AnyElement, MouseMoveEvent, MouseUpEvent};
 use crate::plugin::{PluginContext, RenderContext};
 
 pub struct InteractionState {
-    pub handler: Option<Box<dyn InteractionHandler>>,
+    pub handler: Option<Box<dyn Interaction>>,
 }
 
 impl InteractionState {
@@ -11,7 +11,7 @@ impl InteractionState {
         Self { handler: None }
     }
 
-    pub fn add(&mut self, handler: impl InteractionHandler + 'static) {
+    pub fn add(&mut self, handler: impl Interaction + 'static) {
         self.handler = Some(Box::new(handler));
     }
 
@@ -24,7 +24,7 @@ impl InteractionState {
     }
 }
 
-pub trait InteractionHandler {
+pub trait Interaction {
     fn on_mouse_move(
         &mut self,
         event: &MouseMoveEvent,
@@ -41,11 +41,11 @@ pub trait InteractionHandler {
 pub enum InteractionResult {
     Continue,
     End,
-    Replace(Box<dyn InteractionHandler>),
+    Replace(Box<dyn Interaction>),
 }
 
 impl InteractionResult {
-    pub fn replace(new_handler: impl InteractionHandler + 'static) -> Self {
+    pub fn replace(new_handler: impl Interaction + 'static) -> Self {
         Self::Replace(Box::new(new_handler))
     }
 }

@@ -7,8 +7,8 @@ mod plugins;
 mod viewport;
 
 pub use canvas::{
-    CanvasState, Command, CompositeCommand, FlowCanvas, History, InteractionHandler,
-    InteractionResult, InteractionState,
+    CanvasState, Command, CompositeCommand, FlowCanvas, History, Interaction, InteractionResult,
+    InteractionState,
 };
 pub use edge::*;
 pub use graph::*;
