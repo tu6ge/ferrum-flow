@@ -34,7 +34,6 @@ fn main() {
                     .plugin(Background::new())
                     .plugin(NodePlugin::new())
                     .plugin(PortInteractionPlugin::new())
-                    .plugin(PortPlugin::new())
                     .plugin(EdgePlugin::new())
                     .plugin(DeletePlugin::new())
                     .plugin(HistoryPlugin::new());

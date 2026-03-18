@@ -12,6 +12,6 @@ pub use delete::DeletePlugin;
 pub use edge::EdgePlugin;
 pub use history::HistoryPlugin;
 pub use node::{NodeInteractionPlugin, NodePlugin, NodeRenderer, RendererRegistry};
-pub use port::{PortInteractionPlugin, PortPlugin};
+pub use port::PortInteractionPlugin;
 pub use selection::SelectionPlugin;
 pub use viewport::ViewportPlugin;
