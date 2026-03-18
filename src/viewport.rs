@@ -1,9 +1,10 @@
-use gpui::{Pixels, Point, px};
+use gpui::{Bounds, Pixels, Point, px};
 
 #[derive(Debug, Clone)]
 pub struct Viewport {
     pub zoom: f32,
     pub offset: Point<Pixels>,
+    pub window_bounds: Option<Bounds<Pixels>>,
 }
 
 impl Viewport {
@@ -11,6 +12,7 @@ impl Viewport {
         Self {
             zoom: 1.0,
             offset: Point::new(px(0.0), px(0.0)),
+            window_bounds: None,
         }
     }
 

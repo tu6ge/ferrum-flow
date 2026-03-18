@@ -72,10 +72,24 @@ impl Plugin for NodePlugin {
         crate::plugin::RenderLayer::Nodes
     }
     fn render(&mut self, ctx: &mut RenderContext) -> Option<gpui::AnyElement> {
-        let list: Vec<_> = ctx
+        let list = ctx
             .graph
             .node_order()
             .iter()
+            .filter(|node_id| {
+                let Some(node) = ctx.graph.get_node(node_id) else {
+                    return false;
+                };
+                let Some(window_bounds) = ctx.viewport.window_bounds else {
+                    return false;
+                };
+                let screen = ctx.viewport.world_to_screen(node.point());
+
+                screen.x + node.size.width * ctx.viewport.zoom > px(0.0)
+                    && screen.x < window_bounds.size.width
+                    && screen.y + node.size.height * ctx.viewport.zoom > px(0.0)
+                    && screen.y < window_bounds.size.height
+            })
             .filter_map(|node_id| {
                 let node = ctx.graph.nodes().get(node_id)?;
                 let render = self.renderers.get(&node.node_type);
@@ -89,8 +103,7 @@ impl Plugin for NodePlugin {
                     ),
                     None => Some(render.render(node, ctx)),
                 }
-            })
-            .collect();
+            });
 
         Some(div().children(list).into_any())
     }

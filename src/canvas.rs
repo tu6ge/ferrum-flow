@@ -209,6 +209,11 @@ impl FlowCanvas {
 
 impl Render for FlowCanvas {
     fn render(&mut self, window: &mut Window, this_cx: &mut Context<Self>) -> impl IntoElement {
+        // only run once
+        if self.viewport.window_bounds.is_none() {
+            self.viewport.window_bounds = Some(window.bounds());
+        }
+
         let entity = this_cx.entity();
 
         let graph = &self.graph;
