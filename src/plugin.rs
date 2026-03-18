@@ -425,18 +425,16 @@ pub enum RenderLayer {
     Background,
     Edges,
     Nodes,
-    Ports,
     Selection,
     Interaction,
     Overlay,
 }
 
 impl RenderLayer {
-    pub const ALL: [RenderLayer; 7] = [
+    pub const ALL: [RenderLayer; 6] = [
         RenderLayer::Background,
         RenderLayer::Edges,
         RenderLayer::Nodes,
-        RenderLayer::Ports,
         RenderLayer::Selection,
         RenderLayer::Interaction,
         RenderLayer::Overlay,
@@ -446,10 +444,9 @@ impl RenderLayer {
             RenderLayer::Background => 0,
             RenderLayer::Edges => 1,
             RenderLayer::Nodes => 2,
-            RenderLayer::Ports => 3,
-            RenderLayer::Selection => 4,
-            RenderLayer::Interaction => 5,
-            RenderLayer::Overlay => 6,
+            RenderLayer::Selection => 3,
+            RenderLayer::Interaction => 4,
+            RenderLayer::Overlay => 5,
         }
     }
 }
