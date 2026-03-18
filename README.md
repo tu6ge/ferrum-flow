@@ -3,7 +3,7 @@
 A high-performance, extensible node-based editor built with Rust and gpui.
 Designed for building visual programming tools, workflow editors, and graph-based UIs.
 
-## ✨ Features
+## Features
 
 - 🧩 Plugin-based architecture
 - 🧠 Interaction system (drag, pan, select, etc.)
@@ -24,7 +24,7 @@ Designed for building visual programming tools, workflow editors, and graph-base
 cargo add ferrum-flow
 ```
 
-## 🏗️ Architecture Overview
+## Architecture Overview
 
 The system is designed with clear separation of concerns:
 
@@ -44,7 +44,7 @@ The system is designed with clear separation of concerns:
 - Command System
   Enables undo/redo support
 
-### 🔌 Plugin System
+### Plugin System
 
 Plugins are the primary extension mechanism:
 
@@ -77,7 +77,7 @@ A plugin can:
 - Render UI layers
 - Modify graph state
 
-### 🎮 Interaction System
+### Interaction System
 
 Interactions represent ongoing user actions, such as:
 
@@ -109,7 +109,7 @@ pub enum InteractionResult {
 }
 ```
 
-### 🔄 Command System (Undo / Redo)
+### Command System (Undo / Redo)
 
 Implements the Command Pattern:
 
@@ -130,7 +130,7 @@ Built-in Features
 ctx.execute_command(MyCommand { ... });
 ```
 
-### 🎨 Node Rendering
+### Node Rendering
 
 Rendering is fully customizable via a registry:
 
@@ -152,7 +152,7 @@ div()
     .bg(white())
 ```
 
-### 🧱 Graph Model
+### Graph Model
 
 ```rust
 pub struct Node {
@@ -177,7 +177,7 @@ graph.create_node("math.add")
     .build(&mut graph);
 ```
 
-### ⚡ Performance
+### Performance
 
 Designed to scale to large graphs:
 
@@ -186,7 +186,7 @@ Designed to scale to large graphs:
 - Interaction-aware rendering (degraded mode during drag)
 - Ready for spatial indexing
 
-### 🧭 Design Principles
+### Design Principles
 
 - Separation of data and interaction
 - Plugins over hardcoded behavior
@@ -194,7 +194,7 @@ Designed to scale to large graphs:
 - Performance-first rendering
 - Composable architecture
 
-### 📦 Roadmap
+### Roadmap
 
 - Edge rendering improvements
 - Connection (drag-to-connect)
@@ -202,7 +202,7 @@ Designed to scale to large graphs:
 - Interaction priority & conflict resolution
 - Collaboration support
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome!
 
