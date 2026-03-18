@@ -28,7 +28,7 @@ impl NodePlugin {
     }
 
     fn render_ports(&self, node_id: &NodeId, ctx: &RenderContext) -> Option<gpui::AnyElement> {
-        let ports: Vec<_> = ctx
+        let ports = ctx
             .graph
             .ports
             .iter()
@@ -46,8 +46,7 @@ impl NodePlugin {
                         .rounded_full()
                         .bg(rgb(0x1A192B)),
                 )
-            })
-            .collect();
+            });
 
         Some(div().children(ports).into_any())
     }
