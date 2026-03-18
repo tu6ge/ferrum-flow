@@ -14,6 +14,8 @@ Designed for building visual programming tools, workflow editors, and graph-base
 - 🎨 Custom node rendering system
 - ⚡ Built with performance in mind (virtualization-ready)
 
+[![Watch the video](https://img.youtube.com/vi/mimeKsIldog/0.jpg)](https://www.youtube.com/watch?v=mimeKsIldog)
+
 [GitHub](https://github.com/tu6ge/ferrum-flow)
 
 ## Usage
