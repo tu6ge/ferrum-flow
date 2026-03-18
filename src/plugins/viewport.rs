@@ -34,7 +34,7 @@ impl Plugin for ViewportPlugin {
         } else if let FlowEvent::Input(InputEvent::Wheel(ev)) = event {
             let cursor = ev.position;
 
-            let before = ctx.viewport.screen_to_world(cursor);
+            let before = ctx.screen_to_world(cursor);
 
             let delta = f32::from(ev.delta.pixel_delta(px(1.0)).y);
             if delta == 0.0 {
@@ -47,7 +47,7 @@ impl Plugin for ViewportPlugin {
 
             ctx.viewport.zoom = ctx.viewport.zoom.clamp(0.7, 3.0);
 
-            let after = ctx.viewport.world_to_screen(before);
+            let after = ctx.world_to_screen(before);
 
             ctx.viewport.offset.x += cursor.x - after.x;
             ctx.viewport.offset.y += cursor.y - after.y;

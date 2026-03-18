@@ -125,24 +125,24 @@ fn edge_geometry2(edge: &Edge, ctx: &RenderContext) -> Option<EdgeGeometry> {
 }
 
 fn port_screen_position(port_id: PortId, ctx: &PluginContext) -> Option<Point<Pixels>> {
-    let port = &ctx.graph.ports[&port_id];
-    let node = &ctx.graph.nodes().get(&port.node_id)?;
+    let port = &ctx.graph.ports.get(&port_id)?;
+    let node = &ctx.nodes().get(&port.node_id)?;
 
     let node_pos = node.point();
 
     let offset = port_offset(node, port);
 
-    Some(ctx.viewport.world_to_screen(node_pos + offset))
+    Some(ctx.world_to_screen(node_pos + offset))
 }
 fn port_screen_position2(port_id: PortId, ctx: &RenderContext) -> Option<Point<Pixels>> {
-    let port = &ctx.graph.ports[&port_id];
-    let node = &ctx.graph.nodes().get(&port.node_id)?;
+    let port = &ctx.graph.ports.get(&port_id)?;
+    let node = &ctx.nodes().get(&port.node_id)?;
 
     let node_pos = node.point();
 
     let offset = port_offset(node, port);
 
-    Some(ctx.viewport.world_to_screen(node_pos + offset))
+    Some(ctx.world_to_screen(node_pos + offset))
 }
 
 pub fn port_offset(node: &Node, port: &Port) -> Point<Pixels> {

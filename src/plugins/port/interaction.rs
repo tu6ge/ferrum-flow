@@ -88,7 +88,7 @@ impl Interaction for PortConnecting {
         ev: &gpui::MouseUpEvent,
         ctx: &mut crate::plugin::PluginContext,
     ) -> crate::canvas::InteractionResult {
-        let mouse_world = ctx.viewport.screen_to_world(ev.position);
+        let mouse_world = ctx.screen_to_world(ev.position);
         if let Some((node_id, port_id)) = ctx
             .graph
             .ports
@@ -111,11 +111,7 @@ impl Interaction for PortConnecting {
                 ctx.notify();
                 return crate::canvas::InteractionResult::End;
             }
-            let edge = ctx
-                .graph
-                .new_edge()
-                .source(self.port_id.clone())
-                .target(port_id);
+            let edge = ctx.new_edge().source(self.port_id.clone()).target(port_id);
 
             ctx.execute_command(CreateEdge::new(edge));
         }

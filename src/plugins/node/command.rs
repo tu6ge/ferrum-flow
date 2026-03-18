@@ -30,10 +30,10 @@ impl Command for SelecteNodeCommand {
     }
     fn execute(&mut self, ctx: &mut crate::canvas::CanvasState) {
         if !self.shift {
-            ctx.graph.clear_selected_edge();
+            ctx.clear_selected_edge();
         }
-        ctx.graph.add_selected_node(self.node_id, self.shift);
-        ctx.graph.bring_node_to_front(self.node_id);
+        ctx.add_selected_node(self.node_id, self.shift);
+        ctx.bring_node_to_front(self.node_id);
     }
     fn undo(&mut self, ctx: &mut crate::canvas::CanvasState) {
         ctx.graph.selected_node = self.old_selected_node.clone();

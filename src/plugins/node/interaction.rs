@@ -26,9 +26,9 @@ impl Plugin for NodeInteractionPlugin {
 
     fn on_event(&mut self, event: &FlowEvent, ctx: &mut PluginContext) -> EventResult {
         if let FlowEvent::Input(InputEvent::MouseDown(ev)) = event {
-            let mouse_world = ctx.viewport.screen_to_world(ev.position);
+            let mouse_world = ctx.screen_to_world(ev.position);
 
-            if let Some(node_id) = ctx.graph.hit_node(mouse_world) {
+            if let Some(node_id) = ctx.hit_node(mouse_world) {
                 ctx.start_interaction(NodeDragInteraction::start(
                     node_id,
                     mouse_world,
@@ -37,7 +37,7 @@ impl Plugin for NodeInteractionPlugin {
 
                 return EventResult::Stop;
             } else {
-                ctx.graph.clear_selected_node();
+                ctx.clear_selected_node();
             }
         }
 
@@ -89,18 +89,18 @@ impl Interaction for NodeDragInteraction {
                 start_mouse,
                 ..
             } => {
-                let delta = ctx.viewport.screen_to_world(ev.position) - *start_mouse;
+                let delta = ctx.screen_to_world(ev.position) - *start_mouse;
                 if delta.x.abs() > DRAG_THRESHOLD || delta.y.abs() > DRAG_THRESHOLD {
                     let mut nodes = vec![];
 
                     if ctx.graph.selected_node.contains(&node_id) {
                         for id in &ctx.graph.selected_node {
-                            if let Some(node) = ctx.graph.nodes().get(&id) {
+                            if let Some(node) = ctx.nodes().get(&id) {
                                 nodes.push((id.clone(), node.point()));
                             }
                         }
                     } else {
-                        if let Some(node) = ctx.graph.nodes().get(&node_id) {
+                        if let Some(node) = ctx.nodes().get(&node_id) {
                             nodes.push((node_id.clone(), node.point()));
                         }
                     }
@@ -119,7 +119,7 @@ impl Interaction for NodeDragInteraction {
                 let dx = (ev.position.x - start_mouse.x) / ctx.viewport.zoom;
                 let dy = (ev.position.y - start_mouse.y) / ctx.viewport.zoom;
                 for (id, point) in start_positions.iter() {
-                    if let Some(node) = ctx.graph.get_node_mut(id) {
+                    if let Some(node) = ctx.get_node_mut(id) {
                         node.x = point.x + dx;
                         node.y = point.y + dy;
                     }

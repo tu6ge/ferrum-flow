@@ -74,7 +74,7 @@ impl Plugin for SelectionPlugin {
     }
     fn render(&mut self, ctx: &mut RenderContext) -> Option<AnyElement> {
         self.selected.as_ref().map(|Selected { bounds, .. }| {
-            let top_left = ctx.viewport.world_to_screen(bounds.origin);
+            let top_left = ctx.world_to_screen(bounds.origin);
 
             let size = Size::new(
                 bounds.size.width * ctx.viewport.zoom,
@@ -133,7 +133,7 @@ impl SelectionInteraction {
 
 impl Interaction for SelectionInteraction {
     fn on_mouse_move(&mut self, ev: &MouseMoveEvent, ctx: &mut PluginContext) -> InteractionResult {
-        let mouse_world = ctx.viewport.screen_to_world(ev.position);
+        let mouse_world = ctx.screen_to_world(ev.position);
         match &mut self.state {
             SelectionState::Pending { start } => {
                 let delta = mouse_world - *start;
@@ -162,7 +162,7 @@ impl Interaction for SelectionInteraction {
                 let delta = mouse_world - *start_mouse;
 
                 for (id, start_pos) in nodes.iter_mut() {
-                    if let Some(node) = ctx.graph.get_node_mut(id) {
+                    if let Some(node) = ctx.get_node_mut(id) {
                         node.x = start_pos.x + delta.x;
                         node.y = start_pos.y + delta.y;
                     }
@@ -186,7 +186,7 @@ impl Interaction for SelectionInteraction {
 
                 let mut selected = HashMap::new();
 
-                ctx.graph.clear_selected_node();
+                ctx.clear_selected_node();
 
                 for node in ctx.graph.nodes().values() {
                     let bounds = node_world_bounds(node);
@@ -197,7 +197,7 @@ impl Interaction for SelectionInteraction {
                 }
 
                 for (id, _) in selected.iter() {
-                    ctx.graph.add_selected_node(*id, true);
+                    ctx.add_selected_node(*id, true);
                 }
 
                 let bounds = compute_nodes_bounds(&selected, ctx.graph);
@@ -216,7 +216,7 @@ impl Interaction for SelectionInteraction {
 
                 let mut new_nodes = HashMap::new();
                 for (id, _) in nodes.iter() {
-                    ctx.graph.add_selected_node(*id, true);
+                    ctx.add_selected_node(*id, true);
                     if let Some(node) = ctx.graph.nodes().get(id) {
                         new_nodes.insert(id.clone(), node.point());
                     }
@@ -243,7 +243,7 @@ impl Interaction for SelectionInteraction {
             SelectionState::Selecting { start, end } => {
                 let rect = normalize_rect(*start, *end);
 
-                let top_left = ctx.viewport.world_to_screen(rect.origin);
+                let top_left = ctx.world_to_screen(rect.origin);
 
                 let size = Size::new(
                     rect.size.width * ctx.viewport.zoom,
@@ -254,7 +254,7 @@ impl Interaction for SelectionInteraction {
             }
 
             SelectionState::Moving { bounds, .. } => {
-                let top_left = ctx.viewport.world_to_screen(bounds.origin);
+                let top_left = ctx.world_to_screen(bounds.origin);
 
                 let size = Size::new(
                     bounds.size.width * ctx.viewport.zoom,

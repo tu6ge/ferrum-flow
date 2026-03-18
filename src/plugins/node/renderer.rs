@@ -48,7 +48,7 @@ struct DefaultNodeRenderer;
 impl NodeRenderer for DefaultNodeRenderer {
     fn render(&self, node: &Node, ctx: &mut RenderContext) -> AnyElement {
         let node_id = node.id;
-        let screen = ctx.viewport.world_to_screen(node.point());
+        let screen = ctx.world_to_screen(node.point());
         let node_x = screen.x;
         let node_y = screen.y;
         let selected = ctx
@@ -81,7 +81,7 @@ struct UndefinedNodeRenderer;
 
 impl NodeRenderer for UndefinedNodeRenderer {
     fn render(&self, node: &Node, ctx: &mut RenderContext) -> AnyElement {
-        let screen = ctx.viewport.world_to_screen(node.point());
+        let screen = ctx.world_to_screen(node.point());
         let node_x = screen.x;
         let node_y = screen.y;
 
