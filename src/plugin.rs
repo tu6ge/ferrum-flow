@@ -418,6 +418,57 @@ impl<'a> RenderContext<'a> {
             layer,
         }
     }
+
+    pub fn create_node(&self, node_type: &str) -> NodeBuilder {
+        self.graph.create_node(node_type)
+    }
+
+    pub fn next_node_id(&self) -> NodeId {
+        self.graph.next_node_id()
+    }
+
+    pub fn next_port_id(&self) -> PortId {
+        self.graph.next_port_id()
+    }
+
+    pub fn next_edge_id(&self) -> EdgeId {
+        self.graph.next_edge_id()
+    }
+
+    pub fn get_node(&self, id: &NodeId) -> Option<&Node> {
+        self.graph.get_node(id)
+    }
+
+    pub fn nodes(&self) -> &HashMap<NodeId, Node> {
+        self.graph.nodes()
+    }
+    pub fn node_order(&self) -> &Vec<NodeId> {
+        self.graph.node_order()
+    }
+
+    pub fn new_edge(&self) -> Edge {
+        self.graph.new_edge()
+    }
+
+    pub fn selection_bounds(&self) -> Option<Bounds<Pixels>> {
+        self.graph.selection_bounds()
+    }
+
+    pub fn selected_nodes_with_positions(&self) -> HashMap<NodeId, Point<Pixels>> {
+        self.graph.selected_nodes_with_positions()
+    }
+
+    pub fn hit_node(&self, mouse: Point<Pixels>) -> Option<NodeId> {
+        self.graph.hit_node(mouse)
+    }
+
+    pub fn world_to_screen(&self, p: Point<Pixels>) -> Point<Pixels> {
+        self.viewport.world_to_screen(p)
+    }
+
+    pub fn screen_to_world(&self, p: Point<Pixels>) -> Point<Pixels> {
+        self.viewport.screen_to_world(p)
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
