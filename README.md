@@ -14,6 +14,12 @@ Designed for building visual programming tools, workflow editors, and graph-base
 - 🎨 Custom node rendering system
 - ⚡ Built with performance in mind (virtualization-ready)
 
+## Usage
+
+```bash
+cargo add ferrum-flow
+```
+
 ## 🏗️ Architecture Overview
 
 The system is designed with clear separation of concerns:
