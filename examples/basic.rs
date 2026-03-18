@@ -1,4 +1,4 @@
-use flow_rs::*;
+use ferrum_flow::*;
 use gpui::{AppContext as _, Application, WindowOptions};
 
 fn main() {

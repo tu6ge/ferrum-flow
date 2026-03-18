@@ -1,4 +1,4 @@
-use flow_rs::*;
+use ferrum_flow::*;
 use gpui::{
     AnyElement, AppContext as _, Application, Element as _, ParentElement as _, Size, Styled,
     WindowOptions, div, px, rgb, white,

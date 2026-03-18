@@ -1,7 +1,10 @@
 [package]
-name = "flow-rs"
+name = "ferrum-flow"
 version = "0.1.0"
 edition = "2024"
+license = "Apache-2.0"
+authors = ["tu6ge"]
+description = "A high-performance node-based editor framework built with Rust and GPUI."
 
 [dependencies]
 anyhow = "1.0.102"
