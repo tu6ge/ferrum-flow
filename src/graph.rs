@@ -2,12 +2,13 @@ use std::collections::{HashMap, HashSet};
 
 use gpui::{Bounds, Pixels, Point, Size, px};
 
+use crate::NodeBuilder;
 use crate::edge::{Edge, EdgeId};
 use crate::node::{Node, NodeId, Port, PortId};
 
 #[derive(Debug, Clone)]
 pub struct Graph {
-    nodes: HashMap<NodeId, Node>,
+    pub(crate) nodes: HashMap<NodeId, Node>,
     node_order: Vec<NodeId>,
     pub ports: HashMap<PortId, Port>,
     pub edges: HashMap<EdgeId, Edge>,
@@ -26,6 +27,25 @@ impl Graph {
             selected_edge: HashSet::new(),
             selected_node: HashSet::new(),
         }
+    }
+
+    pub fn create_node(&self, node_type: &str) -> NodeBuilder {
+        NodeBuilder::new(node_type)
+    }
+
+    pub fn next_node_id(&self) -> NodeId {
+        let id = self.nodes.len() as u64 + 1;
+        NodeId(id)
+    }
+
+    pub fn next_port_id(&self) -> PortId {
+        let id = self.ports.len() as u64 + 1;
+        PortId(id)
+    }
+
+    pub fn next_edge_id(&self) -> EdgeId {
+        let id = self.edges.len() as u64 + 1;
+        EdgeId(id)
     }
 
     pub fn add_node(&mut self, node: Node) {

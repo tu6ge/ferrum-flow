@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use gpui::{Bounds, Pixels, Point};
 
-use crate::{Edge, EdgeId, Graph, Node, NodeId, Port, Viewport};
+use crate::{Edge, EdgeId, Graph, Node, NodeBuilder, NodeId, Port, PortId, Viewport};
 
 pub trait Command {
     fn name(&self) -> &'static str;
@@ -88,6 +88,21 @@ impl Command for CompositeCommand {
 }
 
 impl<'a> CanvasState<'a> {
+    pub fn create_node(&self, node_type: &str) -> NodeBuilder {
+        self.graph.create_node(node_type)
+    }
+
+    pub fn next_node_id(&self) -> NodeId {
+        self.graph.next_node_id()
+    }
+
+    pub fn next_port_id(&self) -> PortId {
+        self.graph.next_port_id()
+    }
+
+    pub fn next_edge_id(&self) -> EdgeId {
+        self.graph.next_edge_id()
+    }
     pub fn add_node(&mut self, node: Node) {
         self.graph.add_node(node);
     }

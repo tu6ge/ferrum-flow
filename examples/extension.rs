@@ -1,21 +1,25 @@
 use ferrum_flow::*;
 use gpui::{
-    AnyElement, AppContext as _, Application, Element as _, ParentElement as _, Size, Styled,
-    WindowOptions, div, px, rgb, white,
+    AnyElement, AppContext as _, Application, Element as _, ParentElement as _, Styled,
+    WindowOptions, div, rgb, white,
 };
 
 fn main() {
     Application::new().run(|cx| {
         let mut graph = Graph::new();
-        graph.add_node(
-            Node::new(1, 100.0, 100.0)
-                .set_size(Size::new(px(300.0), px(150.0)))
-                .node_type("number"),
-        );
-        graph.add_point(Port::new_output(1, 1, 0));
 
-        graph.add_node(Node::new(2, 300.0, 400.0));
-        graph.add_point(Port::new_input(2, 2, 0));
+        graph
+            .create_node("number")
+            .position(100.0, 100.0)
+            .size(300.0, 150.0)
+            .output()
+            .build(&mut graph);
+
+        graph
+            .create_node("")
+            .position(300.0, 400.0)
+            .input()
+            .build(&mut graph);
 
         cx.open_window(WindowOptions::default(), |_, cx| {
             cx.new(|fc| {
