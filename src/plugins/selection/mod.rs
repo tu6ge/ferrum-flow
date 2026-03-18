@@ -222,6 +222,13 @@ impl Interaction for SelectionInteraction {
                     }
                 }
 
+                let start_position: Vec<_> = nodes
+                    .iter()
+                    .map(|(id, point)| (id.clone(), point.clone()))
+                    .collect();
+
+                ctx.execute_command(super::node::DragNodesCommand::new(&start_position, ctx));
+
                 ctx.emit(FlowEvent::custom(SelectedEvent {
                     bounds,
                     nodes: new_nodes,

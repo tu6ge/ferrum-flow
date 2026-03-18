@@ -4,7 +4,7 @@ use gpui::{Pixels, Point};
 
 use crate::{EdgeId, NodeId, canvas::Command, plugin::PluginContext};
 
-pub struct SelecteNode {
+pub struct SelecteNodeCommand {
     node_id: NodeId,
     shift: bool,
     old_node_order: Vec<NodeId>,
@@ -12,7 +12,7 @@ pub struct SelecteNode {
     old_selected_node: HashSet<NodeId>,
 }
 
-impl SelecteNode {
+impl SelecteNodeCommand {
     pub fn new(node_id: NodeId, shift: bool, ctx: &PluginContext) -> Self {
         Self {
             node_id,
@@ -24,7 +24,7 @@ impl SelecteNode {
     }
 }
 
-impl Command for SelecteNode {
+impl Command for SelecteNodeCommand {
     fn name(&self) -> &'static str {
         "select_node"
     }
@@ -43,12 +43,12 @@ impl Command for SelecteNode {
     }
 }
 
-pub struct DragNodes {
+pub struct DragNodesCommand {
     from: Vec<(NodeId, Point<Pixels>)>,
     to: Vec<(NodeId, Point<Pixels>)>,
 }
 
-impl DragNodes {
+impl DragNodesCommand {
     pub fn new(start_positions: &Vec<(NodeId, Point<Pixels>)>, ctx: &PluginContext) -> Self {
         let mut to = Vec::new();
         for (node_id, _) in start_positions.iter() {
@@ -63,7 +63,7 @@ impl DragNodes {
     }
 }
 
-impl Command for DragNodes {
+impl Command for DragNodesCommand {
     fn name(&self) -> &'static str {
         "drag_nodes"
     }

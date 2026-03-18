@@ -4,6 +4,7 @@ mod renderer;
 
 pub use renderer::{NodeRenderer, RendererRegistry};
 
+pub use command::DragNodesCommand;
 use gpui::{Element, ParentElement, Styled as _, div, px, rgb};
 pub use interaction::NodeInteractionPlugin;
 
