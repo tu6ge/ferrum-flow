@@ -2,30 +2,17 @@ mod command;
 mod interaction;
 mod renderer;
 
-pub use renderer::{NodeRenderer, RendererRegistry};
-
 pub use command::DragNodesCommand;
 use gpui::{Element, ParentElement, Styled as _, div, px, rgb};
 pub use interaction::NodeInteractionPlugin;
 
 use crate::{NodeId, RenderContext, plugin::Plugin, plugins::port::port_screen_position};
 
-pub struct NodePlugin {
-    renderers: RendererRegistry,
-}
+pub struct NodePlugin {}
 
 impl NodePlugin {
     pub fn new() -> Self {
-        Self {
-            renderers: RendererRegistry::new(),
-        }
-    }
-    pub fn register_node<R>(mut self, name: impl Into<String>, renderer: R) -> Self
-    where
-        R: NodeRenderer + 'static,
-    {
-        self.renderers.register(name, renderer);
-        self
+        Self {}
     }
 
     fn render_ports(&self, node_id: &NodeId, ctx: &RenderContext) -> Option<gpui::AnyElement> {
@@ -92,7 +79,7 @@ impl Plugin for NodePlugin {
             })
             .filter_map(|node_id| {
                 let node = ctx.graph.nodes().get(node_id)?;
-                let render = self.renderers.get(&node.node_type);
+                let render = ctx.renderers.get(&node.node_type);
 
                 match self.render_ports(node_id, &ctx) {
                     Some(ports) => Some(

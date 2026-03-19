@@ -6,7 +6,8 @@ use gpui::{
 };
 
 use crate::{
-    Edge, EdgeId, Graph, Node, NodeBuilder, NodeId, Port, PortId, Viewport,
+    Edge, EdgeId, Graph, Node, NodeBuilder, NodeId, NodeRenderer, Port, PortId, RendererRegistry,
+    Viewport,
     canvas::{CanvasState, Command, History, Interaction, InteractionState},
 };
 
@@ -35,6 +36,7 @@ pub trait Plugin {
 pub struct InitPluginContext<'a> {
     pub graph: &'a mut Graph,
     pub viewport: &'a mut Viewport,
+    pub renderers: &'a mut RendererRegistry,
 }
 
 impl<'a> InitPluginContext<'a> {
@@ -140,6 +142,7 @@ pub struct PluginContext<'a> {
     pub graph: &'a mut Graph,
     pub viewport: &'a mut Viewport,
     pub(crate) interaction: &'a mut InteractionState,
+    pub renderers: &'a mut RendererRegistry,
 
     pub history: &'a mut History,
     emit: &'a mut dyn FnMut(FlowEvent),
@@ -156,6 +159,7 @@ impl<'a> PluginContext<'a> {
         graph: &'a mut Graph,
         viewport: &'a mut Viewport,
         interaction: &'a mut InteractionState,
+        renderers: &'a mut RendererRegistry,
         history: &'a mut History,
         emit: &'a mut dyn FnMut(FlowEvent),
         notify: &'a mut dyn FnMut(),
@@ -164,6 +168,7 @@ impl<'a> PluginContext<'a> {
             graph,
             viewport,
             interaction,
+            renderers,
             history,
             emit,
             notify,
@@ -254,6 +259,12 @@ impl<'a> PluginContext<'a> {
 
     pub fn get_node(&self, id: &NodeId) -> Option<&Node> {
         self.graph.get_node(id)
+    }
+
+    pub fn get_node_render(&self, id: &NodeId) -> Option<&dyn NodeRenderer> {
+        let node = self.get_node(id)?;
+
+        Some(self.renderers.get(&node.node_type))
     }
 
     pub fn get_node_mut(&mut self, id: &NodeId) -> Option<&mut Node> {
@@ -398,6 +409,7 @@ pub enum UiEvent {
 pub struct RenderContext<'a> {
     pub graph: &'a Graph,
     pub viewport: &'a Viewport,
+    pub renderers: &'a RendererRegistry,
 
     pub window: &'a Window,
 
@@ -408,12 +420,14 @@ impl<'a> RenderContext<'a> {
     pub fn new(
         graph: &'a Graph,
         viewport: &'a Viewport,
+        renderers: &'a RendererRegistry,
         window: &'a Window,
         layer: RenderLayer,
     ) -> Self {
         Self {
             graph,
             viewport,
+            renderers,
             window,
             layer,
         }
@@ -437,6 +451,12 @@ impl<'a> RenderContext<'a> {
 
     pub fn get_node(&self, id: &NodeId) -> Option<&Node> {
         self.graph.get_node(id)
+    }
+
+    pub fn get_node_render(&self, id: &NodeId) -> Option<&dyn NodeRenderer> {
+        let node = self.get_node(id)?;
+
+        Some(self.renderers.get(&node.node_type))
     }
 
     pub fn nodes(&self) -> &HashMap<NodeId, Node> {

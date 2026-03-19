@@ -124,6 +124,7 @@ impl Interaction for PortConnecting {
         }
 
         let mouse: Point<Pixels> = self.mouse;
+
         let start = port_screen_position(self.port_id, &ctx)?;
         Some(
             canvas(

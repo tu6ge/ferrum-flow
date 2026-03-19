@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{collections::HashMap, fmt::Display};
 
 use gpui::{Bounds, Pixels, Point, Size, px};
 use serde::{Deserialize, Serialize};
@@ -86,31 +86,21 @@ pub enum PortKind {
     Output,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Hash)]
+pub enum PortPosition {
+    Left,
+    Right,
+    Top,
+    Bottom,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Port {
     pub id: PortId,
     pub kind: PortKind,
     pub index: usize,
     pub node_id: NodeId,
-}
-
-impl Port {
-    pub fn new_input(id: u64, node_id: u64, index: usize) -> Self {
-        Self {
-            id: PortId(id),
-            kind: PortKind::Input,
-            index,
-            node_id: NodeId(node_id),
-        }
-    }
-    pub fn new_output(id: u64, node_id: u64, index: usize) -> Self {
-        Self {
-            id: PortId(id),
-            kind: PortKind::Output,
-            index,
-            node_id: NodeId(node_id),
-        }
-    }
+    pub position: PortPosition,
 }
 
 pub struct NodeBuilder {
@@ -118,8 +108,8 @@ pub struct NodeBuilder {
     x: Pixels,
     y: Pixels,
     size: Size<Pixels>,
-    input_count: usize,
-    output_count: usize,
+    inputs: Vec<PortPosition>,
+    outputs: Vec<PortPosition>,
     data: serde_json::Value,
 }
 
@@ -133,8 +123,8 @@ impl NodeBuilder {
                 width: DEFAULT_NODE_WIDTH,
                 height: DEFAULT_NODE_HEIGHT,
             },
-            input_count: 0,
-            output_count: 0,
+            inputs: vec![],
+            outputs: vec![],
             data: serde_json::Value::Null,
         }
     }
@@ -154,12 +144,22 @@ impl NodeBuilder {
     }
 
     pub fn input(mut self) -> Self {
-        self.input_count += 1;
+        self.inputs.push(PortPosition::Left);
         self
     }
 
     pub fn output(mut self) -> Self {
-        self.output_count += 1;
+        self.outputs.push(PortPosition::Right);
+        self
+    }
+
+    pub fn input_at(mut self, pos: PortPosition) -> Self {
+        self.inputs.push(pos);
+        self
+    }
+
+    pub fn output_at(mut self, pos: PortPosition) -> Self {
+        self.outputs.push(pos);
         self
     }
 
@@ -174,34 +174,48 @@ impl NodeBuilder {
         let mut inputs = Vec::new();
         let mut outputs = Vec::new();
 
+        let mut input_counters: HashMap<PortPosition, usize> = HashMap::new();
+
         // 创建 input ports
-        for i in 0..self.input_count {
+        for pos in self.inputs {
             let port_id = graph.next_port_id();
+
+            let index = input_counters.entry(pos).or_insert(0);
+            let current_index = *index;
+            *index += 1;
 
             graph.ports.insert(
                 port_id,
                 Port {
                     id: port_id,
                     kind: PortKind::Input,
-                    index: i,
+                    index: current_index,
                     node_id,
+                    position: pos,
                 },
             );
 
             inputs.push(port_id);
         }
 
+        let mut output_counters: HashMap<PortPosition, usize> = HashMap::new();
+
         // 创建 output ports
-        for i in 0..self.output_count {
+        for pos in self.outputs {
             let port_id = graph.next_port_id();
+
+            let index = output_counters.entry(pos).or_insert(0);
+            let current_index = *index;
+            *index += 1;
 
             graph.ports.insert(
                 port_id,
                 Port {
                     id: port_id,
                     kind: PortKind::Output,
-                    index: i,
+                    index: current_index,
                     node_id,
+                    position: pos,
                 },
             );
 

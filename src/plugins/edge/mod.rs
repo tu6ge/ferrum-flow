@@ -1,7 +1,7 @@
 use gpui::{Bounds, Element, PathBuilder, Pixels, Point, canvas, px, rgb};
 
 use crate::{
-    Edge, EdgeId, Node, Port, PortId, PortKind, RenderContext,
+    Edge, EdgeId, PortId, RenderContext,
     plugin::{FlowEvent, Plugin, PluginContext},
     plugins::edge::command::ClearEdgeCommand,
 };
@@ -128,9 +128,11 @@ fn port_screen_position(port_id: PortId, ctx: &PluginContext) -> Option<Point<Pi
     let port = &ctx.graph.ports.get(&port_id)?;
     let node = &ctx.nodes().get(&port.node_id)?;
 
+    let node_render = ctx.get_node_render(&port.node_id)?;
+
     let node_pos = node.point();
 
-    let offset = port_offset(node, port);
+    let offset = node_render.port_offset(node, port, &ctx.graph);
 
     Some(ctx.world_to_screen(node_pos + offset))
 }
@@ -138,21 +140,13 @@ fn port_screen_position2(port_id: PortId, ctx: &RenderContext) -> Option<Point<P
     let port = &ctx.graph.ports.get(&port_id)?;
     let node = &ctx.nodes().get(&port.node_id)?;
 
+    let node_render = ctx.get_node_render(&port.node_id)?;
+
     let node_pos = node.point();
 
-    let offset = port_offset(node, port);
+    let offset = node_render.port_offset(node, port, &ctx.graph);
 
     Some(ctx.world_to_screen(node_pos + offset))
-}
-
-pub fn port_offset(node: &Node, port: &Port) -> Point<Pixels> {
-    let node_size = node.size;
-
-    match port.kind {
-        PortKind::Input => Point::new(px(0.0), node_size.height / 2.0),
-
-        PortKind::Output => Point::new(node_size.width, node_size.height / 2.0),
-    }
 }
 
 fn hit_test_get_edge(mouse: Point<Pixels>, ctx: &PluginContext) -> Option<EdgeId> {

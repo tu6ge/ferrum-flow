@@ -9,6 +9,9 @@ fn main() {
             .create_node("")
             .position(100.0, 100.0)
             .output()
+            .output()
+            .output_at(PortPosition::Bottom)
+            .output_at(PortPosition::Bottom)
             .build(&mut graph);
 
         graph

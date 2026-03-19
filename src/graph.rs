@@ -2,9 +2,9 @@ use std::collections::{HashMap, HashSet};
 
 use gpui::{Bounds, Pixels, Point, Size, px};
 
-use crate::NodeBuilder;
 use crate::edge::{Edge, EdgeId};
 use crate::node::{Node, NodeId, Port, PortId};
+use crate::{NodeBuilder, PortKind, PortPosition};
 
 #[derive(Debug, Clone)]
 pub struct Graph {
@@ -239,5 +239,17 @@ impl Graph {
         self.node_order_mut().retain(|id| *id != node_id);
 
         self.node_order_mut().push(node_id);
+    }
+
+    pub fn ports_on_node_side(
+        &self,
+        node_id: NodeId,
+        kind: PortKind,
+        position: PortPosition,
+    ) -> Vec<&Port> {
+        self.ports
+            .values()
+            .filter(|p| p.node_id == node_id && p.kind == kind && p.position == position)
+            .collect()
     }
 }
