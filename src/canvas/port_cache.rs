@@ -19,4 +19,8 @@ impl PortLayoutCache {
     pub fn clear_node(&mut self, node_id: &NodeId) {
         self.map.remove(node_id);
     }
+
+    pub fn claer_all(&mut self) {
+        self.map.clear();
+    }
 }

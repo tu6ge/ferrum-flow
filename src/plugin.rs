@@ -275,6 +275,7 @@ impl<'a> PluginContext<'a> {
     }
     pub fn remove_node(&mut self, id: &NodeId) {
         self.graph.remove_node(id);
+        self.port_offset_cache.clear_node(id);
     }
     pub fn nodes(&self) -> &HashMap<NodeId, Node> {
         self.graph.nodes()
