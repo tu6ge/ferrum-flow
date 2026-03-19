@@ -10,8 +10,11 @@ use crate::{
 };
 
 mod node_renderer;
+mod port_cache;
 mod types;
 mod undo;
+
+pub use port_cache::PortLayoutCache;
 
 pub use undo::{CanvasState, Command, CompositeCommand, History};
 
@@ -26,7 +29,7 @@ pub struct FlowCanvas {
 
     pub(crate) plugins_registry: PluginRegistry,
 
-    renderers: node_renderer::RendererRegistry,
+    renderers: RendererRegistry,
 
     pub(crate) focus_handle: FocusHandle,
 
@@ -35,6 +38,7 @@ pub struct FlowCanvas {
     pub history: History,
 
     pub event_queue: Vec<FlowEvent>,
+    pub port_offset_cache: PortLayoutCache,
 }
 
 // // TODO
@@ -63,6 +67,7 @@ impl FlowCanvas {
             interaction: InteractionState::new(),
             history: History::new(),
             event_queue: vec![],
+            port_offset_cache: PortLayoutCache::new(),
         }
     }
 
@@ -108,6 +113,7 @@ impl FlowCanvas {
         if let Some(mut handler) = self.interaction.handler.take() {
             let mut ctx = PluginContext::new(
                 &mut self.graph,
+                &mut self.port_offset_cache,
                 &mut self.viewport,
                 &mut self.interaction,
                 &mut self.renderers,
@@ -148,6 +154,7 @@ impl FlowCanvas {
 
         let mut ctx = PluginContext::new(
             &mut self.graph,
+            &mut self.port_offset_cache,
             &mut self.viewport,
             &mut self.interaction,
             &mut self.renderers,
@@ -176,6 +183,7 @@ impl FlowCanvas {
 
             let mut ctx = PluginContext::new(
                 &mut self.graph,
+                &mut self.port_offset_cache,
                 &mut self.viewport,
                 &mut self.interaction,
                 &mut self.renderers,
@@ -234,9 +242,10 @@ impl Render for FlowCanvas {
 
         let entity = this_cx.entity();
 
-        let graph = &self.graph;
+        let graph = &mut self.graph;
         let viewport = &self.viewport;
         let renderder = &self.renderers;
+        let port_offset_cache = &mut self.port_offset_cache;
 
         let mut layers: Vec<Vec<AnyElement>> =
             (0..RenderLayer::ALL.len()).map(|_| Vec::new()).collect();
@@ -244,7 +253,8 @@ impl Render for FlowCanvas {
         for plugin in self.plugins_registry.plugins.iter_mut() {
             let layer = plugin.render_layer();
 
-            let mut ctx = RenderContext::new(graph, viewport, renderder, window, layer);
+            let mut ctx =
+                RenderContext::new(graph, port_offset_cache, viewport, renderder, window, layer);
 
             if let Some(el) = plugin.render(&mut ctx) {
                 layers[layer.index()].push(el);
@@ -252,8 +262,14 @@ impl Render for FlowCanvas {
         }
 
         if let Some(i) = self.interaction.handler.as_ref() {
-            let mut ctx =
-                RenderContext::new(graph, viewport, renderder, window, RenderLayer::Interaction);
+            let mut ctx = RenderContext::new(
+                graph,
+                port_offset_cache,
+                viewport,
+                renderder,
+                window,
+                RenderLayer::Interaction,
+            );
 
             if let Some(el) = i.render(&mut ctx) {
                 layers[RenderLayer::Interaction.index()].push(el);

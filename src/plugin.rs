@@ -8,7 +8,7 @@ use gpui::{
 use crate::{
     Edge, EdgeId, Graph, Node, NodeBuilder, NodeId, NodeRenderer, Port, PortId, RendererRegistry,
     Viewport,
-    canvas::{CanvasState, Command, History, Interaction, InteractionState},
+    canvas::{CanvasState, Command, History, Interaction, InteractionState, PortLayoutCache},
 };
 
 pub trait Plugin {
@@ -140,6 +140,7 @@ impl<'a> InitPluginContext<'a> {
 
 pub struct PluginContext<'a> {
     pub graph: &'a mut Graph,
+    pub port_offset_cache: &'a mut PortLayoutCache,
     pub viewport: &'a mut Viewport,
     pub(crate) interaction: &'a mut InteractionState,
     pub renderers: &'a mut RendererRegistry,
@@ -157,6 +158,7 @@ pub enum EventResult {
 impl<'a> PluginContext<'a> {
     pub fn new(
         graph: &'a mut Graph,
+        port_offset_cache: &'a mut PortLayoutCache,
         viewport: &'a mut Viewport,
         interaction: &'a mut InteractionState,
         renderers: &'a mut RendererRegistry,
@@ -166,6 +168,7 @@ impl<'a> PluginContext<'a> {
     ) -> Self {
         Self {
             graph,
+            port_offset_cache,
             viewport,
             interaction,
             renderers,
@@ -335,6 +338,40 @@ impl<'a> PluginContext<'a> {
     pub fn screen_to_world(&self, p: Point<Pixels>) -> Point<Pixels> {
         self.viewport.screen_to_world(p)
     }
+
+    pub fn port_offset_cached(&self, node_id: &NodeId, port_id: &PortId) -> Option<Point<Pixels>> {
+        if let Some(node_cache) = self.port_offset_cache.map.get(node_id) {
+            if let Some(pos) = node_cache.get(port_id) {
+                return Some(*pos);
+            }
+        }
+
+        None
+    }
+
+    pub fn cache_all_node_port_offset(&mut self) {
+        let nodes: Vec<Node> = self.graph.nodes().iter().map(|(_, n)| n.clone()).collect();
+
+        for node in nodes {
+            self.cache_node_port_offset(&node);
+        }
+    }
+
+    fn cache_node_port_offset(&mut self, node: &Node) {
+        if self.port_offset_cache.map.get(&node.id).is_some() {
+            return;
+        }
+        let renderer = self.renderers.get(&node.node_type);
+
+        let mut result = HashMap::new();
+
+        for port in self.graph.ports.values().filter(|p| p.node_id == node.id) {
+            let pos = renderer.port_offset(node, port, self.graph);
+            result.insert(port.id, pos);
+        }
+
+        self.port_offset_cache.map.insert(node.id, result);
+    }
 }
 
 pub enum FlowEvent {
@@ -408,6 +445,7 @@ pub enum UiEvent {
 
 pub struct RenderContext<'a> {
     pub graph: &'a Graph,
+    pub port_offset_cache: &'a mut PortLayoutCache,
     pub viewport: &'a Viewport,
     pub renderers: &'a RendererRegistry,
 
@@ -418,7 +456,8 @@ pub struct RenderContext<'a> {
 
 impl<'a> RenderContext<'a> {
     pub fn new(
-        graph: &'a Graph,
+        graph: &'a mut Graph,
+        port_offset_cache: &'a mut PortLayoutCache,
         viewport: &'a Viewport,
         renderers: &'a RendererRegistry,
         window: &'a Window,
@@ -426,6 +465,7 @@ impl<'a> RenderContext<'a> {
     ) -> Self {
         Self {
             graph,
+            port_offset_cache,
             viewport,
             renderers,
             window,
@@ -488,6 +528,38 @@ impl<'a> RenderContext<'a> {
 
     pub fn screen_to_world(&self, p: Point<Pixels>) -> Point<Pixels> {
         self.viewport.screen_to_world(p)
+    }
+
+    pub fn port_offset_cached(&self, node_id: &NodeId, port_id: &PortId) -> Option<Point<Pixels>> {
+        if let Some(node_cache) = self.port_offset_cache.map.get(node_id) {
+            if let Some(pos) = node_cache.get(port_id) {
+                return Some(*pos);
+            }
+        }
+
+        None
+    }
+
+    pub fn cache_all_node_port_offset(&mut self) {
+        for (_, node) in self.graph.nodes() {
+            let renderer = self.renderers.get(&node.node_type);
+            self.cache_node_port_offset(node, renderer);
+        }
+    }
+
+    fn cache_node_port_offset(&mut self, node: &Node, renderer: &dyn NodeRenderer) {
+        if self.port_offset_cache.map.get(&node.id).is_some() {
+            return;
+        }
+
+        let mut result = HashMap::new();
+
+        for port in self.graph.ports.values().filter(|p| p.node_id == node.id) {
+            let pos = renderer.port_offset(node, port, self.graph);
+            result.insert(port.id, pos);
+        }
+
+        self.port_offset_cache.map.insert(node.id, result);
     }
 }
 

@@ -27,6 +27,8 @@ impl Plugin for PortInteractionPlugin {
         event: &FlowEvent,
         ctx: &mut crate::plugin::PluginContext,
     ) -> crate::plugin::EventResult {
+        ctx.cache_all_node_port_offset();
+
         if let FlowEvent::Input(InputEvent::MouseDown(ev)) = event {
             let mouse_world = ctx.viewport.screen_to_world(ev.position);
             if let Some((node_id, port_id)) = ctx
@@ -88,6 +90,7 @@ impl Interaction for PortConnecting {
         ev: &gpui::MouseUpEvent,
         ctx: &mut crate::plugin::PluginContext,
     ) -> crate::canvas::InteractionResult {
+        ctx.cache_all_node_port_offset();
         let mouse_world = ctx.screen_to_world(ev.position);
         if let Some((node_id, port_id)) = ctx
             .graph

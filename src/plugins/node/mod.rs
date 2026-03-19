@@ -59,6 +59,8 @@ impl Plugin for NodePlugin {
         crate::plugin::RenderLayer::Nodes
     }
     fn render(&mut self, ctx: &mut RenderContext) -> Option<gpui::AnyElement> {
+        ctx.cache_all_node_port_offset();
+
         let list = ctx
             .graph
             .node_order()

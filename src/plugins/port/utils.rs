@@ -6,11 +6,9 @@ pub fn port_screen_position(port_id: PortId, ctx: &RenderContext) -> Option<Poin
     let port = &ctx.graph.ports.get(&port_id)?;
     let node = &ctx.nodes().get(&port.node_id)?;
 
-    let renderer = ctx.get_node_render(&port.node_id)?;
-
     let node_pos = node.point();
 
-    let offset = renderer.port_offset(node, port, ctx.graph);
+    let offset = ctx.port_offset_cached(&port.node_id, &port_id)?;
 
     Some(ctx.viewport.world_to_screen(node_pos + offset))
 }
@@ -22,11 +20,9 @@ pub fn port_screen_bounds(
     let port = &ctx.graph.ports.get(&port_id)?;
     let node = &ctx.nodes().get(&port.node_id)?;
 
-    let renderer = ctx.get_node_render(&port.node_id)?;
-
     let node_pos = node.point();
 
-    let offset = renderer.port_offset(node, port, ctx.graph);
+    let offset = ctx.port_offset_cached(&port.node_id, &port_id)?;
 
     Some(Bounds::new(
         node_pos + offset - Point::new(px(6.0), px(6.0)),

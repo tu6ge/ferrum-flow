@@ -29,6 +29,8 @@ impl Plugin for EdgePlugin {
         ctx: &mut crate::plugin::PluginContext,
     ) -> crate::plugin::EventResult {
         if let FlowEvent::Input(crate::plugin::InputEvent::MouseDown(ev)) = event {
+            ctx.cache_all_node_port_offset();
+
             let shift = ev.modifiers.shift;
             if let Some(id) = hit_test_get_edge(ev.position, &ctx) {
                 ctx.execute_command(SelectEdgeCommand::new(id, shift, &ctx));
@@ -48,6 +50,8 @@ impl Plugin for EdgePlugin {
         crate::plugin::RenderLayer::Edges
     }
     fn render(&mut self, ctx: &mut crate::RenderContext) -> Option<gpui::AnyElement> {
+        ctx.cache_all_node_port_offset();
+
         let edges: Vec<_> = ctx
             .graph
             .edges
@@ -128,11 +132,9 @@ fn port_screen_position(port_id: PortId, ctx: &PluginContext) -> Option<Point<Pi
     let port = &ctx.graph.ports.get(&port_id)?;
     let node = &ctx.nodes().get(&port.node_id)?;
 
-    let node_render = ctx.get_node_render(&port.node_id)?;
-
     let node_pos = node.point();
 
-    let offset = node_render.port_offset(node, port, &ctx.graph);
+    let offset = ctx.port_offset_cached(&port.node_id, &port_id)?;
 
     Some(ctx.world_to_screen(node_pos + offset))
 }
@@ -140,11 +142,9 @@ fn port_screen_position2(port_id: PortId, ctx: &RenderContext) -> Option<Point<P
     let port = &ctx.graph.ports.get(&port_id)?;
     let node = &ctx.nodes().get(&port.node_id)?;
 
-    let node_render = ctx.get_node_render(&port.node_id)?;
-
     let node_pos = node.point();
 
-    let offset = node_render.port_offset(node, port, &ctx.graph);
+    let offset = ctx.port_offset_cached(&port.node_id, &port_id)?;
 
     Some(ctx.world_to_screen(node_pos + offset))
 }
