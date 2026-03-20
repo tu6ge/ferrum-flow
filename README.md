@@ -3,6 +3,8 @@
 A high-performance, extensible node-based editor built with Rust and gpui.
 Designed for building visual programming tools, workflow editors, and graph-based UIs.
 
+**This project is in early stage (alpha), API may change**
+
 ## Features
 
 - 🧩 Plugin-based architecture
