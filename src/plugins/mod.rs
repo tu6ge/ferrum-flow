@@ -7,7 +7,7 @@ mod port;
 mod selection;
 mod viewport;
 
-pub use background::Background;
+pub use background::BackgroundPlugin;
 pub use delete::DeletePlugin;
 pub use edge::EdgePlugin;
 pub use history::HistoryPlugin;

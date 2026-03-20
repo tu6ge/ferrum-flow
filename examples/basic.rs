@@ -34,7 +34,7 @@ fn main() {
                     .plugin(SelectionPlugin::new())
                     .plugin(NodeInteractionPlugin::new())
                     .plugin(ViewportPlugin::new())
-                    .plugin(Background::new())
+                    .plugin(BackgroundPlugin::new())
                     .plugin(NodePlugin::new())
                     .plugin(PortInteractionPlugin::new())
                     .plugin(EdgePlugin::new())

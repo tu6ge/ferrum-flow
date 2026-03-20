@@ -2,15 +2,15 @@ use gpui::{Element, ParentElement, Styled, div, px, rgb};
 
 use crate::plugin::Plugin;
 
-pub struct Background;
+pub struct BackgroundPlugin;
 
-impl Background {
+impl BackgroundPlugin {
     pub fn new() -> Self {
         Self {}
     }
 }
 
-impl Plugin for Background {
+impl Plugin for BackgroundPlugin {
     fn name(&self) -> &'static str {
         "background"
     }

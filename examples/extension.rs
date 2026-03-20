@@ -27,7 +27,7 @@ fn main() {
                     .plugin(SelectionPlugin::new())
                     .plugin(NodeInteractionPlugin::new())
                     .plugin(ViewportPlugin::new())
-                    .plugin(Background::new())
+                    .plugin(BackgroundPlugin::new())
                     .plugin(NodePlugin::new())
                     .register_node("number", NumberNode {});
                 flow.init_plugins();
