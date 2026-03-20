@@ -29,10 +29,9 @@ impl Plugin for EdgePlugin {
         ctx: &mut crate::plugin::PluginContext,
     ) -> crate::plugin::EventResult {
         if let FlowEvent::Input(crate::plugin::InputEvent::MouseDown(ev)) = event {
-            ctx.cache_all_node_port_offset();
-
             let shift = ev.modifiers.shift;
             if let Some(id) = hit_test_get_edge(ev.position, &ctx) {
+                ctx.cache_port_offset_with_edge(&id);
                 ctx.execute_command(SelectEdgeCommand::new(id, shift, &ctx));
                 return crate::plugin::EventResult::Stop;
             } else {
@@ -50,12 +49,11 @@ impl Plugin for EdgePlugin {
         crate::plugin::RenderLayer::Edges
     }
     fn render(&mut self, ctx: &mut crate::RenderContext) -> Option<gpui::AnyElement> {
-        ctx.cache_all_node_port_offset();
-
         let edges: Vec<_> = ctx
             .graph
             .edges
             .iter()
+            .filter(|(_, edge)| ctx.is_edge_visible(edge))
             .map(|(k, v)| (*k, edge_geometry2(v, &ctx)))
             .collect();
         let selected_edges = ctx.graph.selected_edge.clone();
@@ -134,7 +132,9 @@ fn port_screen_position(port_id: PortId, ctx: &PluginContext) -> Option<Point<Pi
 
     let node_pos = node.point();
 
-    let offset = ctx.port_offset_cached(&port.node_id, &port_id)?;
+    //let offset = ctx.port_offset_cached(&port.node_id, &port_id)?;
+    let renderer = ctx.get_node_render(&port.node_id)?;
+    let offset = renderer.port_offset(&node, port, ctx.graph);
 
     Some(ctx.world_to_screen(node_pos + offset))
 }
@@ -144,13 +144,21 @@ fn port_screen_position2(port_id: PortId, ctx: &RenderContext) -> Option<Point<P
 
     let node_pos = node.point();
 
-    let offset = ctx.port_offset_cached(&port.node_id, &port_id)?;
+    // TODO no cache
+    //let offset = ctx.port_offset_cached(&port.node_id, &port_id)?;
+    let renderer = ctx.get_node_render(&port.node_id)?;
+    let offset = renderer.port_offset(&node, port, ctx.graph);
 
     Some(ctx.world_to_screen(node_pos + offset))
 }
 
 fn hit_test_get_edge(mouse: Point<Pixels>, ctx: &PluginContext) -> Option<EdgeId> {
-    for edge in ctx.graph.edges.values() {
+    let edges = ctx
+        .graph
+        .edges
+        .values()
+        .filter(|edge| ctx.is_edge_visible(edge));
+    for edge in edges {
         let Some(geom) = edge_geometry(edge, ctx) else {
             continue;
         };

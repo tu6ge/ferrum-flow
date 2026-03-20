@@ -1,5 +1,7 @@
 use gpui::{Bounds, Pixels, Point, px};
 
+use crate::Node;
+
 #[derive(Debug, Clone)]
 pub struct Viewport {
     pub zoom: f32,
@@ -28,5 +30,18 @@ impl Viewport {
             (p.x - self.offset.x) / self.zoom,
             (p.y - self.offset.y) / self.zoom,
         )
+    }
+
+    pub fn is_node_visible(&self, node: &Node) -> bool {
+        let Some(window_bounds) = self.window_bounds else {
+            return false;
+        };
+
+        let screen = self.world_to_screen(node.point());
+
+        screen.x + node.size.width * self.zoom > px(0.0)
+            && screen.x < window_bounds.size.width
+            && screen.y + node.size.height * self.zoom > px(0.0)
+            && screen.y < window_bounds.size.height
     }
 }

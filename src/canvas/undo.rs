@@ -190,6 +190,31 @@ impl<'a> CommandContext<'a> {
         self.viewport.screen_to_world(p)
     }
 
+    pub fn is_node_visible(&self, node_id: &NodeId) -> bool {
+        let Some(node) = self.get_node(node_id) else {
+            return false;
+        };
+        self.viewport.is_node_visible(node)
+    }
+
+    pub fn is_edge_visible(&self, edge: &Edge) -> bool {
+        let Edge {
+            source_port,
+            target_port,
+            ..
+        } = edge;
+        let Some(Port { node_id, .. }) = self.graph.ports.get(source_port) else {
+            return false;
+        };
+        let Some(Port {
+            node_id: node_id2, ..
+        }) = self.graph.ports.get(target_port)
+        else {
+            return false;
+        };
+        self.is_node_visible(node_id) || self.is_node_visible(node_id2)
+    }
+
     pub fn port_offset_cached(&self, node_id: &NodeId, port_id: &PortId) -> Option<Point<Pixels>> {
         if let Some(node_cache) = self.port_offset_cache.map.get(node_id) {
             if let Some(pos) = node_cache.get(port_id) {

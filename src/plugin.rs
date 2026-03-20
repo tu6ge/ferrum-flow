@@ -136,6 +136,13 @@ impl<'a> InitPluginContext<'a> {
     pub fn screen_to_world(&self, p: Point<Pixels>) -> Point<Pixels> {
         self.viewport.screen_to_world(p)
     }
+
+    pub fn is_node_visible(&self, node_id: &NodeId) -> bool {
+        let Some(node) = self.get_node(node_id) else {
+            return false;
+        };
+        self.viewport.is_node_visible(node)
+    }
 }
 
 pub struct PluginContext<'a> {
@@ -346,6 +353,31 @@ impl<'a> PluginContext<'a> {
         self.viewport.screen_to_world(p)
     }
 
+    pub fn is_node_visible(&self, node_id: &NodeId) -> bool {
+        let Some(node) = self.get_node(node_id) else {
+            return false;
+        };
+        self.viewport.is_node_visible(node)
+    }
+
+    pub fn is_edge_visible(&self, edge: &Edge) -> bool {
+        let Edge {
+            source_port,
+            target_port,
+            ..
+        } = edge;
+        let Some(Port { node_id, .. }) = self.graph.ports.get(source_port) else {
+            return false;
+        };
+        let Some(Port {
+            node_id: node_id2, ..
+        }) = self.graph.ports.get(target_port)
+        else {
+            return false;
+        };
+        self.is_node_visible(node_id) || self.is_node_visible(node_id2)
+    }
+
     pub fn port_offset_cached(&self, node_id: &NodeId, port_id: &PortId) -> Option<Point<Pixels>> {
         if let Some(node_cache) = self.port_offset_cache.map.get(node_id) {
             if let Some(pos) = node_cache.get(port_id) {
@@ -362,6 +394,38 @@ impl<'a> PluginContext<'a> {
         for node in nodes {
             self.cache_node_port_offset(&node);
         }
+    }
+
+    pub fn cache_port_offset_with_node(&mut self, node_ids: &Vec<NodeId>) {
+        for node_id in node_ids {
+            self.cache_node_port_offset(&node_id);
+        }
+    }
+
+    pub fn cache_port_offset_with_edge(&mut self, edge_id: &EdgeId) {
+        let Some(Edge {
+            source_port,
+            target_port,
+            ..
+        }) = self.graph.edges.get(edge_id)
+        else {
+            return;
+        };
+        let port1 = source_port.clone();
+        let port2 = target_port.clone();
+        self.cache_port_offset_with_port(&port1);
+        self.cache_port_offset_with_port(&port2);
+    }
+
+    pub fn cache_port_offset_with_port(&mut self, port_id: &PortId) {
+        let Some(port) = self.graph.ports.get(port_id) else {
+            return;
+        };
+        let Some(node) = self.get_node(&port.node_id) else {
+            return;
+        };
+        let node_clone = node.clone();
+        self.cache_node_port_offset(&node_clone.id);
     }
 
     fn cache_node_port_offset(&mut self, node_id: &NodeId) {
@@ -540,6 +604,31 @@ impl<'a> RenderContext<'a> {
         self.viewport.screen_to_world(p)
     }
 
+    pub fn is_node_visible(&self, node_id: &NodeId) -> bool {
+        let Some(node) = self.get_node(node_id) else {
+            return false;
+        };
+        self.viewport.is_node_visible(node)
+    }
+
+    pub fn is_edge_visible(&self, edge: &Edge) -> bool {
+        let Edge {
+            source_port,
+            target_port,
+            ..
+        } = edge;
+        let Some(Port { node_id, .. }) = self.graph.ports.get(source_port) else {
+            return false;
+        };
+        let Some(Port {
+            node_id: node_id2, ..
+        }) = self.graph.ports.get(target_port)
+        else {
+            return false;
+        };
+        self.is_node_visible(node_id) || self.is_node_visible(node_id2)
+    }
+
     pub fn port_offset_cached(&self, node_id: &NodeId, port_id: &PortId) -> Option<Point<Pixels>> {
         if let Some(node_cache) = self.port_offset_cache.map.get(node_id) {
             if let Some(pos) = node_cache.get(port_id) {
@@ -555,6 +644,45 @@ impl<'a> RenderContext<'a> {
             let renderer = self.renderers.get(&node.node_type);
             self.cache_node_port_offset(node, renderer);
         }
+    }
+
+    pub fn cache_port_offset_with_node(&mut self, node_ids: &Vec<NodeId>) {
+        let mut list = vec![];
+        for node_id in node_ids {
+            let Some(node) = self.get_node(node_id) else {
+                continue;
+            };
+            list.push(node.clone());
+        }
+        for node in list {
+            let renderer = self.renderers.get(&node.node_type);
+            self.cache_node_port_offset(&node, renderer);
+        }
+    }
+
+    pub fn cache_port_offset_with_edge(&mut self, edge_id: &EdgeId) {
+        let Some(Edge {
+            source_port,
+            target_port,
+            ..
+        }) = self.graph.edges.get(edge_id)
+        else {
+            return;
+        };
+        self.cache_port_offset_with_port(source_port);
+        self.cache_port_offset_with_port(target_port);
+    }
+
+    pub fn cache_port_offset_with_port(&mut self, port_id: &PortId) {
+        let Some(port) = self.graph.ports.get(port_id) else {
+            return;
+        };
+        let Some(node) = self.get_node(&port.node_id) else {
+            return;
+        };
+        let node_clone = node.clone();
+        let renderer = self.renderers.get(&node_clone.node_type);
+        self.cache_node_port_offset(&node_clone, renderer);
     }
 
     fn cache_node_port_offset(&mut self, node: &Node, renderer: &dyn NodeRenderer) {
