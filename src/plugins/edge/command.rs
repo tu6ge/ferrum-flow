@@ -24,13 +24,13 @@ impl Command for SelectEdgeCommand {
     fn name(&self) -> &'static str {
         "select_edge"
     }
-    fn execute(&mut self, ctx: &mut crate::canvas::CanvasState) {
+    fn execute(&mut self, ctx: &mut crate::canvas::CommandContext) {
         if !self.shift {
             ctx.clear_selected_node();
         }
         ctx.add_selected_edge(self.edge_id, self.shift);
     }
-    fn undo(&mut self, ctx: &mut crate::canvas::CanvasState) {
+    fn undo(&mut self, ctx: &mut crate::canvas::CommandContext) {
         ctx.graph.selected_node = self.old_selected_node.clone();
         ctx.graph.selected_edge = self.old_selected_edge.clone();
     }
@@ -52,10 +52,10 @@ impl Command for ClearEdgeCommand {
     fn name(&self) -> &'static str {
         "clear_edge"
     }
-    fn execute(&mut self, ctx: &mut crate::canvas::CanvasState) {
+    fn execute(&mut self, ctx: &mut crate::canvas::CommandContext) {
         ctx.clear_selected_edge();
     }
-    fn undo(&mut self, ctx: &mut crate::canvas::CanvasState) {
+    fn undo(&mut self, ctx: &mut crate::canvas::CommandContext) {
         ctx.graph.selected_edge = self.old_selected_edge.clone();
     }
 }

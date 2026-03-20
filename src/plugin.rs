@@ -8,7 +8,7 @@ use gpui::{
 use crate::{
     Edge, EdgeId, Graph, Node, NodeBuilder, NodeId, NodeRenderer, Port, PortId, RendererRegistry,
     Viewport,
-    canvas::{CanvasState, Command, History, Interaction, InteractionState, PortLayoutCache},
+    canvas::{Command, CommandContext, History, Interaction, InteractionState, PortLayoutCache},
 };
 
 pub trait Plugin {
@@ -204,7 +204,7 @@ impl<'a> PluginContext<'a> {
     }
 
     pub fn execute_command(&mut self, command: impl Command + 'static) {
-        let mut canvas = CanvasState {
+        let mut canvas = CommandContext {
             graph: self.graph,
             port_offset_cache: self.port_offset_cache,
             viewport: self.viewport,
@@ -217,7 +217,7 @@ impl<'a> PluginContext<'a> {
     }
 
     pub fn undo(&mut self) {
-        let mut canvas = CanvasState {
+        let mut canvas = CommandContext {
             graph: self.graph,
             port_offset_cache: self.port_offset_cache,
             viewport: self.viewport,
@@ -230,7 +230,7 @@ impl<'a> PluginContext<'a> {
     }
 
     pub fn redo(&mut self) {
-        let mut canvas = CanvasState {
+        let mut canvas = CommandContext {
             graph: self.graph,
             port_offset_cache: self.port_offset_cache,
             viewport: self.viewport,

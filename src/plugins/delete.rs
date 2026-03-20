@@ -60,11 +60,11 @@ impl Command for DeleteCommand {
     fn name(&self) -> &'static str {
         "delete"
     }
-    fn execute(&mut self, ctx: &mut crate::canvas::CanvasState) {
+    fn execute(&mut self, ctx: &mut crate::canvas::CommandContext) {
         ctx.remove_selected_edge();
         ctx.remove_selected_node();
     }
-    fn undo(&mut self, ctx: &mut crate::canvas::CanvasState) {
+    fn undo(&mut self, ctx: &mut crate::canvas::CommandContext) {
         for edge in &self.selected_edge {
             ctx.add_edge(edge.clone());
             ctx.add_selected_edge(edge.id, true);

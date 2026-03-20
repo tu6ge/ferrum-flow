@@ -14,10 +14,10 @@ impl Command for CreateEdge {
     fn name(&self) -> &'static str {
         "create_edge"
     }
-    fn execute(&mut self, ctx: &mut crate::canvas::CanvasState) {
+    fn execute(&mut self, ctx: &mut crate::canvas::CommandContext) {
         ctx.add_edge(self.edge.clone());
     }
-    fn undo(&mut self, ctx: &mut crate::canvas::CanvasState) {
+    fn undo(&mut self, ctx: &mut crate::canvas::CommandContext) {
         ctx.remove_edge(self.edge.id);
     }
 }

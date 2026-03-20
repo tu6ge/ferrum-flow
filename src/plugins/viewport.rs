@@ -109,11 +109,11 @@ impl Command for PanningCommand {
     fn name(&self) -> &'static str {
         "panning"
     }
-    fn execute(&mut self, ctx: &mut crate::canvas::CanvasState) {
+    fn execute(&mut self, ctx: &mut crate::canvas::CommandContext) {
         ctx.viewport.offset.x = self.to.x;
         ctx.viewport.offset.y = self.to.y;
     }
-    fn undo(&mut self, ctx: &mut crate::canvas::CanvasState) {
+    fn undo(&mut self, ctx: &mut crate::canvas::CommandContext) {
         ctx.viewport.offset.x = self.from.x;
         ctx.viewport.offset.y = self.from.y;
     }

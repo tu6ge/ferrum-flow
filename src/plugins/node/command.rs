@@ -28,14 +28,14 @@ impl Command for SelecteNodeCommand {
     fn name(&self) -> &'static str {
         "select_node"
     }
-    fn execute(&mut self, ctx: &mut crate::canvas::CanvasState) {
+    fn execute(&mut self, ctx: &mut crate::canvas::CommandContext) {
         if !self.shift {
             ctx.clear_selected_edge();
         }
         ctx.add_selected_node(self.node_id, self.shift);
         ctx.bring_node_to_front(self.node_id);
     }
-    fn undo(&mut self, ctx: &mut crate::canvas::CanvasState) {
+    fn undo(&mut self, ctx: &mut crate::canvas::CommandContext) {
         ctx.graph.selected_node = self.old_selected_node.clone();
         ctx.graph.selected_edge = self.old_selected_edge.clone();
         let a = ctx.graph.node_order_mut();
@@ -67,7 +67,7 @@ impl Command for DragNodesCommand {
     fn name(&self) -> &'static str {
         "drag_nodes"
     }
-    fn execute(&mut self, ctx: &mut crate::canvas::CanvasState) {
+    fn execute(&mut self, ctx: &mut crate::canvas::CommandContext) {
         for (id, point) in self.to.iter() {
             if let Some(node) = ctx.get_node_mut(id) {
                 node.x = point.x;
@@ -75,7 +75,7 @@ impl Command for DragNodesCommand {
             }
         }
     }
-    fn undo(&mut self, ctx: &mut crate::canvas::CanvasState) {
+    fn undo(&mut self, ctx: &mut crate::canvas::CommandContext) {
         for (id, point) in self.from.iter() {
             if let Some(node) = ctx.get_node_mut(id) {
                 node.x = point.x;

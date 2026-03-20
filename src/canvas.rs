@@ -16,7 +16,7 @@ mod undo;
 
 pub use port_cache::PortLayoutCache;
 
-pub use undo::{CanvasState, Command, CompositeCommand, History};
+pub use undo::{Command, CommandContext, CompositeCommand, History};
 
 pub use types::{Interaction, InteractionResult, InteractionState};
 

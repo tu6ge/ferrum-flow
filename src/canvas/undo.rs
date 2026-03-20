@@ -9,11 +9,11 @@ use crate::{
 
 pub trait Command {
     fn name(&self) -> &'static str;
-    fn execute(&mut self, ctx: &mut CanvasState);
-    fn undo(&mut self, ctx: &mut CanvasState);
+    fn execute(&mut self, ctx: &mut CommandContext);
+    fn undo(&mut self, ctx: &mut CommandContext);
 }
 
-pub struct CanvasState<'a> {
+pub struct CommandContext<'a> {
     pub graph: &'a mut Graph,
     pub port_offset_cache: &'a mut PortLayoutCache,
     pub viewport: &'a mut Viewport,
@@ -35,7 +35,7 @@ impl History {
         }
     }
 
-    pub fn execute(&mut self, mut command: Box<dyn Command>, state: &mut CanvasState) {
+    pub fn execute(&mut self, mut command: Box<dyn Command>, state: &mut CommandContext) {
         command.execute(state);
 
         self.undo_stack.push(command);
@@ -45,14 +45,14 @@ impl History {
         self.redo_stack.clear();
     }
 
-    pub fn undo(&mut self, state: &mut CanvasState) {
+    pub fn undo(&mut self, state: &mut CommandContext) {
         if let Some(mut cmd) = self.undo_stack.pop() {
             cmd.undo(state);
             self.redo_stack.push(cmd);
         }
     }
 
-    pub fn redo(&mut self, state: &mut CanvasState) {
+    pub fn redo(&mut self, state: &mut CommandContext) {
         if let Some(mut cmd) = self.redo_stack.pop() {
             cmd.execute(state);
             self.undo_stack.push(cmd);
@@ -79,20 +79,20 @@ impl Command for CompositeCommand {
     fn name(&self) -> &'static str {
         "composite"
     }
-    fn execute(&mut self, state: &mut CanvasState) {
+    fn execute(&mut self, state: &mut CommandContext) {
         for cmd in &mut self.commands {
             cmd.execute(state);
         }
     }
 
-    fn undo(&mut self, state: &mut CanvasState) {
+    fn undo(&mut self, state: &mut CommandContext) {
         for cmd in self.commands.iter_mut().rev() {
             cmd.undo(state);
         }
     }
 }
 
-impl<'a> CanvasState<'a> {
+impl<'a> CommandContext<'a> {
     pub fn create_node(&self, node_type: &str) -> NodeBuilder {
         self.graph.create_node(node_type)
     }
