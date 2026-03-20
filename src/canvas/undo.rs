@@ -201,17 +201,20 @@ impl<'a> CanvasState<'a> {
     }
 
     pub fn cache_all_node_port_offset(&mut self) {
-        let nodes: Vec<Node> = self.graph.nodes().iter().map(|(_, n)| n.clone()).collect();
+        let nodes: Vec<NodeId> = self.graph.nodes().iter().map(|(id, _)| *id).collect();
 
         for node in nodes {
             self.cache_node_port_offset(&node);
         }
     }
 
-    fn cache_node_port_offset(&mut self, node: &Node) {
-        if self.port_offset_cache.map.get(&node.id).is_some() {
+    fn cache_node_port_offset(&mut self, node_id: &NodeId) {
+        if self.port_offset_cache.map.get(&node_id).is_some() {
             return;
         }
+        let Some(node) = self.get_node(node_id) else {
+            return;
+        };
         let renderer = self.renderers.get(&node.node_type);
 
         let mut result = HashMap::new();
