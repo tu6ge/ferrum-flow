@@ -2,7 +2,10 @@ use std::collections::HashMap;
 
 use gpui::{Bounds, Pixels, Point};
 
-use crate::{Edge, EdgeId, Graph, Node, NodeBuilder, NodeId, Port, PortId, Viewport};
+use crate::{
+    Edge, EdgeId, Graph, Node, NodeBuilder, NodeId, Port, PortId, RendererRegistry, Viewport,
+    canvas::PortLayoutCache,
+};
 
 pub trait Command {
     fn name(&self) -> &'static str;
@@ -12,7 +15,9 @@ pub trait Command {
 
 pub struct CanvasState<'a> {
     pub graph: &'a mut Graph,
+    pub port_offset_cache: &'a mut PortLayoutCache,
     pub viewport: &'a mut Viewport,
+    pub renderers: &'a mut RendererRegistry,
 }
 
 const MAX_HISTORY: usize = 100;
@@ -120,6 +125,7 @@ impl<'a> CanvasState<'a> {
     }
     pub fn remove_node(&mut self, id: &NodeId) {
         self.graph.remove_node(id);
+        self.port_offset_cache.clear_node(id);
     }
     pub fn nodes(&self) -> &HashMap<NodeId, Node> {
         self.graph.nodes()
@@ -182,5 +188,39 @@ impl<'a> CanvasState<'a> {
 
     pub fn screen_to_world(&self, p: Point<Pixels>) -> Point<Pixels> {
         self.viewport.screen_to_world(p)
+    }
+
+    pub fn port_offset_cached(&self, node_id: &NodeId, port_id: &PortId) -> Option<Point<Pixels>> {
+        if let Some(node_cache) = self.port_offset_cache.map.get(node_id) {
+            if let Some(pos) = node_cache.get(port_id) {
+                return Some(*pos);
+            }
+        }
+
+        None
+    }
+
+    pub fn cache_all_node_port_offset(&mut self) {
+        let nodes: Vec<Node> = self.graph.nodes().iter().map(|(_, n)| n.clone()).collect();
+
+        for node in nodes {
+            self.cache_node_port_offset(&node);
+        }
+    }
+
+    fn cache_node_port_offset(&mut self, node: &Node) {
+        if self.port_offset_cache.map.get(&node.id).is_some() {
+            return;
+        }
+        let renderer = self.renderers.get(&node.node_type);
+
+        let mut result = HashMap::new();
+
+        for port in self.graph.ports.values().filter(|p| p.node_id == node.id) {
+            let pos = renderer.port_offset(node, port, self.graph);
+            result.insert(port.id, pos);
+        }
+
+        self.port_offset_cache.map.insert(node.id, result);
     }
 }

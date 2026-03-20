@@ -206,7 +206,9 @@ impl<'a> PluginContext<'a> {
     pub fn execute_command(&mut self, command: impl Command + 'static) {
         let mut canvas = CanvasState {
             graph: self.graph,
+            port_offset_cache: self.port_offset_cache,
             viewport: self.viewport,
+            renderers: self.renderers,
         };
 
         self.history.execute(Box::new(command), &mut canvas);
@@ -217,7 +219,9 @@ impl<'a> PluginContext<'a> {
     pub fn undo(&mut self) {
         let mut canvas = CanvasState {
             graph: self.graph,
+            port_offset_cache: self.port_offset_cache,
             viewport: self.viewport,
+            renderers: self.renderers,
         };
 
         self.history.undo(&mut canvas);
@@ -228,7 +232,9 @@ impl<'a> PluginContext<'a> {
     pub fn redo(&mut self) {
         let mut canvas = CanvasState {
             graph: self.graph,
+            port_offset_cache: self.port_offset_cache,
             viewport: self.viewport,
+            renderers: self.renderers,
         };
 
         self.history.redo(&mut canvas);
