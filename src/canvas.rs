@@ -87,6 +87,7 @@ impl FlowCanvas {
     pub fn init_plugins(&mut self) {
         let mut ctx = InitPluginContext {
             graph: &mut self.graph,
+            port_offset_cache: &mut self.port_offset_cache,
             viewport: &mut self.viewport,
             renderers: &mut self.renderers,
         };

@@ -42,6 +42,7 @@ pub trait Plugin {
 
 pub struct InitPluginContext<'a> {
     pub graph: &'a mut Graph,
+    pub port_offset_cache: &'a mut PortLayoutCache,
     pub viewport: &'a mut Viewport,
     pub renderers: &'a mut RendererRegistry,
 }
@@ -154,6 +155,28 @@ impl<'a> InitPluginContext<'a> {
 
     pub fn is_edge_visible(&self, edge: &Edge) -> bool {
         is_edge_visible(self.graph, self.viewport, edge)
+    }
+
+    pub fn port_offset_cached(&self, node_id: &NodeId, port_id: &PortId) -> Option<Point<Pixels>> {
+        port_offset_cached(self.port_offset_cache, node_id, port_id)
+    }
+
+    pub fn cache_port_offset_with_node(&mut self, node_ids: &Vec<NodeId>) {
+        for node_id in node_ids {
+            self.cache_node_port_offset(&node_id);
+        }
+    }
+
+    pub fn cache_port_offset_with_edge(&mut self, edge_id: &EdgeId) {
+        cache_port_offset_with_edge(self.graph, self.renderers, self.port_offset_cache, edge_id)
+    }
+
+    pub fn cache_port_offset_with_port(&mut self, port_id: &PortId) {
+        cache_port_offset_with_port(self.graph, self.renderers, self.port_offset_cache, port_id)
+    }
+
+    fn cache_node_port_offset(&mut self, node_id: &NodeId) {
+        cache_node_port_offset(self.graph, self.renderers, self.port_offset_cache, node_id);
     }
 }
 
