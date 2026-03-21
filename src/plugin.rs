@@ -21,13 +21,13 @@ pub use utils::{
 pub trait Plugin {
     fn name(&self) -> &'static str;
 
-    fn setup(&mut self, ctx: &mut InitPluginContext);
+    fn setup(&mut self, _ctx: &mut InitPluginContext) {}
 
-    fn on_event(&mut self, _event: &FlowEvent, _context: &mut PluginContext) -> EventResult {
+    fn on_event(&mut self, _event: &FlowEvent, _ctx: &mut PluginContext) -> EventResult {
         EventResult::Continue
     }
 
-    fn render(&mut self, _context: &mut RenderContext) -> Option<AnyElement> {
+    fn render(&mut self, _ctx: &mut RenderContext) -> Option<AnyElement> {
         None
     }
 
