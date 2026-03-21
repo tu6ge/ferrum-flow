@@ -485,17 +485,6 @@ pub enum UiEvent {
     ViewportChanged { zoom: f32, pan: Point<Pixels> },
 }
 
-// TODO
-// pub trait Command {
-//     fn execute(&mut self, graph: &mut Graph);
-//     fn undo(&mut self, graph: &mut Graph);
-// }
-
-// pub struct CommandQueue {
-//     undo_stack: Vec<Box<dyn Command>>,
-//     redo_stack: Vec<Box<dyn Command>>,
-// }
-
 pub struct RenderContext<'a> {
     pub graph: &'a Graph,
     pub port_offset_cache: &'a mut PortLayoutCache,
