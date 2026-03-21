@@ -4,7 +4,7 @@ use gpui::{Bounds, Pixels, Point, Size, px};
 
 use crate::edge::{Edge, EdgeId};
 use crate::node::{Node, NodeId, Port, PortId};
-use crate::{NodeBuilder, PortKind, PortPosition};
+use crate::{EdgeBuilder, NodeBuilder, PortKind, PortPosition};
 
 #[derive(Debug, Clone)]
 pub struct Graph {
@@ -31,6 +31,10 @@ impl Graph {
 
     pub fn create_node(&self, node_type: &str) -> NodeBuilder {
         NodeBuilder::new(node_type)
+    }
+
+    pub fn create_dege(&self) -> EdgeBuilder {
+        EdgeBuilder::new()
     }
 
     pub fn next_node_id(&self) -> NodeId {

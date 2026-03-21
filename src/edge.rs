@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::PortId;
+use crate::{Graph, PortId};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct EdgeId(pub u64);
@@ -28,5 +28,47 @@ impl Edge {
     pub fn target(mut self, port: PortId) -> Self {
         self.target_port = port;
         self
+    }
+}
+
+pub struct EdgeBuilder {
+    source: Option<PortId>,
+    target: Option<PortId>,
+}
+
+impl EdgeBuilder {
+    pub fn new() -> Self {
+        Self {
+            source: None,
+            target: None,
+        }
+    }
+
+    pub fn source(mut self, port: PortId) -> Self {
+        self.source = Some(port);
+        self
+    }
+
+    pub fn target(mut self, port: PortId) -> Self {
+        self.target = Some(port);
+        self
+    }
+
+    pub fn build(self, graph: &mut Graph) -> Option<EdgeId> {
+        let source = self.source?;
+        let target = self.target?;
+
+        let edge_id = graph.next_edge_id();
+
+        graph.edges.insert(
+            edge_id,
+            Edge {
+                id: edge_id,
+                source_port: source,
+                target_port: target,
+            },
+        );
+
+        Some(edge_id)
     }
 }
