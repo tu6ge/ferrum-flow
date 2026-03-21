@@ -67,7 +67,7 @@ impl Plugin for NodePlugin {
             .cloned()
             .collect();
 
-        ctx.cache_port_offset_with_node(&node_ids);
+        ctx.cache_port_offset_with_nodes(&node_ids);
 
         let list = node_ids.iter().filter_map(|node_id| {
             let node = ctx.graph.nodes().get(node_id)?;

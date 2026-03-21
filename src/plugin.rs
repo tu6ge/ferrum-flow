@@ -594,7 +594,7 @@ impl<'a> RenderContext<'a> {
         }
     }
 
-    pub fn cache_port_offset_with_node(&mut self, node_ids: &Vec<NodeId>) {
+    pub fn cache_port_offset_with_nodes(&mut self, node_ids: &Vec<NodeId>) {
         for node_id in node_ids {
             self.cache_node_port_offset(node_id);
         }
