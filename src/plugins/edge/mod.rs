@@ -56,6 +56,12 @@ impl Plugin for EdgePlugin {
             .filter(|(_, edge)| ctx.is_edge_visible(edge))
             .map(|(k, v)| (*k, edge_geometry2(v, &ctx)))
             .collect();
+
+        let edge_ids: Vec<_> = edges.iter().map(|(id, _)| *id).collect();
+        for edge_id in edge_ids {
+            ctx.cache_port_offset_with_edge(&edge_id);
+        }
+
         let selected_edges = ctx.graph.selected_edge.clone();
 
         Some(
@@ -132,9 +138,7 @@ fn port_screen_position(port_id: PortId, ctx: &PluginContext) -> Option<Point<Pi
 
     let node_pos = node.point();
 
-    //let offset = ctx.port_offset_cached(&port.node_id, &port_id)?;
-    let renderer = ctx.get_node_render(&port.node_id)?;
-    let offset = renderer.port_offset(&node, port, ctx.graph);
+    let offset = ctx.port_offset_cached(&port.node_id, &port_id)?;
 
     Some(ctx.world_to_screen(node_pos + offset))
 }
@@ -144,10 +148,7 @@ fn port_screen_position2(port_id: PortId, ctx: &RenderContext) -> Option<Point<P
 
     let node_pos = node.point();
 
-    // TODO no cache
-    //let offset = ctx.port_offset_cached(&port.node_id, &port_id)?;
-    let renderer = ctx.get_node_render(&port.node_id)?;
-    let offset = renderer.port_offset(&node, port, ctx.graph);
+    let offset = ctx.port_offset_cached(&port.node_id, &port_id)?;
 
     Some(ctx.world_to_screen(node_pos + offset))
 }
