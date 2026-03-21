@@ -5,6 +5,10 @@ use gpui::{Bounds, Pixels, Point};
 use crate::{
     Edge, EdgeId, Graph, Node, NodeBuilder, NodeId, Port, PortId, RendererRegistry, Viewport,
     canvas::PortLayoutCache,
+    plugin::{
+        cache_all_node_port_offset, cache_node_port_offset, is_edge_visible, is_node_visible,
+        port_offset_cached,
+    },
 };
 
 pub trait Command {
@@ -191,64 +195,22 @@ impl<'a> CommandContext<'a> {
     }
 
     pub fn is_node_visible(&self, node_id: &NodeId) -> bool {
-        let Some(node) = self.get_node(node_id) else {
-            return false;
-        };
-        self.viewport.is_node_visible(node)
+        is_node_visible(self.graph, self.viewport, node_id)
     }
 
     pub fn is_edge_visible(&self, edge: &Edge) -> bool {
-        let Edge {
-            source_port,
-            target_port,
-            ..
-        } = edge;
-        let Some(Port { node_id, .. }) = self.graph.ports.get(source_port) else {
-            return false;
-        };
-        let Some(Port {
-            node_id: node_id2, ..
-        }) = self.graph.ports.get(target_port)
-        else {
-            return false;
-        };
-        self.is_node_visible(node_id) || self.is_node_visible(node_id2)
+        is_edge_visible(self.graph, self.viewport, edge)
     }
 
     pub fn port_offset_cached(&self, node_id: &NodeId, port_id: &PortId) -> Option<Point<Pixels>> {
-        if let Some(node_cache) = self.port_offset_cache.map.get(node_id) {
-            if let Some(pos) = node_cache.get(port_id) {
-                return Some(*pos);
-            }
-        }
-
-        None
+        port_offset_cached(self.port_offset_cache, node_id, port_id)
     }
 
     pub fn cache_all_node_port_offset(&mut self) {
-        let nodes: Vec<NodeId> = self.graph.nodes().iter().map(|(id, _)| *id).collect();
-
-        for node in nodes {
-            self.cache_node_port_offset(&node);
-        }
+        cache_all_node_port_offset(self.graph, self.renderers, self.port_offset_cache)
     }
 
-    fn cache_node_port_offset(&mut self, node_id: &NodeId) {
-        if self.port_offset_cache.map.get(&node_id).is_some() {
-            return;
-        }
-        let Some(node) = self.get_node(node_id) else {
-            return;
-        };
-        let renderer = self.renderers.get(&node.node_type);
-
-        let mut result = HashMap::new();
-
-        for port in self.graph.ports.values().filter(|p| p.node_id == node.id) {
-            let pos = renderer.port_offset(node, port, self.graph);
-            result.insert(port.id, pos);
-        }
-
-        self.port_offset_cache.map.insert(node.id, result);
+    pub fn cache_node_port_offset(&mut self, node_id: &NodeId) {
+        cache_node_port_offset(self.graph, self.renderers, self.port_offset_cache, node_id);
     }
 }
