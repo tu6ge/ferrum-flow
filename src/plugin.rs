@@ -6,8 +6,8 @@ use gpui::{
 };
 
 use crate::{
-    Edge, EdgeId, Graph, Node, NodeBuilder, NodeId, NodeRenderer, Port, PortId, RendererRegistry,
-    Viewport,
+    Edge, EdgeBuilder, EdgeId, Graph, Node, NodeBuilder, NodeId, NodeRenderer, Port, PortId,
+    RendererRegistry, Viewport,
     canvas::{Command, CommandContext, History, Interaction, InteractionState, PortLayoutCache},
 };
 
@@ -49,6 +49,10 @@ pub struct InitPluginContext<'a> {
 impl<'a> InitPluginContext<'a> {
     pub fn create_node(&self, node_type: &str) -> NodeBuilder {
         self.graph.create_node(node_type)
+    }
+
+    pub fn create_edge(&self) -> EdgeBuilder {
+        self.graph.create_dege()
     }
 
     pub fn next_node_id(&self) -> NodeId {
@@ -259,6 +263,10 @@ impl<'a> PluginContext<'a> {
 
     pub fn create_node(&self, node_type: &str) -> NodeBuilder {
         self.graph.create_node(node_type)
+    }
+
+    pub fn create_edge(&self) -> EdgeBuilder {
+        self.graph.create_dege()
     }
 
     pub fn next_node_id(&self) -> NodeId {
@@ -497,6 +505,10 @@ impl<'a> RenderContext<'a> {
 
     pub fn create_node(&self, node_type: &str) -> NodeBuilder {
         self.graph.create_node(node_type)
+    }
+
+    pub fn create_edge(&self) -> EdgeBuilder {
+        self.graph.create_dege()
     }
 
     pub fn next_node_id(&self) -> NodeId {

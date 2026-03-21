@@ -3,7 +3,8 @@ use std::collections::HashMap;
 use gpui::{Bounds, Pixels, Point};
 
 use crate::{
-    Edge, EdgeId, Graph, Node, NodeBuilder, NodeId, Port, PortId, RendererRegistry, Viewport,
+    Edge, EdgeBuilder, EdgeId, Graph, Node, NodeBuilder, NodeId, Port, PortId, RendererRegistry,
+    Viewport,
     canvas::PortLayoutCache,
     plugin::{
         cache_all_node_port_offset, cache_node_port_offset, is_edge_visible, is_node_visible,
@@ -99,6 +100,10 @@ impl Command for CompositeCommand {
 impl<'a> CommandContext<'a> {
     pub fn create_node(&self, node_type: &str) -> NodeBuilder {
         self.graph.create_node(node_type)
+    }
+
+    pub fn create_edge(&self) -> EdgeBuilder {
+        self.graph.create_dege()
     }
 
     pub fn next_node_id(&self) -> NodeId {
