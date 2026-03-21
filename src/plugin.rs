@@ -429,8 +429,6 @@ impl<'a> PluginContext<'a> {
 
 pub enum FlowEvent {
     Input(InputEvent),
-    Graph(GraphEvent),
-    Ui(UiEvent),
     Custom(Box<dyn std::any::Any + Send>),
 }
 
@@ -455,34 +453,6 @@ pub enum InputEvent {
     MouseUp(MouseUpEvent),
 
     Wheel(ScrollWheelEvent),
-}
-
-pub enum GraphEvent {
-    NodeClicked(NodeId),
-
-    NodeDragStart(NodeId),
-    NodeDragging(NodeId, Point<Pixels>),
-    NodeDragEnd(NodeId),
-
-    EdgeClicked(EdgeId),
-
-    EdgeCreated { from: PortId, to: PortId },
-
-    EdgeRemoved(EdgeId),
-}
-
-pub enum UiEvent {
-    SelectionChanged(Vec<NodeId>),
-
-    ConnectStart(PortId),
-
-    ConnectPreview(Point<Pixels>),
-
-    ConnectEnd(PortId),
-
-    ConnectCancel,
-
-    ViewportChanged { zoom: f32, pan: Point<Pixels> },
 }
 
 pub struct RenderContext<'a> {
