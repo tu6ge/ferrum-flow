@@ -30,16 +30,34 @@ pub fn port_screen_bounds(
     ))
 }
 
+pub fn port_screen_big_bounds(
+    port_id: PortId,
+    ctx: &crate::plugin::PluginContext,
+) -> Option<Bounds<Pixels>> {
+    let mut bounds = port_screen_bounds(port_id, ctx)?;
+
+    bounds.origin -= Point::new(px(9.0), px(9.0));
+
+    bounds.size = Size {
+        width: px(30.0),
+        height: px(30.0),
+    };
+
+    Some(bounds)
+}
+
 pub fn edge_bezier(
     start: Point<Pixels>,
     start_position: PortPosition,
+    end_poisition: PortPosition,
     end: Point<Pixels>,
     viewport: &Viewport,
 ) -> Result<Path<Pixels>, anyhow::Error> {
     let control_a = get_control_point(start, start_position, viewport);
+    let control_b = get_control_point(end, end_poisition, viewport);
     let mut line = PathBuilder::stroke(px(1.0));
     line.move_to(start);
-    line.cubic_bezier_to(end, control_a, Point::new(end.x - px(50.0), end.y));
+    line.cubic_bezier_to(end, control_a, control_b);
 
     line.build()
 }

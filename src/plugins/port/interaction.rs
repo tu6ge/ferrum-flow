@@ -4,7 +4,9 @@ use crate::{
     NodeId, PortId, PortPosition,
     canvas::Interaction,
     plugin::{FlowEvent, InputEvent, Plugin},
-    plugins::port::{edge_bezier, port_screen_bounds, port_screen_position},
+    plugins::port::{
+        edge_bezier, port_screen_big_bounds, port_screen_bounds, port_screen_position,
+    },
 };
 
 use super::command::CreateEdge;
@@ -46,6 +48,7 @@ impl Plugin for PortInteractionPlugin {
                     node_id,
                     port_id,
                     position,
+                    target_position: PortPosition::Left,
                     mouse: Some(mouse_world),
                 });
                 return crate::plugin::EventResult::Stop;
@@ -69,6 +72,7 @@ struct PortConnecting {
     node_id: NodeId,
     port_id: PortId,
     position: PortPosition,
+    target_position: PortPosition,
     mouse: Option<Point<Pixels>>,
 }
 
@@ -82,6 +86,20 @@ impl Interaction for PortConnecting {
     ) -> crate::canvas::InteractionResult {
         // let mouse_world = ctx.viewport.world_to_screen(event.position);
         self.mouse = Some(event.position);
+        let mouse_world = ctx.screen_to_world(event.position);
+        if let Some(position) = ctx
+            .graph
+            .ports
+            .iter()
+            .filter(|(_, port)| ctx.is_node_visible(&port.node_id))
+            .find(|(id, _)| match port_screen_big_bounds(**id, ctx) {
+                Some(b) => b.contains(&mouse_world),
+                None => false,
+            })
+            .map(|(_, p)| p.position)
+        {
+            self.target_position = position;
+        }
         ctx.notify();
         crate::canvas::InteractionResult::Continue
     }
@@ -129,12 +147,15 @@ impl Interaction for PortConnecting {
 
         let start = port_screen_position(self.port_id, &ctx)?;
         let position = self.position;
+        let target_position = self.target_position;
         let viewport = ctx.viewport.clone();
         Some(
             canvas(
-                move |_, _, _| (position, viewport),
-                move |_, (position, viewport), win, _| {
-                    if let Ok(line) = edge_bezier(start, position, mouse, &viewport) {
+                move |_, _, _| (position, target_position, viewport),
+                move |_, (position, target_position, viewport), win, _| {
+                    if let Ok(line) =
+                        edge_bezier(start, position, target_position, mouse, &viewport)
+                    {
                         win.paint_path(line, rgb(0xb1b1b8));
                     }
                 },
