@@ -1,6 +1,6 @@
 use gpui::{Bounds, Path, PathBuilder, Pixels, Point, Size, px};
 
-use crate::{PortId, RenderContext};
+use crate::{PortId, PortPosition, RenderContext};
 
 pub fn port_screen_position(port_id: PortId, ctx: &RenderContext) -> Option<Point<Pixels>> {
     let port = &ctx.graph.ports.get(&port_id)?;
@@ -32,15 +32,18 @@ pub fn port_screen_bounds(
 
 pub fn edge_bezier(
     start: Point<Pixels>,
+    start_position: PortPosition,
     end: Point<Pixels>,
 ) -> Result<Path<Pixels>, anyhow::Error> {
+    let control_a = match start_position {
+        PortPosition::Right => Point::new(start.x + px(50.0), start.y),
+        PortPosition::Left => Point::new(start.x - px(50.0), start.y),
+        PortPosition::Top => Point::new(start.x, start.y - px(50.0)),
+        PortPosition::Bottom => Point::new(start.x, start.y + px(50.0)),
+    };
     let mut line = PathBuilder::stroke(px(1.0));
     line.move_to(start);
-    line.cubic_bezier_to(
-        end,
-        Point::new(start.x + px(50.0), start.y),
-        Point::new(end.x - px(50.0), end.y),
-    );
+    line.cubic_bezier_to(end, control_a, Point::new(end.x - px(50.0), end.y));
 
     line.build()
 }

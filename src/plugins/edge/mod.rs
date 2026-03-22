@@ -1,7 +1,7 @@
 use gpui::{Bounds, Element, PathBuilder, Pixels, Point, canvas, px, rgb};
 
 use crate::{
-    Edge, EdgeId, PortId, RenderContext,
+    Edge, EdgeId, PortId, PortPosition, RenderContext,
     plugin::{FlowEvent, Plugin, PluginContext},
     plugins::edge::command::ClearEdgeCommand,
 };
@@ -98,38 +98,62 @@ pub struct EdgeGeometry {
 
 fn edge_geometry(edge: &Edge, ctx: &PluginContext) -> Option<EdgeGeometry> {
     let Edge {
-        source_port,
-        target_port,
+        source_port: source_id,
+        target_port: target_id,
         ..
     } = edge;
 
-    let start = port_screen_position(*source_port, &ctx)?;
-    let end = port_screen_position(*target_port, &ctx)?;
+    let start = port_screen_position(*source_id, &ctx)?;
+    let end = port_screen_position(*target_id, &ctx)?;
 
-    Some(EdgeGeometry {
-        start,
-        c1: start + Point::new(px(50.0), px(0.0)),
-        c2: end - Point::new(px(50.0), px(0.0)),
-        end,
-    })
+    let source_port = ctx.graph.ports.get(source_id)?;
+    let target_port = ctx.graph.ports.get(target_id)?;
+
+    let c1 = match source_port.position {
+        PortPosition::Top => start - Point::new(px(0.0), px(50.0)),
+        PortPosition::Left => start - Point::new(px(50.0), px(0.0)),
+        PortPosition::Right => start + Point::new(px(50.0), px(0.0)),
+        PortPosition::Bottom => start + Point::new(px(0.0), px(50.0)),
+    };
+
+    let c2 = match target_port.position {
+        PortPosition::Top => end - Point::new(px(0.0), px(50.0)),
+        PortPosition::Left => end - Point::new(px(50.0), px(0.0)),
+        PortPosition::Right => end + Point::new(px(50.0), px(0.0)),
+        PortPosition::Bottom => end + Point::new(px(0.0), px(50.0)),
+    };
+
+    Some(EdgeGeometry { start, c1, c2, end })
 }
 
 fn edge_geometry2(edge: &Edge, ctx: &RenderContext) -> Option<EdgeGeometry> {
     let Edge {
-        source_port,
-        target_port,
+        source_port: source_id,
+        target_port: target_id,
         ..
     } = edge;
 
-    let start = port_screen_position2(*source_port, &ctx)?;
-    let end = port_screen_position2(*target_port, &ctx)?;
+    let start = port_screen_position2(*source_id, &ctx)?;
+    let end = port_screen_position2(*target_id, &ctx)?;
 
-    Some(EdgeGeometry {
-        start,
-        c1: start + Point::new(px(50.0), px(0.0)),
-        c2: end - Point::new(px(50.0), px(0.0)),
-        end,
-    })
+    let source_port = ctx.graph.ports.get(source_id)?;
+    let target_port = ctx.graph.ports.get(target_id)?;
+
+    let c1 = match source_port.position {
+        PortPosition::Top => start - Point::new(px(0.0), px(50.0)),
+        PortPosition::Left => start - Point::new(px(50.0), px(0.0)),
+        PortPosition::Right => start + Point::new(px(50.0), px(0.0)),
+        PortPosition::Bottom => start + Point::new(px(0.0), px(50.0)),
+    };
+
+    let c2 = match target_port.position {
+        PortPosition::Top => end - Point::new(px(0.0), px(50.0)),
+        PortPosition::Left => end - Point::new(px(50.0), px(0.0)),
+        PortPosition::Right => end + Point::new(px(50.0), px(0.0)),
+        PortPosition::Bottom => end + Point::new(px(0.0), px(50.0)),
+    };
+
+    Some(EdgeGeometry { start, c1, c2, end })
 }
 
 fn port_screen_position(port_id: PortId, ctx: &PluginContext) -> Option<Point<Pixels>> {

@@ -1,7 +1,7 @@
 use gpui::{Element, Pixels, Point, canvas, rgb};
 
 use crate::{
-    NodeId, PortId,
+    NodeId, PortId, PortPosition,
     canvas::Interaction,
     plugin::{FlowEvent, InputEvent, Plugin},
     plugins::port::{edge_bezier, port_screen_bounds, port_screen_position},
@@ -31,7 +31,7 @@ impl Plugin for PortInteractionPlugin {
 
         if let FlowEvent::Input(InputEvent::MouseDown(ev)) = event {
             let mouse_world = ctx.viewport.screen_to_world(ev.position);
-            if let Some((node_id, port_id)) = ctx
+            if let Some((node_id, port_id, position)) = ctx
                 .graph
                 .ports
                 .iter()
@@ -40,11 +40,12 @@ impl Plugin for PortInteractionPlugin {
                     Some(b) => b.contains(&mouse_world),
                     None => false,
                 })
-                .map(|(_, p)| (p.node_id, p.id))
+                .map(|(_, p)| (p.node_id, p.id, p.position))
             {
                 ctx.start_interaction(PortConnecting {
                     node_id,
                     port_id,
+                    position,
                     mouse: mouse_world,
                     moving: false,
                 });
@@ -68,6 +69,7 @@ impl Plugin for PortInteractionPlugin {
 struct PortConnecting {
     node_id: NodeId,
     port_id: PortId,
+    position: PortPosition,
     moving: bool,
     mouse: Point<Pixels>,
 }
@@ -130,11 +132,12 @@ impl Interaction for PortConnecting {
         let mouse: Point<Pixels> = self.mouse;
 
         let start = port_screen_position(self.port_id, &ctx)?;
+        let position = self.position;
         Some(
             canvas(
-                |_, _, _| {},
-                move |_, _, win, _| {
-                    if let Ok(line) = edge_bezier(start, mouse) {
+                move |_, _, _| position,
+                move |_, position, win, _| {
+                    if let Ok(line) = edge_bezier(start, position, mouse) {
                         win.paint_path(line, rgb(0xb1b1b8));
                     }
                 },
