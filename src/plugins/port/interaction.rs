@@ -87,7 +87,7 @@ impl Interaction for PortConnecting {
         // let mouse_world = ctx.viewport.world_to_screen(event.position);
         self.mouse = Some(event.position);
         let mouse_world = ctx.screen_to_world(event.position);
-        if let Some(position) = ctx
+        if let Some(port) = ctx
             .graph
             .ports
             .iter()
@@ -96,9 +96,11 @@ impl Interaction for PortConnecting {
                 Some(b) => b.contains(&mouse_world),
                 None => false,
             })
-            .map(|(_, p)| p.position)
+            .map(|(_, p)| p)
         {
-            self.target_position = position;
+            if self.node_id != port.node_id {
+                self.target_position = port.position;
+            }
         }
         ctx.notify();
         crate::canvas::InteractionResult::Continue
