@@ -29,6 +29,10 @@ fn main() {
                     .plugin(ViewportPlugin::new())
                     .plugin(BackgroundPlugin::new())
                     .plugin(NodePlugin::new())
+                    .plugin(PortInteractionPlugin::new())
+                    .plugin(EdgePlugin::new())
+                    .plugin(DeletePlugin::new())
+                    .plugin(HistoryPlugin::new())
                     .register_node("number", NumberNode {});
                 flow.init_plugins();
                 flow
