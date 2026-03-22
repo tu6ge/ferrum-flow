@@ -129,11 +129,12 @@ impl Interaction for PortConnecting {
 
         let start = port_screen_position(self.port_id, &ctx)?;
         let position = self.position;
+        let viewport = ctx.viewport.clone();
         Some(
             canvas(
-                move |_, _, _| position,
-                move |_, position, win, _| {
-                    if let Ok(line) = edge_bezier(start, position, mouse) {
+                move |_, _, _| (position, viewport),
+                move |_, (position, viewport), win, _| {
+                    if let Ok(line) = edge_bezier(start, position, mouse, &viewport) {
                         win.paint_path(line, rgb(0xb1b1b8));
                     }
                 },

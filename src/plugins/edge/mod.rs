@@ -1,7 +1,7 @@
 use gpui::{Bounds, Element, PathBuilder, Pixels, Point, canvas, px, rgb};
 
 use crate::{
-    Edge, EdgeId, PortId, PortPosition, RenderContext,
+    Edge, EdgeId, PortId, PortPosition, RenderContext, Viewport,
     plugin::{FlowEvent, Plugin, PluginContext},
     plugins::edge::command::ClearEdgeCommand,
 };
@@ -109,8 +109,8 @@ fn edge_geometry(edge: &Edge, ctx: &PluginContext) -> Option<EdgeGeometry> {
     let source_port = ctx.graph.ports.get(source_id)?;
     let target_port = ctx.graph.ports.get(target_id)?;
 
-    let c1 = get_control_point(start, source_port.position);
-    let c2 = get_control_point(end, target_port.position);
+    let c1 = get_control_point(start, source_port.position, ctx.viewport);
+    let c2 = get_control_point(end, target_port.position, ctx.viewport);
 
     Some(EdgeGeometry { start, c1, c2, end })
 }
@@ -128,8 +128,8 @@ fn edge_geometry2(edge: &Edge, ctx: &RenderContext) -> Option<EdgeGeometry> {
     let source_port = ctx.graph.ports.get(source_id)?;
     let target_port = ctx.graph.ports.get(target_id)?;
 
-    let c1 = get_control_point(start, source_port.position);
-    let c2 = get_control_point(end, target_port.position);
+    let c1 = get_control_point(start, source_port.position, ctx.viewport);
+    let c2 = get_control_point(end, target_port.position, ctx.viewport);
 
     Some(EdgeGeometry { start, c1, c2, end })
 }
@@ -263,11 +263,15 @@ fn vec_length(v: (f32, f32)) -> f32 {
     (v.0 * v.0 + v.1 * v.1).sqrt()
 }
 
-pub fn get_control_point(source: Point<Pixels>, position: PortPosition) -> Point<Pixels> {
+pub fn get_control_point(
+    source: Point<Pixels>,
+    position: PortPosition,
+    viewport: &Viewport,
+) -> Point<Pixels> {
     match position {
-        PortPosition::Top => source - Point::new(px(0.0), px(50.0)),
-        PortPosition::Left => source - Point::new(px(50.0), px(0.0)),
-        PortPosition::Right => source + Point::new(px(50.0), px(0.0)),
-        PortPosition::Bottom => source + Point::new(px(0.0), px(50.0)),
+        PortPosition::Top => source - Point::new(px(0.0), px(50.0 * viewport.zoom)),
+        PortPosition::Left => source - Point::new(px(50.0 * viewport.zoom), px(0.0)),
+        PortPosition::Right => source + Point::new(px(50.0 * viewport.zoom), px(0.0)),
+        PortPosition::Bottom => source + Point::new(px(0.0), px(50.0 * viewport.zoom)),
     }
 }
