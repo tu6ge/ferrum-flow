@@ -46,8 +46,7 @@ impl Plugin for PortInteractionPlugin {
                     node_id,
                     port_id,
                     position,
-                    mouse: mouse_world,
-                    moving: false,
+                    mouse: Some(mouse_world),
                 });
                 return crate::plugin::EventResult::Stop;
             }
@@ -70,8 +69,7 @@ struct PortConnecting {
     node_id: NodeId,
     port_id: PortId,
     position: PortPosition,
-    moving: bool,
-    mouse: Point<Pixels>,
+    mouse: Option<Point<Pixels>>,
 }
 
 impl PortConnecting {}
@@ -83,8 +81,7 @@ impl Interaction for PortConnecting {
         ctx: &mut crate::plugin::PluginContext,
     ) -> crate::canvas::InteractionResult {
         // let mouse_world = ctx.viewport.world_to_screen(event.position);
-        self.mouse = event.position;
-        self.moving = true;
+        self.mouse = Some(event.position);
         ctx.notify();
         crate::canvas::InteractionResult::Continue
     }
@@ -120,16 +117,15 @@ impl Interaction for PortConnecting {
             let edge = ctx.new_edge().source(self.port_id.clone()).target(port_id);
 
             ctx.execute_command(CreateEdge::new(edge));
+            return crate::canvas::InteractionResult::End;
         }
-        ctx.cancel_interaction();
+        self.mouse = None;
+        ctx.notify();
+        // ctx.cancel_interaction();
         crate::canvas::InteractionResult::End
     }
     fn render(&self, ctx: &mut crate::RenderContext) -> Option<gpui::AnyElement> {
-        if !self.moving {
-            return None;
-        }
-
-        let mouse: Point<Pixels> = self.mouse;
+        let mouse: Point<Pixels> = self.mouse?;
 
         let start = port_screen_position(self.port_id, &ctx)?;
         let position = self.position;
