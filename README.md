@@ -140,6 +140,11 @@ Rendering is fully customizable via a registry:
 pub trait NodeRenderer {
     fn render(&self, node: &Node, ctx: &mut RenderContext) -> AnyElement;
 
+    // custom render port UI
+    fn port_render(&self, port: &Port, ctx: &mut RenderContext) -> Option<AnyElement> {
+        // ... default implement
+    }
+
     // computing the position of port relative to node
     fn port_offset(&self, node: &Node, port: &Port, graph: &Graph) -> Point<Pixels> {
         // ... default implement
