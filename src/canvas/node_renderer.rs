@@ -9,6 +9,7 @@ pub trait NodeRenderer: Send + Sync {
     /// render node inner UI
     fn render(&self, node: &Node, ctx: &mut RenderContext) -> AnyElement;
 
+    /// computing the position of port relative to node
     fn port_offset(&self, node: &Node, port: &Port, graph: &Graph) -> Point<Pixels> {
         let ports: Vec<&Port> = graph
             .ports

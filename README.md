@@ -117,8 +117,8 @@ Implements the Command Pattern:
 
 ```rust
 pub trait Command {
-    fn execute(&mut self, ctx: &mut CanvasState);
-    fn undo(&mut self, ctx: &mut CanvasState);
+    fn execute(&mut self, ctx: &mut CommandContext);
+    fn undo(&mut self, ctx: &mut CommandContext);
 }
 ```
 
@@ -139,10 +139,15 @@ Rendering is fully customizable via a registry:
 ```rust
 pub trait NodeRenderer {
     fn render(&self, node: &Node, ctx: &mut RenderContext) -> AnyElement;
+
+    // computing the position of port relative to node
+    fn port_offset(&self, node: &Node, port: &Port, graph: &Graph) -> Point<Pixels> {
+        // ... default implement
+    }
 }
 ```
 
-Example:
+Render example:
 
 ```rust
 div()
