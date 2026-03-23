@@ -101,6 +101,7 @@ pub struct Port {
     pub index: usize,
     pub node_id: NodeId,
     pub position: PortPosition,
+    pub size: Size<Pixels>,
 }
 
 pub struct NodeBuilder {
@@ -108,10 +109,21 @@ pub struct NodeBuilder {
     x: Pixels,
     y: Pixels,
     size: Size<Pixels>,
-    inputs: Vec<PortPosition>,
-    outputs: Vec<PortPosition>,
+    inputs: Vec<PortSpec>,
+    outputs: Vec<PortSpec>,
     data: serde_json::Value,
 }
+
+#[derive(Clone)]
+struct PortSpec {
+    position: PortPosition,
+    size: Size<Pixels>,
+}
+
+const DEFAULT_PORT_SIZE: Size<Pixels> = Size {
+    width: px(12.0),
+    height: px(12.0),
+};
 
 impl NodeBuilder {
     pub fn new(node_type: impl Into<String>) -> Self {
@@ -144,22 +156,50 @@ impl NodeBuilder {
     }
 
     pub fn input(mut self) -> Self {
-        self.inputs.push(PortPosition::Left);
+        self.inputs.push(PortSpec {
+            position: PortPosition::Left,
+            size: DEFAULT_PORT_SIZE,
+        });
         self
     }
 
     pub fn output(mut self) -> Self {
-        self.outputs.push(PortPosition::Right);
+        self.outputs.push(PortSpec {
+            position: PortPosition::Right,
+            size: DEFAULT_PORT_SIZE,
+        });
         self
     }
 
     pub fn input_at(mut self, pos: PortPosition) -> Self {
-        self.inputs.push(pos);
+        self.inputs.push(PortSpec {
+            position: pos,
+            size: DEFAULT_PORT_SIZE,
+        });
         self
     }
 
     pub fn output_at(mut self, pos: PortPosition) -> Self {
-        self.outputs.push(pos);
+        self.outputs.push(PortSpec {
+            position: pos,
+            size: DEFAULT_PORT_SIZE,
+        });
+        self
+    }
+
+    pub fn input_with(mut self, pos: PortPosition, size: Size<Pixels>) -> Self {
+        self.inputs.push(PortSpec {
+            position: pos,
+            size,
+        });
+        self
+    }
+
+    pub fn output_with(mut self, pos: PortPosition, size: Size<Pixels>) -> Self {
+        self.outputs.push(PortSpec {
+            position: pos,
+            size,
+        });
         self
     }
 
@@ -177,10 +217,10 @@ impl NodeBuilder {
         let mut input_counters: HashMap<PortPosition, usize> = HashMap::new();
 
         // 创建 input ports
-        for pos in self.inputs {
+        for spec in self.inputs {
             let port_id = graph.next_port_id();
 
-            let index = input_counters.entry(pos).or_insert(0);
+            let index = input_counters.entry(spec.position).or_insert(0);
             let current_index = *index;
             *index += 1;
 
@@ -191,7 +231,8 @@ impl NodeBuilder {
                     kind: PortKind::Input,
                     index: current_index,
                     node_id,
-                    position: pos,
+                    position: spec.position,
+                    size: spec.size,
                 },
             );
 
@@ -201,10 +242,10 @@ impl NodeBuilder {
         let mut output_counters: HashMap<PortPosition, usize> = HashMap::new();
 
         // 创建 output ports
-        for pos in self.outputs {
+        for spec in self.outputs {
             let port_id = graph.next_port_id();
 
-            let index = output_counters.entry(pos).or_insert(0);
+            let index = output_counters.entry(spec.position).or_insert(0);
             let current_index = *index;
             *index += 1;
 
@@ -215,7 +256,8 @@ impl NodeBuilder {
                     kind: PortKind::Output,
                     index: current_index,
                     node_id,
-                    position: pos,
+                    position: spec.position,
+                    size: spec.size,
                 },
             );
 
@@ -234,8 +276,7 @@ impl NodeBuilder {
         };
 
         graph.nodes.insert(node_id, node);
-        let order = graph.node_order_mut();
-        order.push(node_id);
+        graph.node_order_mut().push(node_id);
 
         node_id
     }
