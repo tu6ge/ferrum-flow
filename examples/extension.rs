@@ -60,4 +60,23 @@ impl NodeRenderer for NumberNode {
             .child(div().child("Number Node").text_color(white()))
             .into_any()
     }
+
+    fn port_render(&self, node: &Node, port: &Port, ctx: &mut RenderContext) -> Option<AnyElement> {
+        let size = port.size;
+        let position = port_screen_position(node, port.id, &ctx)?;
+
+        Some(
+            div()
+                .absolute()
+                .left(position.x - size.width / 2.0 * ctx.viewport.zoom)
+                .top(position.y - size.height / 2.0 * ctx.viewport.zoom)
+                .w(size.width * ctx.viewport.zoom)
+                .h(size.height * ctx.viewport.zoom)
+                .rounded_full()
+                .border_1()
+                .border_color(rgb(0x1A192B))
+                .bg(white())
+                .into_any(),
+        )
+    }
 }

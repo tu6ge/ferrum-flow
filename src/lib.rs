@@ -8,7 +8,7 @@ mod viewport;
 
 pub use canvas::{
     Command, CommandContext, CompositeCommand, FlowCanvas, History, Interaction, InteractionResult,
-    InteractionState, NodeRenderer, RendererRegistry,
+    InteractionState, NodeRenderer, RendererRegistry, port_screen_position,
 };
 pub use edge::*;
 pub use graph::*;
