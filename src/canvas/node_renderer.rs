@@ -3,11 +3,29 @@ use std::collections::HashMap;
 
 use crate::node::Node;
 use crate::plugin::RenderContext;
-use crate::{Graph, Port, PortPosition};
+use crate::{Graph, Port, PortId, PortPosition};
 
 pub trait NodeRenderer: Send + Sync {
     /// render node inner UI
     fn render(&self, node: &Node, ctx: &mut RenderContext) -> AnyElement;
+
+    // custom render port UI
+    fn port_render(&self, port: &Port, ctx: &mut RenderContext) -> Option<AnyElement> {
+        let size = port.size;
+        let position = port_screen_position(port.id, &ctx)?;
+
+        Some(
+            div()
+                .absolute()
+                .left(position.x - size.width / 2.0 * ctx.viewport.zoom)
+                .top(position.y - size.height / 2.0 * ctx.viewport.zoom)
+                .w(size.width * ctx.viewport.zoom)
+                .h(size.height * ctx.viewport.zoom)
+                .rounded_full()
+                .bg(rgb(0x1A192B))
+                .into_any(),
+        )
+    }
 
     /// computing the position of port relative to node
     fn port_offset(&self, node: &Node, port: &Port, graph: &Graph) -> Point<Pixels> {
@@ -135,4 +153,15 @@ impl NodeRenderer for UndefinedNodeRenderer {
             )
             .into_any()
     }
+}
+
+pub fn port_screen_position(port_id: PortId, ctx: &RenderContext) -> Option<Point<Pixels>> {
+    let port = &ctx.graph.ports.get(&port_id)?;
+    let node = &ctx.nodes().get(&port.node_id)?;
+
+    let node_pos = node.point();
+
+    let offset = ctx.port_offset_cached(&port.node_id, &port_id)?;
+
+    Some(ctx.viewport.world_to_screen(node_pos + offset))
 }
