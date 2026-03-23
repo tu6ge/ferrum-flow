@@ -20,7 +20,7 @@ pub use undo::{Command, CommandContext, CompositeCommand, History};
 
 pub use types::{Interaction, InteractionResult, InteractionState};
 
-pub use node_renderer::{NodeRenderer, RendererRegistry};
+pub use node_renderer::{NodeRenderer, RendererRegistry, port_screen_position};
 
 pub struct FlowCanvas {
     pub graph: Graph,
