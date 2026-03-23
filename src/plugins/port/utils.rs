@@ -25,8 +25,8 @@ pub fn port_screen_bounds(
     let offset = ctx.port_offset_cached(&port.node_id, &port_id)?;
 
     Some(Bounds::new(
-        node_pos + offset - Point::new(px(6.0), px(6.0)),
-        Size::new(px(12.0), px(12.0)),
+        node_pos + offset - Point::new(port.size.width / 2.0, port.size.height / 2.0),
+        port.size,
     ))
 }
 

@@ -21,16 +21,17 @@ impl NodePlugin {
             .ports
             .iter()
             .filter(|(_, port)| port.node_id == *node_id)
-            .filter_map(|(id, _)| {
+            .filter_map(|(id, port)| {
+                let size = port.size;
                 let position = port_screen_position(*id, &ctx)?;
 
                 Some(
                     div()
                         .absolute()
-                        .left(position.x - px(6.0 * ctx.viewport.zoom))
-                        .top(position.y - px(6.0 * ctx.viewport.zoom))
-                        .w(px(12.0 * ctx.viewport.zoom))
-                        .h(px(12.0 * ctx.viewport.zoom))
+                        .left(position.x - size.width / 2.0 * ctx.viewport.zoom)
+                        .top(position.y - size.height / 2.0 * ctx.viewport.zoom)
+                        .w(size.width * ctx.viewport.zoom)
+                        .h(size.height * ctx.viewport.zoom)
                         .rounded_full()
                         .bg(rgb(0x1A192B)),
                 )

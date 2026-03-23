@@ -1,5 +1,5 @@
 use ferrum_flow::*;
-use gpui::{AppContext as _, Application, WindowOptions};
+use gpui::{AppContext as _, Application, Size, WindowOptions, px};
 
 fn main() {
     Application::new().run(|cx| {
@@ -10,7 +10,7 @@ fn main() {
             .position(100.0, 100.0)
             .output()
             .output()
-            .output_at(PortPosition::Bottom)
+            .output_with(PortPosition::Bottom, Size::new(px(20.0), px(20.0)))
             .output_at(PortPosition::Bottom)
             .build(&mut graph);
 
