@@ -293,17 +293,21 @@ pub struct FlowCanvasBuilder<'a, 'b> {
 }
 
 impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
+    /// register plugin
     pub fn plugin(mut self, plugin: impl Plugin + 'static) -> Self {
         self.plugins = self.plugins.add(plugin);
         self
     }
-    pub fn register_node<R>(mut self, name: impl Into<String>, renderer: R) -> Self
+
+    /// register node renderer
+    pub fn node_renderer<R>(mut self, name: impl Into<String>, renderer: R) -> Self
     where
         R: node_renderer::NodeRenderer + 'static,
     {
         self.renderers.register(name, renderer);
         self
     }
+
     pub fn build(self) -> FlowCanvas {
         let focus_handle = self.cx.focus_handle();
 

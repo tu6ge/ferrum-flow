@@ -33,7 +33,7 @@ fn main() {
                     .plugin(EdgePlugin::new())
                     .plugin(DeletePlugin::new())
                     .plugin(HistoryPlugin::new())
-                    .register_node("number", NumberNode {})
+                    .node_renderer("number", NumberNode {})
                     .build()
             })
         })
