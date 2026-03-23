@@ -19,13 +19,16 @@ impl Plugin for HistoryPlugin {
         ctx: &mut crate::plugin::PluginContext,
     ) -> crate::plugin::EventResult {
         if let FlowEvent::Input(crate::plugin::InputEvent::KeyDown(ev)) = event {
-            if ev.keystroke.key == "z"
-                && ev.keystroke.modifiers.platform
-                && ev.keystroke.modifiers.shift
-            {
+            #[cfg(target_os = "macos")]
+            let platform = ev.keystroke.modifiers.platform;
+
+            #[cfg(not(target_os = "macos"))]
+            let platform = ev.keystroke.modifiers.control;
+
+            if ev.keystroke.key == "z" && platform && ev.keystroke.modifiers.shift {
                 ctx.redo();
                 return crate::plugin::EventResult::Stop;
-            } else if ev.keystroke.key == "z" && ev.keystroke.modifiers.platform {
+            } else if ev.keystroke.key == "z" && platform {
                 ctx.undo();
                 return crate::plugin::EventResult::Stop;
             }
