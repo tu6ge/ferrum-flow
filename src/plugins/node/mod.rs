@@ -3,41 +3,16 @@ mod interaction;
 mod renderer;
 
 pub use command::DragNodesCommand;
-use gpui::{Element, ParentElement, Styled as _, div, px, rgb};
+use gpui::{Element, ParentElement, div};
 pub use interaction::NodeInteractionPlugin;
 
-use crate::{NodeId, RenderContext, plugin::Plugin, plugins::port::port_screen_position};
+use crate::{RenderContext, plugin::Plugin};
 
 pub struct NodePlugin {}
 
 impl NodePlugin {
     pub fn new() -> Self {
         Self {}
-    }
-
-    fn render_ports(&self, node_id: &NodeId, ctx: &RenderContext) -> Option<gpui::AnyElement> {
-        let ports = ctx
-            .graph
-            .ports
-            .iter()
-            .filter(|(_, port)| port.node_id == *node_id)
-            .filter_map(|(id, port)| {
-                let size = port.size;
-                let position = port_screen_position(*id, &ctx)?;
-
-                Some(
-                    div()
-                        .absolute()
-                        .left(position.x - size.width / 2.0 * ctx.viewport.zoom)
-                        .top(position.y - size.height / 2.0 * ctx.viewport.zoom)
-                        .w(size.width * ctx.viewport.zoom)
-                        .h(size.height * ctx.viewport.zoom)
-                        .rounded_full()
-                        .bg(rgb(0x1A192B)),
-                )
-            });
-
-        Some(div().children(ports).into_any())
     }
 }
 
@@ -74,15 +49,16 @@ impl Plugin for NodePlugin {
             let node = ctx.graph.nodes().get(node_id)?;
             let render = ctx.renderers.get(&node.node_type);
 
-            match self.render_ports(node_id, &ctx) {
-                Some(ports) => Some(
-                    div()
-                        .child(render.render(node, ctx))
-                        .child(ports)
-                        .into_any(),
-                ),
-                None => Some(render.render(node, ctx)),
-            }
+            let node_render = render.render(node, ctx);
+
+            let ports = ctx
+                .graph
+                .ports
+                .iter()
+                .filter(|(_, port)| port.node_id == *node_id)
+                .filter_map(|(_, port)| render.port_render(port, ctx));
+
+            Some(div().child(node_render).children(ports).into_any())
         });
 
         Some(div().children(list).into_any())
