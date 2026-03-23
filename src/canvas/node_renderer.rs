@@ -10,9 +10,9 @@ pub trait NodeRenderer: Send + Sync {
     fn render(&self, node: &Node, ctx: &mut RenderContext) -> AnyElement;
 
     // custom render port UI
-    fn port_render(&self, port: &Port, ctx: &mut RenderContext) -> Option<AnyElement> {
+    fn port_render(&self, node: &Node, port: &Port, ctx: &mut RenderContext) -> Option<AnyElement> {
         let size = port.size;
-        let position = port_screen_position(port.id, &ctx)?;
+        let position = port_screen_position(node, port.id, &ctx)?;
 
         Some(
             div()
@@ -155,13 +155,14 @@ impl NodeRenderer for UndefinedNodeRenderer {
     }
 }
 
-pub fn port_screen_position(port_id: PortId, ctx: &RenderContext) -> Option<Point<Pixels>> {
-    let port = &ctx.graph.ports.get(&port_id)?;
-    let node = &ctx.nodes().get(&port.node_id)?;
-
+pub fn port_screen_position(
+    node: &Node,
+    port_id: PortId,
+    ctx: &RenderContext,
+) -> Option<Point<Pixels>> {
     let node_pos = node.point();
 
-    let offset = ctx.port_offset_cached(&port.node_id, &port_id)?;
+    let offset = ctx.port_offset_cached(&node.id, &port_id)?;
 
     Some(ctx.viewport.world_to_screen(node_pos + offset))
 }

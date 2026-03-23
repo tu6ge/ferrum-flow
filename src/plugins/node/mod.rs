@@ -56,7 +56,7 @@ impl Plugin for NodePlugin {
                 .ports
                 .iter()
                 .filter(|(_, port)| port.node_id == *node_id)
-                .filter_map(|(_, port)| render.port_render(port, ctx));
+                .filter_map(|(_, port)| render.port_render(node, port, ctx));
 
             Some(div().child(node_render).children(ports).into_any())
         });
