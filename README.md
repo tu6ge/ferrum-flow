@@ -141,7 +141,7 @@ pub trait NodeRenderer {
     fn render(&self, node: &Node, ctx: &mut RenderContext) -> AnyElement;
 
     // custom render port UI
-    fn port_render(&self, port: &Port, ctx: &mut RenderContext) -> Option<AnyElement> {
+    fn port_render(&self, node: &Node, port: &Port, ctx: &mut RenderContext) -> Option<AnyElement> {
         // ... default implement
     }
 
