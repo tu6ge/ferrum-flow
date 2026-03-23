@@ -28,6 +28,7 @@ pub trait NodeRenderer: Send + Sync {
     }
 
     /// computing the position of port relative to node
+    /// built-in Node Plugin is cached this.
     fn port_offset(&self, node: &Node, port: &Port, graph: &Graph) -> Point<Pixels> {
         let ports: Vec<&Port> = graph
             .ports
