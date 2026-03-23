@@ -36,7 +36,10 @@ pub fn port_screen_big_bounds(
 ) -> Option<Bounds<Pixels>> {
     let mut bounds = port_screen_bounds(port_id, ctx)?;
 
-    bounds.origin -= Point::new(px(9.0), px(9.0));
+    let offset_width = px(15.0) - bounds.size.width / 2.0;
+    let offset_height = px(15.0) - bounds.size.height / 2.0;
+
+    bounds.origin -= Point::new(offset_width, offset_height);
 
     bounds.size = Size {
         width: px(30.0),
