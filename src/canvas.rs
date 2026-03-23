@@ -73,11 +73,11 @@ impl FlowCanvas {
 
     pub fn builder<'a, 'b>(
         graph: Graph,
-        cx: &'a mut Context<'b, Self>,
+        ctx: &'a mut Context<'b, Self>,
     ) -> FlowCanvasBuilder<'a, 'b> {
         FlowCanvasBuilder {
             graph,
-            cx,
+            ctx,
             plugins: PluginRegistry::new(),
             renderers: RendererRegistry::new(),
         }
@@ -286,7 +286,7 @@ impl Render for FlowCanvas {
 
 pub struct FlowCanvasBuilder<'a, 'b> {
     graph: Graph,
-    cx: &'a mut Context<'b, FlowCanvas>,
+    ctx: &'a mut Context<'b, FlowCanvas>,
 
     plugins: PluginRegistry,
     renderers: RendererRegistry,
@@ -309,7 +309,7 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
     }
 
     pub fn build(self) -> FlowCanvas {
-        let focus_handle = self.cx.focus_handle();
+        let focus_handle = self.ctx.focus_handle();
 
         let mut canvas = FlowCanvas {
             graph: self.graph,

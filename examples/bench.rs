@@ -21,8 +21,8 @@ fn main() {
         generate_chain_edges(&mut graph, node_ids);
 
         cx.open_window(WindowOptions::default(), |_, cx| {
-            cx.new(|fc| {
-                FlowCanvas::builder(graph, fc)
+            cx.new(|ctx| {
+                FlowCanvas::builder(graph, ctx)
                     .plugin(SelectionPlugin::new())
                     .plugin(NodeInteractionPlugin::new())
                     .plugin(ViewportPlugin::new())
