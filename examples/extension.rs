@@ -23,7 +23,7 @@ fn main() {
 
         cx.open_window(WindowOptions::default(), |_, cx| {
             cx.new(|fc| {
-                let mut flow = FlowCanvas::new(graph, fc)
+                FlowCanvas::builder(graph, fc)
                     .plugin(SelectionPlugin::new())
                     .plugin(NodeInteractionPlugin::new())
                     .plugin(ViewportPlugin::new())
@@ -33,9 +33,8 @@ fn main() {
                     .plugin(EdgePlugin::new())
                     .plugin(DeletePlugin::new())
                     .plugin(HistoryPlugin::new())
-                    .register_node("number", NumberNode {});
-                flow.init_plugins();
-                flow
+                    .register_node("number", NumberNode {})
+                    .build()
             })
         })
         .unwrap();

@@ -22,7 +22,7 @@ fn main() {
 
         cx.open_window(WindowOptions::default(), |_, cx| {
             cx.new(|fc| {
-                let mut flow = FlowCanvas::new(graph, fc)
+                FlowCanvas::builder(graph, fc)
                     .plugin(SelectionPlugin::new())
                     .plugin(NodeInteractionPlugin::new())
                     .plugin(ViewportPlugin::new())
@@ -31,9 +31,8 @@ fn main() {
                     .plugin(PortInteractionPlugin::new())
                     .plugin(EdgePlugin::new())
                     .plugin(DeletePlugin::new())
-                    .plugin(HistoryPlugin::new());
-                flow.init_plugins();
-                flow
+                    .plugin(HistoryPlugin::new())
+                    .build()
             })
         })
         .unwrap();

@@ -71,31 +71,15 @@ impl FlowCanvas {
         }
     }
 
-    pub fn register_node<R>(mut self, name: impl Into<String>, renderer: R) -> Self
-    where
-        R: node_renderer::NodeRenderer + 'static,
-    {
-        self.renderers.register(name, renderer);
-        self
-    }
-
-    pub fn plugin(mut self, plugin: impl Plugin + 'static) -> Self {
-        self.plugins_registry = self.plugins_registry.add(plugin);
-        self
-    }
-
-    pub fn init_plugins(&mut self) {
-        let mut ctx = InitPluginContext {
-            graph: &mut self.graph,
-            port_offset_cache: &mut self.port_offset_cache,
-            viewport: &mut self.viewport,
-            renderers: &mut self.renderers,
-        };
-
-        self.plugins_registry.plugins.sort_by_key(|p| -p.priority());
-
-        for plugin in &mut self.plugins_registry.plugins.iter_mut() {
-            plugin.setup(&mut ctx);
+    pub fn builder<'a, 'b>(
+        graph: Graph,
+        cx: &'a mut Context<'b, Self>,
+    ) -> FlowCanvasBuilder<'a, 'b> {
+        FlowCanvasBuilder {
+            graph,
+            cx,
+            plugins: PluginRegistry::new(),
+            renderers: RendererRegistry::new(),
         }
     }
 
@@ -297,5 +281,62 @@ impl Render for FlowCanvas {
                     .iter()
                     .map(|layer| div().absolute().children(layers[layer.index()].drain(..))),
             )
+    }
+}
+
+pub struct FlowCanvasBuilder<'a, 'b> {
+    graph: Graph,
+    cx: &'a mut Context<'b, FlowCanvas>,
+
+    plugins: PluginRegistry,
+    renderers: RendererRegistry,
+}
+
+impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
+    pub fn plugin(mut self, plugin: impl Plugin + 'static) -> Self {
+        self.plugins = self.plugins.add(plugin);
+        self
+    }
+    pub fn register_node<R>(mut self, name: impl Into<String>, renderer: R) -> Self
+    where
+        R: node_renderer::NodeRenderer + 'static,
+    {
+        self.renderers.register(name, renderer);
+        self
+    }
+    pub fn build(self) -> FlowCanvas {
+        let focus_handle = self.cx.focus_handle();
+
+        let mut canvas = FlowCanvas {
+            graph: self.graph,
+            viewport: Viewport::new(),
+            plugins_registry: self.plugins,
+            renderers: self.renderers,
+            focus_handle,
+            interaction: InteractionState::new(),
+            history: History::new(),
+            event_queue: vec![],
+            port_offset_cache: PortLayoutCache::new(),
+        };
+
+        canvas
+            .plugins_registry
+            .plugins
+            .sort_by_key(|p| -p.priority());
+
+        {
+            let mut ctx = InitPluginContext {
+                graph: &mut canvas.graph,
+                port_offset_cache: &mut canvas.port_offset_cache,
+                viewport: &mut canvas.viewport,
+                renderers: &mut canvas.renderers,
+            };
+
+            for plugin in &mut canvas.plugins_registry.plugins {
+                plugin.setup(&mut ctx);
+            }
+        }
+
+        canvas
     }
 }
