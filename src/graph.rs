@@ -1,12 +1,13 @@
 use std::collections::{HashMap, HashSet};
 
 use gpui::{Bounds, Pixels, Point, Size, px};
+use serde::{Deserialize, Serialize};
 
 use crate::edge::{Edge, EdgeId};
 use crate::node::{Node, NodeId, Port, PortId};
 use crate::{EdgeBuilder, NodeBuilder, PortKind, PortPosition};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Graph {
     pub(crate) nodes: HashMap<NodeId, Node>,
     node_order: Vec<NodeId>,
@@ -27,6 +28,14 @@ impl Graph {
             selected_edge: HashSet::new(),
             selected_node: HashSet::new(),
         }
+    }
+
+    pub fn from_json(json: &str) -> serde_json::Result<Self> {
+        serde_json::from_str(json)
+    }
+
+    pub fn to_json(&self) -> serde_json::Result<String> {
+        serde_json::to_string(self)
     }
 
     pub fn create_node(&self, node_type: &str) -> NodeBuilder {
