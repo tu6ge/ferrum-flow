@@ -13,6 +13,9 @@ pub use canvas::{
 pub use edge::*;
 pub use graph::*;
 pub use node::*;
-pub use plugin::{InitPluginContext, Plugin, PluginContext, RenderContext, RenderLayer};
+pub use plugin::{
+    EventResult, FlowEvent, InitPluginContext, InputEvent, Plugin, PluginContext, RenderContext,
+    RenderLayer,
+};
 pub use plugins::*;
 pub use viewport::Viewport;
