@@ -7,6 +7,8 @@ use crate::edge::{Edge, EdgeId};
 use crate::node::{Node, NodeId, Port, PortId};
 use crate::{EdgeBuilder, NodeBuilder, PortKind, PortPosition};
 
+mod sync;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Graph {
     pub(crate) nodes: HashMap<NodeId, Node>,

@@ -104,6 +104,25 @@ pub struct Port {
     pub size: Size<Pixels>,
 }
 
+impl ToString for PortKind {
+    fn to_string(&self) -> String {
+        match self {
+            PortKind::Input => "input".into(),
+            PortKind::Output => "output".into(),
+        }
+    }
+}
+impl ToString for PortPosition {
+    fn to_string(&self) -> String {
+        match self {
+            PortPosition::Left => "left".into(),
+            PortPosition::Right => "right".into(),
+            PortPosition::Top => "top".into(),
+            PortPosition::Bottom => "bottom".into(),
+        }
+    }
+}
+
 pub struct NodeBuilder {
     node_type: String,
     x: Pixels,
