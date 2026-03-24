@@ -232,10 +232,7 @@ impl<'a> PluginContext<'a> {
         self.interaction.handler.is_some()
     }
 
-    // pub fn take_interaction(&mut self) -> Option<Box<dyn InteractionHandler + 'static>> {
-    //     self.interaction.handler.take()
-    // }
-
+    /// Tell GPUI that this entity has changed and observers of it should be notified.
     pub fn notify(&mut self) {
         (self.notify)();
     }
