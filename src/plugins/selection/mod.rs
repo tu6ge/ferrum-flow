@@ -302,7 +302,9 @@ fn compute_nodes_bounds(nodes: &HashMap<NodeId, Point<Pixels>>, graph: &Graph) -
     let mut max_y = f32::MIN;
 
     for id in nodes.keys() {
-        let node = &graph.nodes()[id];
+        let Some(node) = &graph.nodes().get(id) else {
+            continue;
+        };
 
         min_x = min_x.min(node.x.into());
         min_y = min_y.min(node.y.into());

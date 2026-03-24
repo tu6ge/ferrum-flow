@@ -62,7 +62,7 @@ impl Graph {
     }
 
     pub fn add_node(&mut self, node: Node) {
-        let node_id = node.id.clone();
+        let node_id = node.id;
         self.nodes.insert(node.id, node);
         self.node_order.push(node_id);
     }
@@ -106,7 +106,9 @@ impl Graph {
     }
 
     pub fn remove_node(&mut self, id: &NodeId) {
-        let node = &self.nodes[id];
+        let Some(node) = &self.nodes.get(id) else {
+            return;
+        };
         let mut port_ids = node.inputs.clone();
         port_ids.extend(node.outputs.clone());
 
@@ -210,7 +212,7 @@ impl Graph {
         let mut found = false;
 
         for id in &self.selected_node {
-            let node = &self.nodes[id];
+            let node = &self.nodes.get(id)?;
 
             min_x = min_x.min(node.x.into());
             min_y = min_y.min(node.y.into());
@@ -234,9 +236,9 @@ impl Graph {
     pub fn selected_nodes_with_positions(&self) -> HashMap<NodeId, Point<Pixels>> {
         self.selected_node
             .iter()
-            .map(|id| {
-                let n = &self.nodes[id];
-                (*id, n.point())
+            .filter_map(|id| {
+                let n = &self.nodes.get(id)?;
+                Some((*id, n.point()))
             })
             .collect()
     }
