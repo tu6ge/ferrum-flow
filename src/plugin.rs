@@ -246,40 +246,40 @@ impl<'a> PluginContext<'a> {
     }
 
     pub fn execute_command(&mut self, command: impl Command + 'static) {
-        let mut canvas = CommandContext {
+        let mut ctx = CommandContext {
             graph: self.graph,
             port_offset_cache: self.port_offset_cache,
             viewport: self.viewport,
             renderers: self.renderers,
         };
 
-        self.history.execute(Box::new(command), &mut canvas);
+        self.history.execute(Box::new(command), &mut ctx);
 
         self.notify();
     }
 
     pub fn undo(&mut self) {
-        let mut canvas = CommandContext {
+        let mut ctx = CommandContext {
             graph: self.graph,
             port_offset_cache: self.port_offset_cache,
             viewport: self.viewport,
             renderers: self.renderers,
         };
 
-        self.history.undo(&mut canvas);
+        self.history.undo(&mut ctx);
 
         self.notify();
     }
 
     pub fn redo(&mut self) {
-        let mut canvas = CommandContext {
+        let mut ctx = CommandContext {
             graph: self.graph,
             port_offset_cache: self.port_offset_cache,
             viewport: self.viewport,
             renderers: self.renderers,
         };
 
-        self.history.redo(&mut canvas);
+        self.history.redo(&mut ctx);
 
         self.notify();
     }

@@ -40,8 +40,8 @@ impl History {
         }
     }
 
-    pub fn execute(&mut self, mut command: Box<dyn Command>, state: &mut CommandContext) {
-        command.execute(state);
+    pub fn execute(&mut self, mut command: Box<dyn Command>, ctx: &mut CommandContext) {
+        command.execute(ctx);
 
         self.undo_stack.push(command);
         if self.undo_stack.len() > MAX_HISTORY {
@@ -50,16 +50,16 @@ impl History {
         self.redo_stack.clear();
     }
 
-    pub fn undo(&mut self, state: &mut CommandContext) {
+    pub fn undo(&mut self, ctx: &mut CommandContext) {
         if let Some(mut cmd) = self.undo_stack.pop() {
-            cmd.undo(state);
+            cmd.undo(ctx);
             self.redo_stack.push(cmd);
         }
     }
 
-    pub fn redo(&mut self, state: &mut CommandContext) {
+    pub fn redo(&mut self, ctx: &mut CommandContext) {
         if let Some(mut cmd) = self.redo_stack.pop() {
-            cmd.execute(state);
+            cmd.execute(ctx);
             self.undo_stack.push(cmd);
         }
     }
