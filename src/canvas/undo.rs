@@ -25,44 +25,20 @@ pub struct CommandContext<'a> {
     pub renderers: &'a mut RendererRegistry,
 }
 
-const MAX_HISTORY: usize = 100;
-
-pub struct History {
-    undo_stack: Vec<Box<dyn Command>>,
-    redo_stack: Vec<Box<dyn Command>>,
-}
+pub struct History {}
 
 impl History {
     pub fn new() -> Self {
-        Self {
-            undo_stack: Vec::new(),
-            redo_stack: Vec::new(),
-        }
+        Self {}
     }
 
     pub fn execute(&mut self, mut command: Box<dyn Command>, ctx: &mut CommandContext) {
         command.execute(ctx);
-
-        self.undo_stack.push(command);
-        if self.undo_stack.len() > MAX_HISTORY {
-            self.undo_stack.remove(0);
-        }
-        self.redo_stack.clear();
     }
 
-    pub fn undo(&mut self, ctx: &mut CommandContext) {
-        if let Some(mut cmd) = self.undo_stack.pop() {
-            cmd.undo(ctx);
-            self.redo_stack.push(cmd);
-        }
-    }
+    pub fn undo(&mut self, ctx: &mut CommandContext) {}
 
-    pub fn redo(&mut self, ctx: &mut CommandContext) {
-        if let Some(mut cmd) = self.redo_stack.pop() {
-            cmd.execute(ctx);
-            self.undo_stack.push(cmd);
-        }
-    }
+    pub fn redo(&mut self, ctx: &mut CommandContext) {}
 }
 
 pub struct CompositeCommand {
