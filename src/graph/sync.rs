@@ -2,7 +2,7 @@ use yrs::{
     Array, ArrayPrelim, ArrayRef, Doc, GetString, Map, MapPrelim, MapRef, Transact, TransactionMut,
 };
 
-use crate::{Edge, EdgeId, Graph, Node, NodeId, Port, PortId};
+use crate::{Edge, EdgeId, Graph, Node, NodeId, Port};
 
 pub struct YGraph {
     pub doc: Doc,
@@ -58,6 +58,31 @@ impl YGraph {
         }
 
         self.node_order.push_back(&mut txn, node.id.0.to_string());
+    }
+
+    pub fn update_node_position(&self, id: &NodeId, x: f32, y: f32) {
+        let mut txn = self.doc.transact_mut();
+        if let Some(yrs::Out::YMap(node_ref)) = self.nodes.get(&mut txn, &id.0.to_string()) {
+            node_ref.try_update(&mut txn, "x", x);
+            node_ref.try_update(&mut txn, "y", y);
+        }
+    }
+
+    pub fn remove_node(&self, id: &NodeId) {
+        let mut txn = self.doc.transact_mut();
+
+        self.nodes.remove(&mut txn, &id.0.to_string());
+
+        let Some(index) = self.node_order.iter(&txn).position(|i| {
+            if let yrs::Out::YText(inner) = i {
+                inner.get_string(&txn) == id.0.to_string()
+            } else {
+                return false;
+            }
+        }) else {
+            return;
+        };
+        self.node_order.remove(&mut txn, index as u32);
     }
 
     pub fn insert_edge(&self, edge: &Edge) {
