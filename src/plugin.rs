@@ -45,6 +45,7 @@ pub struct InitPluginContext<'a> {
     pub port_offset_cache: &'a mut PortLayoutCache,
     pub viewport: &'a mut Viewport,
     pub renderers: &'a mut RendererRegistry,
+    pub notify: &'a mut dyn FnMut(),
 }
 
 impl<'a> InitPluginContext<'a> {
