@@ -8,7 +8,9 @@ use gpui::{
 use crate::{
     Edge, EdgeBuilder, EdgeId, Graph, Node, NodeBuilder, NodeId, NodeRenderer, Port, PortId,
     RendererRegistry, Viewport,
-    canvas::{Command, CommandContext, History, Interaction, InteractionState, PortLayoutCache},
+    canvas::{
+        Command, CommandContext, HistoryProvider, Interaction, InteractionState, PortLayoutCache,
+    },
 };
 
 mod utils;
@@ -188,7 +190,7 @@ pub struct PluginContext<'a> {
     pub(crate) interaction: &'a mut InteractionState,
     pub renderers: &'a mut RendererRegistry,
 
-    pub history: &'a mut History,
+    pub history: &'a mut dyn HistoryProvider,
     emit: &'a mut dyn FnMut(FlowEvent),
     notify: &'a mut dyn FnMut(),
 }
@@ -205,7 +207,7 @@ impl<'a> PluginContext<'a> {
         viewport: &'a mut Viewport,
         interaction: &'a mut InteractionState,
         renderers: &'a mut RendererRegistry,
-        history: &'a mut History,
+        history: &'a mut dyn HistoryProvider,
         emit: &'a mut dyn FnMut(FlowEvent),
         notify: &'a mut dyn FnMut(),
     ) -> Self {
@@ -251,7 +253,7 @@ impl<'a> PluginContext<'a> {
             renderers: self.renderers,
         };
 
-        self.history.execute(Box::new(command), &mut ctx);
+        self.history.push(Box::new(command), &mut ctx);
 
         self.notify();
     }

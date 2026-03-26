@@ -18,27 +18,64 @@ pub trait Command {
     fn undo(&mut self, ctx: &mut CommandContext);
 }
 
+pub trait HistoryProvider {
+    fn undo(&mut self, ctx: &mut CommandContext);
+    fn redo(&mut self, ctx: &mut CommandContext);
+    fn push(&mut self, command: Box<dyn Command>, ctx: &mut CommandContext);
+    fn clear(&mut self);
+}
+
 pub struct CommandContext<'a> {
     pub graph: &'a mut Graph,
     pub port_offset_cache: &'a mut PortLayoutCache,
     pub viewport: &'a mut Viewport,
     pub renderers: &'a mut RendererRegistry,
 }
+const MAX_HISTORY: usize = 100;
+pub struct LocalHistory {
+    undo_stack: Vec<Box<dyn Command>>,
+    redo_stack: Vec<Box<dyn Command>>,
+}
 
-pub struct History {}
-
-impl History {
+impl LocalHistory {
     pub fn new() -> Self {
-        Self {}
+        Self {
+            undo_stack: vec![],
+            redo_stack: vec![],
+        }
     }
+}
 
-    pub fn execute(&mut self, mut command: Box<dyn Command>, ctx: &mut CommandContext) {
+impl HistoryProvider for LocalHistory {
+    fn push(&mut self, mut command: Box<dyn Command>, ctx: &mut CommandContext) {
         command.execute(ctx);
+
+        self.undo_stack.push(command);
+
+        self.redo_stack.clear();
+
+        if self.undo_stack.len() > MAX_HISTORY {
+            self.undo_stack.remove(0);
+        }
+    }
+    fn undo(&mut self, ctx: &mut CommandContext) {
+        if let Some(mut cmd) = self.undo_stack.pop() {
+            cmd.undo(ctx);
+            self.redo_stack.push(cmd);
+        }
     }
 
-    pub fn undo(&mut self, ctx: &mut CommandContext) {}
+    fn redo(&mut self, ctx: &mut CommandContext) {
+        if let Some(mut cmd) = self.redo_stack.pop() {
+            cmd.execute(ctx);
+            self.undo_stack.push(cmd);
+        }
+    }
 
-    pub fn redo(&mut self, ctx: &mut CommandContext) {}
+    fn clear(&mut self) {
+        self.undo_stack.clear();
+        self.redo_stack.clear();
+    }
 }
 
 pub struct CompositeCommand {
