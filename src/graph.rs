@@ -7,7 +7,11 @@ use crate::edge::{Edge, EdgeId};
 use crate::node::{Node, NodeId, Port, PortId};
 use crate::{EdgeBuilder, NodeBuilder, PortKind, PortPosition};
 
+mod operation;
+mod store;
 mod sync;
+
+pub use store::{GraphChange, GraphChangeKind, GraphOp, GraphStore, LocalGraphStore};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Graph {
@@ -38,6 +42,19 @@ impl Graph {
 
     pub fn to_json(&self) -> serde_json::Result<String> {
         serde_json::to_string(self)
+    }
+
+    pub fn apply(&mut self, op: GraphOp) -> GraphChange {
+        self.execute_internal(&op);
+
+        todo!()
+    }
+    pub fn apply_silent(&mut self, op: GraphOp) {
+        self.execute_internal(&op);
+    }
+
+    fn execute_internal(&mut self, op: &GraphOp) {
+        todo!()
     }
 
     pub fn create_node(&self, node_type: &str) -> NodeBuilder {

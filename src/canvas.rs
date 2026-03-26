@@ -16,7 +16,7 @@ mod undo;
 
 pub use port_cache::PortLayoutCache;
 
-pub use undo::{Command, CommandContext, CompositeCommand, History};
+pub use undo::{Command, CommandContext, CompositeCommand, HistoryProvider, LocalHistory};
 
 pub use types::{Interaction, InteractionResult, InteractionState};
 
@@ -35,7 +35,7 @@ pub struct FlowCanvas {
 
     pub(crate) interaction: InteractionState,
 
-    pub history: History,
+    pub history: Box<dyn HistoryProvider>,
 
     pub event_queue: Vec<FlowEvent>,
     pub port_offset_cache: PortLayoutCache,
@@ -65,7 +65,7 @@ impl FlowCanvas {
             renderers: RendererRegistry::new(),
             focus_handle,
             interaction: InteractionState::new(),
-            history: History::new(),
+            history: Box::new(LocalHistory::new()),
             event_queue: vec![],
             port_offset_cache: PortLayoutCache::new(),
         }
@@ -102,7 +102,7 @@ impl FlowCanvas {
                 &mut self.viewport,
                 &mut self.interaction,
                 &mut self.renderers,
-                &mut self.history,
+                self.history.as_mut(),
                 &mut emit,
                 &mut notify,
             );
@@ -143,7 +143,7 @@ impl FlowCanvas {
             &mut self.viewport,
             &mut self.interaction,
             &mut self.renderers,
-            &mut self.history,
+            self.history.as_mut(),
             &mut emit,
             &mut notify,
         );
@@ -172,7 +172,7 @@ impl FlowCanvas {
                 &mut self.viewport,
                 &mut self.interaction,
                 &mut self.renderers,
-                &mut self.history,
+                self.history.as_mut(),
                 &mut emit,
                 &mut notify,
             );
@@ -322,7 +322,7 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
             renderers: self.renderers,
             focus_handle,
             interaction: InteractionState::new(),
-            history: History::new(),
+            history: Box::new(LocalHistory::new()),
             event_queue: vec![],
             port_offset_cache: PortLayoutCache::new(),
         };
