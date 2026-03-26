@@ -43,7 +43,7 @@ impl Command for SelecteNodeCommand {
     }
 
     fn to_ops(&self, _ctx: &mut crate::CommandContext) -> Vec<crate::GraphOp> {
-        vec![]
+        vec![GraphOp::NodeToFront { id: self.node_id }]
     }
 }
 

@@ -10,7 +10,7 @@ use crate::{EdgeBuilder, NodeBuilder, PortKind, PortPosition};
 mod store;
 mod sync;
 
-pub use store::{GraphChange, GraphChangeKind, GraphOp, GraphStore, LocalGraphStore};
+pub use store::{GraphChange, GraphChangeKind, GraphOp};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Graph {
