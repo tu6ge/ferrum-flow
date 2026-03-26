@@ -1,5 +1,5 @@
 use crate::{
-    Edge, Node,
+    Edge, GraphOp, Node,
     canvas::Command,
     plugin::{FlowEvent, Plugin},
 };
@@ -74,5 +74,18 @@ impl Command for DeleteCommand {
             ctx.add_node(node.clone());
             ctx.add_selected_node(node.id, true);
         }
+    }
+
+    fn to_ops(&self, _ctx: &mut crate::CommandContext) -> Vec<crate::GraphOp> {
+        let mut list = vec![];
+        for node in &self.selected_node {
+            list.push(GraphOp::RemoveNode { id: node.id });
+        }
+
+        for edge in &self.selected_edge {
+            list.push(GraphOp::RemoveEdge(edge.id));
+        }
+
+        list
     }
 }

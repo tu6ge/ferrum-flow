@@ -16,7 +16,7 @@ pub use graph::*;
 pub use node::*;
 pub use plugin::{
     EventResult, FlowEvent, InitPluginContext, InputEvent, Plugin, PluginContext, RenderContext,
-    RenderLayer,
+    RenderLayer, SyncPlugin,
 };
 pub use plugins::*;
 pub use viewport::Viewport;

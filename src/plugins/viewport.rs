@@ -117,4 +117,8 @@ impl Command for PanningCommand {
         ctx.viewport.offset.x = self.from.x;
         ctx.viewport.offset.y = self.from.y;
     }
+
+    fn to_ops(&self, _ctx: &mut crate::CommandContext) -> Vec<crate::GraphOp> {
+        vec![]
+    }
 }
