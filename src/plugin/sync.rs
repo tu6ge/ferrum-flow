@@ -7,7 +7,7 @@ pub trait SyncPlugin {
 
     fn setup(&mut self, change_sender: Sender<GraphChange>);
 
-    fn process_intent(&mut self, op: GraphOp);
+    fn process_intent(&self, op: GraphOp);
 
     fn undo(&mut self);
     fn redo(&mut self);

@@ -8,9 +8,8 @@ use crate::node::{Node, NodeId, Port, PortId};
 use crate::{EdgeBuilder, NodeBuilder, PortKind, PortPosition};
 
 mod store;
-mod sync;
 
-pub use store::{GraphChange, GraphChangeKind, GraphOp};
+pub use store::{ChangeSource, GraphChange, GraphChangeKind, GraphOp};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Graph {
