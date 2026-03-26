@@ -71,8 +71,13 @@ pub enum GraphChangeKind {
         id: NodeId,
         data: serde_json::Value,
     },
-    NodeToFront {
+
+    // --- node_order ---
+    NodeOrderInsert {
         id: NodeId,
+    },
+    NodeOrderRemove {
+        index: usize,
     },
 
     // --- Port ---

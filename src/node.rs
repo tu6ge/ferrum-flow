@@ -123,6 +123,18 @@ impl ToString for PortPosition {
     }
 }
 
+impl PortPosition {
+    pub(crate) fn from_str(str: &str) -> Option<Self> {
+        match str {
+            "right" => Some(Self::Right),
+            "top" => Some(Self::Top),
+            "bottom" => Some(Self::Bottom),
+            "left" => Some(Self::Left),
+            _ => None,
+        }
+    }
+}
+
 pub struct NodeBuilder {
     node_type: String,
     x: Pixels,

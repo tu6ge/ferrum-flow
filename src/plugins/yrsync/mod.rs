@@ -1,8 +1,10 @@
 use std::sync::{Arc, mpsc::Sender};
 
+use gpui::{Size, px};
+use serde_json::Value;
 use yrs::{
-    Array as _, ArrayRef, Doc, GetString as _, Map, MapPrelim, MapRef, Observable as _, Out,
-    Transact, TransactionMut, types::EntryChange,
+    Array as _, ArrayRef, Doc, GetString as _, Map, MapPrelim, MapRef, Observable as _, Transact,
+    TransactionMut, types::EntryChange,
 };
 
 use crate::{
@@ -12,13 +14,15 @@ use crate::{
 
 pub struct YrsSyncPlugin {
     doc: yrs::Doc,
-    graph: MapRef,
     pub nodes: MapRef,        // ref HashMap<NodeId, Node>
     pub ports: MapRef,        // ref HashMap<PortId, Port>
     pub edges: MapRef,        // ref HashMap<EdgeId, Edge>
     pub node_order: ArrayRef, // ref Vec<NodeId>
     undo_manager: yrs::UndoManager,
-    _subscription: Option<yrs::Subscription>,
+    _subscription_nodes: Option<yrs::Subscription>,
+    _subscription_ports: Option<yrs::Subscription>,
+    _subscription_edges: Option<yrs::Subscription>,
+    _subscription_order: Option<yrs::Subscription>,
 }
 
 impl YrsSyncPlugin {
@@ -35,12 +39,14 @@ impl YrsSyncPlugin {
         Self {
             undo_manager: yrs::UndoManager::new(&doc, &root),
             doc,
-            graph: root,
             nodes,
             ports,
             edges,
             node_order,
-            _subscription: None,
+            _subscription_nodes: None,
+            _subscription_ports: None,
+            _subscription_edges: None,
+            _subscription_order: None,
         }
     }
 
@@ -148,7 +154,11 @@ impl SyncPlugin for YrsSyncPlugin {
     }
 
     fn setup(&mut self, change_sender: Sender<GraphChange>) {
-        let sub = self.graph.observe(move |txn, event| {
+        let change_sender_clone = change_sender.clone();
+        let change_sender_clone2 = change_sender.clone();
+        let change_sender_clone3 = change_sender.clone();
+        let change_sender_clone4 = change_sender.clone();
+        let sub = self.nodes.observe(move |txn, event| {
             let source = match txn.origin() {
                 Some(orig) if *orig == "local_intent".into() => ChangeSource::Local,
                 Some(orig) if *orig == "undo_manager".into() => ChangeSource::Undo,
@@ -156,13 +166,71 @@ impl SyncPlugin for YrsSyncPlugin {
             };
 
             for (key, change) in event.keys(txn) {
-                let kind = parse_yrs_change_to_kind(key, change);
-
-                let _ = change_sender.send(GraphChange { kind, source });
+                if let Some(kind) = parse_node_change(txn, key, change) {
+                    let _ = change_sender_clone.send(GraphChange { kind, source });
+                }
             }
         });
 
-        self._subscription = Some(sub);
+        self._subscription_nodes = Some(sub);
+
+        let sub = self.ports.observe(move |txn, event| {
+            let source = match txn.origin() {
+                Some(orig) if *orig == "local_intent".into() => ChangeSource::Local,
+                Some(orig) if *orig == "undo_manager".into() => ChangeSource::Undo,
+                _ => ChangeSource::Remote,
+            };
+
+            for (key, change) in event.keys(txn) {
+                if let Some(kind) = parse_port_change(txn, key, change) {
+                    let _ = change_sender_clone2.send(GraphChange { kind, source });
+                }
+            }
+        });
+        self._subscription_ports = Some(sub);
+
+        let sub = self.edges.observe(move |txn, event| {
+            let source = match txn.origin() {
+                Some(orig) if *orig == "local_intent".into() => ChangeSource::Local,
+                Some(orig) if *orig == "undo_manager".into() => ChangeSource::Undo,
+                _ => ChangeSource::Remote,
+            };
+
+            for (key, change) in event.keys(txn) {
+                if let Some(kind) = parse_edge_change(txn, key, change) {
+                    let _ = change_sender_clone3.send(GraphChange { kind, source });
+                }
+            }
+        });
+        self._subscription_edges = Some(sub);
+
+        let sub = self.node_order.observe(move |txn, event| {
+            let source = match txn.origin() {
+                Some(orig) if *orig == "local_intent".into() => ChangeSource::Local,
+                Some(orig) if *orig == "undo_manager".into() => ChangeSource::Undo,
+                _ => ChangeSource::Remote,
+            };
+
+            let changes = event.delta(txn);
+
+            for change in changes {
+                let kind = match change {
+                    yrs::types::Change::Added(outs) => {
+                        let out = outs.get(0).unwrap();
+                        let node_id = out.to_string();
+                        GraphChangeKind::NodeOrderInsert {
+                            id: NodeId(node_id.parse().unwrap_or_default()),
+                        }
+                    }
+                    yrs::types::Change::Removed(index) => GraphChangeKind::NodeOrderRemove {
+                        index: *index as usize,
+                    },
+                    yrs::types::Change::Retain(_) => unreachable!(),
+                };
+                let _ = change_sender_clone4.send(GraphChange { kind, source });
+            }
+        });
+        self._subscription_order = Some(sub);
     }
 
     fn process_intent(&self, intent: GraphOp) {
@@ -183,14 +251,175 @@ impl SyncPlugin for YrsSyncPlugin {
     }
 }
 
-fn parse_yrs_change_to_kind(key: &Arc<str>, change: &EntryChange) -> GraphChangeKind {
-    todo!()
-}
-
 fn write_port_to_map(txn: &mut TransactionMut, port_map: &MapRef, port: &Port) {
     port_map.insert(txn, "kind", port.kind.to_string());
     port_map.insert(txn, "index", port.index as u32);
     port_map.insert(txn, "position", port.position.to_string());
     port_map.insert(txn, "width", Into::<f32>::into(port.size.width));
     port_map.insert(txn, "height", Into::<f32>::into(port.size.height));
+}
+
+fn parse_node_change(
+    txn: &yrs::TransactionMut,
+    key: &Arc<str>,
+    change: &EntryChange,
+) -> Option<GraphChangeKind> {
+    let id = NodeId(key.to_string().parse().unwrap_or_default());
+
+    match change {
+        EntryChange::Inserted(value) => {
+            if let yrs::Out::YMap(node_map) = value {
+                Some(GraphChangeKind::NodeAdded(read_node_from_map(
+                    txn, node_map, id,
+                )))
+            } else {
+                None
+            }
+        }
+
+        EntryChange::Removed(_) => Some(GraphChangeKind::NodeRemoved { id }),
+
+        EntryChange::Updated(old, new) => {
+            let (old_map, new_map) = match (old, new) {
+                (yrs::Out::YMap(o), yrs::Out::YMap(n)) => (o, n),
+                _ => return None,
+            };
+
+            let old_x = get_f32(txn, old_map, "x");
+            let old_y = get_f32(txn, old_map, "y");
+            let new_x = get_f32(txn, new_map, "x");
+            let new_y = get_f32(txn, new_map, "y");
+
+            if old_x != new_x || old_y != new_y {
+                return Some(GraphChangeKind::NodeMoved {
+                    id,
+                    old_pos: (old_x, old_y),
+                    new_pos: (new_x, new_y),
+                });
+            }
+
+            // data 变化
+            let old_data = get_json(txn, old_map, "data");
+            let new_data = get_json(txn, new_map, "data");
+
+            if old_data != new_data {
+                return Some(GraphChangeKind::NodeDataUpdated { id, data: new_data });
+            }
+
+            None
+        }
+    }
+}
+
+fn read_node_from_map(txn: &yrs::TransactionMut, node_map: &MapRef, id: NodeId) -> Node {
+    let node_type: String = node_map.get_as(txn, "type").unwrap_or_default();
+    let x: f32 = node_map.get_as(txn, "x").unwrap_or_default();
+    let y: f32 = node_map.get_as(txn, "y").unwrap_or_default();
+    let width: f32 = node_map.get_as(txn, "width").unwrap_or_default();
+    let height: f32 = node_map.get_as(txn, "height").unwrap_or_default();
+    let json: String = node_map.get_as(txn, "data").unwrap_or_default();
+    let data = serde_json::from_str(&json).unwrap_or_default();
+    Node {
+        id,
+        node_type,
+        x: px(x),
+        y: px(y),
+        size: Size::new(px(width), px(height)),
+        inputs: vec![],  // TODO
+        outputs: vec![], // TODO
+        data,
+    }
+}
+
+fn parse_port_change(
+    txn: &yrs::TransactionMut,
+    key: &Arc<str>,
+    change: &EntryChange,
+) -> Option<GraphChangeKind> {
+    let id = PortId(key.to_string().parse().unwrap_or_default());
+
+    match change {
+        EntryChange::Inserted(value) => {
+            if let yrs::Out::YMap(port_map) = value {
+                Some(GraphChangeKind::PortAdded(read_port_from_map(
+                    txn, port_map, id,
+                )))
+            } else {
+                None
+            }
+        }
+
+        EntryChange::Removed(_) => Some(GraphChangeKind::PortRemoved { id }),
+
+        _ => None,
+    }
+}
+
+fn read_port_from_map(txn: &yrs::TransactionMut, node_map: &MapRef, id: PortId) -> Port {
+    let kind: String = node_map.get_as(txn, "kind").unwrap_or_default();
+    let index: u32 = node_map.get_as(txn, "index").unwrap_or_default();
+    let position: String = node_map.get_as(txn, "position").unwrap_or_default();
+    let width: f32 = node_map.get_as(txn, "width").unwrap_or_default();
+    let height: f32 = node_map.get_as(txn, "height").unwrap_or_default();
+
+    Port {
+        id,
+        kind: if kind == "input" {
+            crate::PortKind::Input
+        } else {
+            crate::PortKind::Output
+        },
+        index: index as usize,
+        node_id: NodeId(0), // TODO
+        position: crate::PortPosition::from_str(&position).unwrap_or(crate::PortPosition::Left),
+        size: Size::new(px(width), px(height)),
+    }
+}
+
+fn parse_edge_change(
+    txn: &yrs::TransactionMut,
+    key: &Arc<str>,
+    change: &EntryChange,
+) -> Option<GraphChangeKind> {
+    let id = EdgeId(key.to_string().parse().unwrap_or_default());
+
+    match change {
+        EntryChange::Inserted(value) => {
+            if let yrs::Out::YMap(edge_map) = value {
+                Some(GraphChangeKind::EdgeAdded(read_edge_from_map(
+                    txn, edge_map, id,
+                )))
+            } else {
+                None
+            }
+        }
+
+        EntryChange::Removed(_) => Some(GraphChangeKind::EdgeRemoved { id }),
+
+        _ => None,
+    }
+}
+
+fn read_edge_from_map(txn: &yrs::TransactionMut, node_map: &MapRef, id: EdgeId) -> Edge {
+    let source_port: String = node_map.get_as(txn, "source_port").unwrap_or_default();
+    let target_port: String = node_map.get_as(txn, "target_port").unwrap_or_default();
+
+    Edge {
+        id,
+        source_port: PortId(source_port.parse().unwrap_or_default()),
+        target_port: PortId(target_port.parse().unwrap_or_default()),
+    }
+}
+
+fn get_f32(txn: &yrs::TransactionMut, map: &MapRef, key: &str) -> f32 {
+    map.get(txn, key)
+        .and_then(|v| v.to_string(txn).parse::<f32>().ok())
+        .unwrap_or(0.0)
+}
+
+fn get_json(txn: &yrs::TransactionMut, map: &MapRef, key: &str) -> Value {
+    map.get(txn, key)
+        .map(|v| v.to_string(txn))
+        .and_then(|str| serde_json::from_str(&str).ok())
+        .unwrap_or_default()
 }
