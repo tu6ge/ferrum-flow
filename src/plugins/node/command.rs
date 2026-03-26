@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use gpui::{Pixels, Point};
 
-use crate::{EdgeId, NodeId, canvas::Command, plugin::PluginContext};
+use crate::{EdgeId, GraphOp, NodeId, canvas::Command, plugin::PluginContext};
 
 pub struct SelecteNodeCommand {
     node_id: NodeId,
@@ -40,6 +40,10 @@ impl Command for SelecteNodeCommand {
         ctx.graph.selected_edge = self.old_selected_edge.clone();
         let a = ctx.graph.node_order_mut();
         *a = self.old_node_order.clone();
+    }
+
+    fn to_ops(&self, _ctx: &mut crate::CommandContext) -> Vec<crate::GraphOp> {
+        vec![]
     }
 }
 
@@ -82,5 +86,18 @@ impl Command for DragNodesCommand {
                 node.y = point.y;
             }
         }
+    }
+
+    fn to_ops(&self, _ctx: &mut crate::CommandContext) -> Vec<crate::GraphOp> {
+        let mut list = vec![];
+        for (id, point) in self.to.iter() {
+            list.push(GraphOp::MoveNode {
+                id: *id,
+                x: Into::<f32>::into(point.x),
+                y: Into::<f32>::into(point.y),
+            })
+        }
+
+        vec![GraphOp::Batch(list)]
     }
 }

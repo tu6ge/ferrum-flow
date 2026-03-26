@@ -1,6 +1,9 @@
+use std::sync::mpsc::{Receiver, Sender, channel};
+
 use gpui::*;
 
 use crate::{
+    GraphChange, GraphOp, SyncPlugin,
     graph::Graph,
     plugin::{
         EventResult, FlowEvent, InitPluginContext, InputEvent, Plugin, PluginContext,
@@ -25,9 +28,13 @@ pub use node_renderer::{NodeRenderer, RendererRegistry, port_screen_position};
 pub struct FlowCanvas {
     pub graph: Graph,
 
+    change_receiver: Receiver<GraphChange>,
+
     pub(crate) viewport: Viewport,
 
     pub(crate) plugins_registry: PluginRegistry,
+
+    pub(crate) sync_plugin: Option<Box<dyn SyncPlugin + 'static>>,
 
     renderers: RendererRegistry,
 
@@ -58,10 +65,13 @@ pub struct FlowCanvas {
 impl FlowCanvas {
     pub fn new(graph: Graph, cx: &mut Context<Self>) -> Self {
         let focus_handle = cx.focus_handle();
+        let (_, change_receiver) = channel();
         Self {
             graph,
+            change_receiver,
             viewport: Viewport::new(),
             plugins_registry: PluginRegistry::new(),
+            sync_plugin: None,
             renderers: RendererRegistry::new(),
             focus_handle,
             interaction: InteractionState::new(),
@@ -79,7 +89,20 @@ impl FlowCanvas {
             graph,
             ctx,
             plugins: PluginRegistry::new(),
+            sync_plugin: None,
             renderers: RendererRegistry::new(),
+        }
+    }
+
+    pub fn process_pending_changes(&mut self, cx: &mut Context<Self>) {
+        let mut is_change = false;
+        while let Ok(change) = self.change_receiver.try_recv() {
+            self.graph.apply(change.kind);
+            is_change = true;
+        }
+
+        if is_change {
+            cx.notify();
         }
     }
 
@@ -102,6 +125,7 @@ impl FlowCanvas {
                 &mut self.viewport,
                 &mut self.interaction,
                 &mut self.renderers,
+                &mut self.sync_plugin,
                 self.history.as_mut(),
                 &mut emit,
                 &mut notify,
@@ -143,6 +167,7 @@ impl FlowCanvas {
             &mut self.viewport,
             &mut self.interaction,
             &mut self.renderers,
+            &mut self.sync_plugin,
             self.history.as_mut(),
             &mut emit,
             &mut notify,
@@ -159,6 +184,7 @@ impl FlowCanvas {
     }
 
     fn process_event_queue(&mut self, cx: &mut Context<Self>) {
+        self.process_pending_changes(cx);
         while let Some(event) = self.event_queue.pop() {
             let mut emit = |e| self.event_queue.push(e);
 
@@ -172,6 +198,7 @@ impl FlowCanvas {
                 &mut self.viewport,
                 &mut self.interaction,
                 &mut self.renderers,
+                &mut self.sync_plugin,
                 self.history.as_mut(),
                 &mut emit,
                 &mut notify,
@@ -290,12 +317,18 @@ pub struct FlowCanvasBuilder<'a, 'b> {
 
     plugins: PluginRegistry,
     renderers: RendererRegistry,
+    sync_plugin: Option<Box<dyn SyncPlugin + 'static>>,
 }
 
 impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
     /// register plugin
     pub fn plugin(mut self, plugin: impl Plugin + 'static) -> Self {
         self.plugins = self.plugins.add(plugin);
+        self
+    }
+
+    pub fn sync_plugin(mut self, plugin: impl SyncPlugin + 'static) -> Self {
+        self.sync_plugin = Some(Box::new(plugin));
         self
     }
 
@@ -315,10 +348,14 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
             self.ctx.notify();
         };
 
+        let (change_sender, change_receiver) = channel();
+
         let mut canvas = FlowCanvas {
             graph: self.graph,
+            change_receiver,
             viewport: Viewport::new(),
             plugins_registry: self.plugins,
+            sync_plugin: self.sync_plugin,
             renderers: self.renderers,
             focus_handle,
             interaction: InteractionState::new(),
@@ -326,6 +363,10 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
             event_queue: vec![],
             port_offset_cache: PortLayoutCache::new(),
         };
+
+        if let Some(sync_plugin) = &mut canvas.sync_plugin {
+            sync_plugin.setup(change_sender);
+        }
 
         canvas
             .plugins_registry

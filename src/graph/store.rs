@@ -48,8 +48,8 @@ pub enum GraphOp {
 
 #[derive(Debug, Clone)]
 pub struct GraphChange {
-    kind: GraphChangeKind,
-    source: ChangeSource,
+    pub kind: GraphChangeKind,
+    pub source: ChangeSource,
 }
 
 impl GraphChange {

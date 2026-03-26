@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::mpsc::Sender};
 
 use gpui::{
     AnyElement, Bounds, KeyDownEvent, KeyUpEvent, MouseDownEvent, MouseMoveEvent, MouseUpEvent,
@@ -6,14 +6,17 @@ use gpui::{
 };
 
 use crate::{
-    Edge, EdgeBuilder, EdgeId, Graph, Node, NodeBuilder, NodeId, NodeRenderer, Port, PortId,
-    RendererRegistry, Viewport,
+    Edge, EdgeBuilder, EdgeId, Graph, GraphChange, Node, NodeBuilder, NodeId, NodeRenderer, Port,
+    PortId, RendererRegistry, Viewport,
     canvas::{
         Command, CommandContext, HistoryProvider, Interaction, InteractionState, PortLayoutCache,
     },
 };
 
+mod sync;
 mod utils;
+
+pub use sync::SyncPlugin;
 
 pub use utils::{
     cache_all_node_port_offset, cache_node_port_offset, cache_port_offset_with_edge,
@@ -190,6 +193,8 @@ pub struct PluginContext<'a> {
     pub(crate) interaction: &'a mut InteractionState,
     pub renderers: &'a mut RendererRegistry,
 
+    sync_plugin: &'a mut Option<Box<dyn SyncPlugin + 'static>>,
+
     pub history: &'a mut dyn HistoryProvider,
     emit: &'a mut dyn FnMut(FlowEvent),
     notify: &'a mut dyn FnMut(),
@@ -207,6 +212,7 @@ impl<'a> PluginContext<'a> {
         viewport: &'a mut Viewport,
         interaction: &'a mut InteractionState,
         renderers: &'a mut RendererRegistry,
+        sync_plugin: &'a mut Option<Box<dyn SyncPlugin + 'static>>,
         history: &'a mut dyn HistoryProvider,
         emit: &'a mut dyn FnMut(FlowEvent),
         notify: &'a mut dyn FnMut(),
@@ -217,6 +223,7 @@ impl<'a> PluginContext<'a> {
             viewport,
             interaction,
             renderers,
+            sync_plugin,
             history,
             emit,
             notify,
@@ -252,36 +259,50 @@ impl<'a> PluginContext<'a> {
             viewport: self.viewport,
             renderers: self.renderers,
         };
+        if let Some(sync) = &mut self.sync_plugin {
+            let ops = command.to_ops(&mut ctx);
+            for op in ops.into_iter() {
+                sync.process_intent(op);
+            }
+        } else {
+            self.history.push(Box::new(command), &mut ctx);
 
-        self.history.push(Box::new(command), &mut ctx);
-
-        self.notify();
+            self.notify();
+        }
     }
 
     pub fn undo(&mut self) {
-        let mut ctx = CommandContext {
-            graph: self.graph,
-            port_offset_cache: self.port_offset_cache,
-            viewport: self.viewport,
-            renderers: self.renderers,
-        };
+        if let Some(sync) = &mut self.sync_plugin {
+            sync.undo();
+        } else {
+            let mut ctx = CommandContext {
+                graph: self.graph,
+                port_offset_cache: self.port_offset_cache,
+                viewport: self.viewport,
+                renderers: self.renderers,
+            };
 
-        self.history.undo(&mut ctx);
+            self.history.undo(&mut ctx);
 
-        self.notify();
+            self.notify();
+        }
     }
 
     pub fn redo(&mut self) {
-        let mut ctx = CommandContext {
-            graph: self.graph,
-            port_offset_cache: self.port_offset_cache,
-            viewport: self.viewport,
-            renderers: self.renderers,
-        };
+        if let Some(sync) = &mut self.sync_plugin {
+            sync.redo();
+        } else {
+            let mut ctx = CommandContext {
+                graph: self.graph,
+                port_offset_cache: self.port_offset_cache,
+                viewport: self.viewport,
+                renderers: self.renderers,
+            };
 
-        self.history.redo(&mut ctx);
+            self.history.redo(&mut ctx);
 
-        self.notify();
+            self.notify();
+        }
     }
 
     pub fn create_node(&self, node_type: &str) -> NodeBuilder {

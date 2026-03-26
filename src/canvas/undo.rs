@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use gpui::{Bounds, Pixels, Point};
 
 use crate::{
-    Edge, EdgeBuilder, EdgeId, Graph, Node, NodeBuilder, NodeId, Port, PortId, RendererRegistry,
-    Viewport,
+    Edge, EdgeBuilder, EdgeId, Graph, GraphOp, Node, NodeBuilder, NodeId, Port, PortId,
+    RendererRegistry, Viewport,
     canvas::PortLayoutCache,
     plugin::{
         cache_all_node_port_offset, cache_node_port_offset, is_edge_visible, is_node_visible,
@@ -16,6 +16,9 @@ pub trait Command {
     fn name(&self) -> &'static str;
     fn execute(&mut self, ctx: &mut CommandContext);
     fn undo(&mut self, ctx: &mut CommandContext);
+
+    /// used by sync plugin
+    fn to_ops(&self, ctx: &mut CommandContext) -> Vec<GraphOp>;
 }
 
 pub trait HistoryProvider {
@@ -107,6 +110,14 @@ impl Command for CompositeCommand {
         for cmd in self.commands.iter_mut().rev() {
             cmd.undo(state);
         }
+    }
+    fn to_ops(&self, ctx: &mut CommandContext) -> Vec<GraphOp> {
+        let mut list = vec![];
+        for cmd in &self.commands {
+            list.extend(cmd.to_ops(ctx));
+        }
+
+        vec![GraphOp::Batch(list)]
     }
 }
 
