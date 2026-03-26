@@ -1,24 +1,7 @@
 use gpui::{Pixels, Size};
 use serde::{Deserialize, Serialize};
 
-use crate::{Edge, EdgeId, Graph, Node, NodeId, Port, PortId};
-
-pub trait GraphStore {
-    fn get_graph(&self) -> Graph;
-
-    fn apply_op(&mut self, op: GraphOp);
-
-    fn subscribe(&mut self, f: Box<dyn FnMut(&GraphChange)>);
-}
-
-pub struct LocalGraphStore {
-    graph: Graph,
-    listeners: Vec<Box<dyn FnMut(&GraphChange)>>,
-}
-
-// pub struct YrsGraphStore {
-//     doc: yrs::Doc,
-// }
+use crate::{Edge, EdgeId, Node, NodeId, Port, PortId};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum GraphOp {
@@ -32,6 +15,8 @@ pub enum GraphOp {
     ResizeNode { id: NodeId, size: Size<Pixels> },
 
     UpdateNodeData { id: NodeId, data: serde_json::Value },
+
+    NodeToFront { id: NodeId },
 
     // --- Port ---
     AddPort(Port),
@@ -86,6 +71,9 @@ pub enum GraphChangeKind {
         id: NodeId,
         data: serde_json::Value,
     },
+    NodeToFront {
+        id: NodeId,
+    },
 
     // --- Port ---
     PortAdded(Port),
@@ -100,33 +88,4 @@ pub enum GraphChangeKind {
     },
 
     Batch(Vec<GraphChangeKind>),
-}
-
-impl GraphStore for LocalGraphStore {
-    fn apply_op(&mut self, op: GraphOp) {
-        let change = self.apply_to_graph(op);
-
-        for l in &mut self.listeners {
-            l(&change);
-        }
-    }
-    fn get_graph(&self) -> Graph {
-        self.graph.clone()
-    }
-    fn subscribe(&mut self, f: Box<dyn FnMut(&GraphChange)>) {
-        self.listeners.push(f);
-    }
-}
-
-impl LocalGraphStore {
-    pub fn new(graph: Graph) -> Self {
-        Self {
-            graph,
-            listeners: vec![],
-        }
-    }
-
-    fn apply_to_graph(&mut self, op: GraphOp) -> GraphChange {
-        todo!()
-    }
 }
