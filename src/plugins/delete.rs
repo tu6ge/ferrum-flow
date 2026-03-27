@@ -76,10 +76,39 @@ impl Command for DeleteCommand {
         }
     }
 
-    fn to_ops(&self, _ctx: &mut crate::CommandContext) -> Vec<crate::GraphOp> {
+    fn to_ops(&self, ctx: &mut crate::CommandContext) -> Vec<crate::GraphOp> {
         let mut list = vec![];
         for node in &self.selected_node {
             list.push(GraphOp::RemoveNode { id: node.id });
+            let mut port_ids = node.inputs.clone();
+            port_ids.extend(node.outputs.clone());
+
+            let index = ctx.graph.node_order().iter().position(|v| *v == node.id);
+            if let Some(index) = index {
+                list.push(GraphOp::NodeOrderRemove { index })
+            }
+
+            for port_id in port_ids.iter() {
+                let edge1 = ctx
+                    .graph
+                    .edges
+                    .iter()
+                    .find(|(_, edge)| edge.source_port == *port_id);
+                if let Some((&edge_id, _)) = edge1 {
+                    list.push(GraphOp::RemoveEdge(edge_id));
+                }
+
+                let edge2 = ctx
+                    .graph
+                    .edges
+                    .iter()
+                    .find(|(_, edge)| edge.target_port == *port_id);
+                if let Some((&edge_id, _)) = edge2 {
+                    list.push(GraphOp::RemoveEdge(edge_id));
+                }
+
+                list.push(GraphOp::RemovePort(*port_id));
+            }
         }
 
         for edge in &self.selected_edge {

@@ -43,7 +43,43 @@ impl Graph {
     }
 
     pub fn apply(&mut self, op: GraphChangeKind) {
-        todo!()
+        match op {
+            GraphChangeKind::NodeAdded(node) => self.add_node(node),
+            GraphChangeKind::NodeRemoved { id } => self.remove_node(&id),
+            GraphChangeKind::NodeMoved { id, x, y } => {
+                if let Some(node) = self.nodes.get_mut(&id) {
+                    node.x = px(x);
+                    node.y = px(y);
+                }
+            }
+            GraphChangeKind::NodeResized { id, size } => {
+                if let Some(node) = self.nodes.get_mut(&id) {
+                    node.size = size;
+                }
+            }
+            GraphChangeKind::NodeDataUpdated { id, data } => {
+                if let Some(node) = self.nodes.get_mut(&id) {
+                    node.data = data;
+                }
+            }
+            GraphChangeKind::NodeOrderInsert { id } => {
+                self.node_order.push(id);
+            }
+            GraphChangeKind::NodeOrderRemove { index } => {
+                self.node_order.remove(index);
+            }
+            GraphChangeKind::PortAdded(port) => self.add_point(port),
+            GraphChangeKind::PortRemoved { id } => {
+                self.ports.remove(&id);
+            }
+            GraphChangeKind::EdgeAdded(edge) => self.add_edge(edge),
+            GraphChangeKind::EdgeRemoved { id } => self.remove_edge(id),
+            GraphChangeKind::Batch(graph_change_kinds) => {
+                for change in graph_change_kinds {
+                    self.apply(change);
+                }
+            }
+        }
     }
 
     pub fn create_node(&self, node_type: &str) -> NodeBuilder {
