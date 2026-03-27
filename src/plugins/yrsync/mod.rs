@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{sync::Arc, vec};
 
 use gpui::{Size, px};
 use serde_json::Value;
@@ -232,35 +232,23 @@ impl SyncPlugin for YrsSyncPlugin {
                 _ => ChangeSource::Remote,
             };
 
-            let changes = event.delta(txn);
+            let array = event.target();
 
-            for change in changes {
-                let kind = match change {
-                    yrs::types::Change::Added(outs) => {
-                        let mut list = vec![];
-                        for out in outs {
-                            let node_id = out.to_string();
-                            list.push(GraphChangeKind::NodeOrderInsert {
-                                id: NodeId(node_id.parse().unwrap_or_default()),
-                            })
-                        }
-
-                        Some(GraphChangeKind::Batch(list))
-                    }
-                    yrs::types::Change::Removed(index) => Some(GraphChangeKind::NodeOrderRemove {
-                        index: *index as usize,
-                    }),
-                    yrs::types::Change::Retain(_) => None,
-                };
-
-                if let Some(kind) = kind {
-                    Runtime::new().unwrap().block_on(async {
-                        let _ = change_sender_clone4
-                            .send(GraphChange { kind, source })
-                            .await;
-                    });
+            let mut list = vec![];
+            for item in array.iter(txn) {
+                if let Out::Any(Any::String(str)) = item {
+                    list.push(NodeId(str.parse().unwrap_or_default()));
                 }
             }
+
+            Runtime::new().unwrap().block_on(async {
+                let _ = change_sender_clone4
+                    .send(GraphChange {
+                        kind: GraphChangeKind::NodeOrderUpdate(list),
+                        source,
+                    })
+                    .await;
+            });
         });
         self._subscription_order = Some(sub);
 
