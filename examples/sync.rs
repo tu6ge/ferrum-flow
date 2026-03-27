@@ -34,7 +34,7 @@ fn main() {
 
         cx.open_window(WindowOptions::default(), |_, cx| {
             cx.new(|ctx| {
-                FlowCanvas::builder(graph, ctx)
+                FlowCanvas::builder(Graph::new(), ctx)
                     .plugin(SelectionPlugin::new())
                     .plugin(NodeInteractionPlugin::new())
                     .plugin(ViewportPlugin::new())
@@ -44,7 +44,7 @@ fn main() {
                     .plugin(EdgePlugin::new())
                     .plugin(DeletePlugin::new())
                     .plugin(HistoryPlugin::new())
-                    .sync_plugin(YrsSyncPlugin::new())
+                    .sync_plugin(YrsSyncPlugin::new(graph))
                     .build()
             })
         })

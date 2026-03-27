@@ -1,9 +1,7 @@
-use std::sync::mpsc::{Receiver, Sender, channel};
-
 use gpui::*;
 
 use crate::{
-    GraphChange, GraphOp, SyncPlugin,
+    GraphChange, SyncPlugin,
     graph::Graph,
     plugin::{
         EventResult, FlowEvent, InitPluginContext, InputEvent, Plugin, PluginContext,
@@ -27,8 +25,6 @@ pub use node_renderer::{NodeRenderer, RendererRegistry, port_screen_position};
 
 pub struct FlowCanvas {
     pub graph: Graph,
-
-    change_receiver: Receiver<GraphChange>,
 
     pub(crate) viewport: Viewport,
 
@@ -65,10 +61,8 @@ pub struct FlowCanvas {
 impl FlowCanvas {
     pub fn new(graph: Graph, cx: &mut Context<Self>) -> Self {
         let focus_handle = cx.focus_handle();
-        let (_, change_receiver) = channel();
         Self {
             graph,
-            change_receiver,
             viewport: Viewport::new(),
             plugins_registry: PluginRegistry::new(),
             sync_plugin: None,
@@ -91,18 +85,6 @@ impl FlowCanvas {
             plugins: PluginRegistry::new(),
             sync_plugin: None,
             renderers: RendererRegistry::new(),
-        }
-    }
-
-    pub fn process_pending_changes(&mut self, cx: &mut Context<Self>) {
-        let mut is_change = false;
-        while let Ok(change) = self.change_receiver.try_recv() {
-            self.graph.apply(change.kind);
-            is_change = true;
-        }
-
-        if is_change {
-            cx.notify();
         }
     }
 
@@ -184,7 +166,6 @@ impl FlowCanvas {
     }
 
     fn process_event_queue(&mut self, cx: &mut Context<Self>) {
-        self.process_pending_changes(cx);
         while let Some(event) = self.event_queue.pop() {
             let mut emit = |e| self.event_queue.push(e);
 
@@ -344,15 +325,14 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
     pub fn build(self) -> FlowCanvas {
         let focus_handle = self.ctx.focus_handle();
 
-        let mut notify = || {
-            self.ctx.notify();
-        };
+        // let mut notify = || {
+        //     self.ctx.notify();
+        // };
 
-        let (change_sender, change_receiver) = channel();
+        let (change_sender, mut change_receiver) = tokio::sync::mpsc::channel::<GraphChange>(100);
 
         let mut canvas = FlowCanvas {
             graph: self.graph,
-            change_receiver,
             viewport: Viewport::new(),
             plugins_registry: self.plugins,
             sync_plugin: self.sync_plugin,
@@ -363,6 +343,17 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
             event_queue: vec![],
             port_offset_cache: PortLayoutCache::new(),
         };
+
+        self.ctx
+            .spawn(async move |this, ctx| {
+                while let Some(change) = change_receiver.recv().await {
+                    let _ = this.update(ctx, |this, cx| {
+                        this.graph.apply(change.kind);
+                        cx.notify();
+                    });
+                }
+            })
+            .detach();
 
         if let Some(sync_plugin) = &mut canvas.sync_plugin {
             sync_plugin.setup(change_sender);
@@ -379,7 +370,7 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
                 port_offset_cache: &mut canvas.port_offset_cache,
                 viewport: &mut canvas.viewport,
                 renderers: &mut canvas.renderers,
-                notify: &mut notify,
+                //notify: &mut notify,
             };
 
             for plugin in &mut canvas.plugins_registry.plugins {

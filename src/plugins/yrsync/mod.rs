@@ -1,10 +1,12 @@
-use std::sync::{Arc, mpsc::Sender};
+use std::sync::Arc;
 
 use gpui::{Size, px};
 use serde_json::Value;
+use tokio::{runtime::Runtime, sync::mpsc::Sender};
 use yrs::{
-    Array as _, ArrayRef, Doc, GetString as _, Map, MapPrelim, MapRef, Observable as _, Transact,
-    TransactionMut, types::EntryChange,
+    Any, Array as _, ArrayRef, Doc, Map, MapPrelim, MapRef, Observable as _, Out, Transact,
+    TransactionMut,
+    types::{DefaultPrelim, EntryChange},
 };
 
 use crate::{
@@ -14,6 +16,7 @@ use crate::{
 
 pub struct YrsSyncPlugin {
     doc: yrs::Doc,
+    init_graph: Graph,
     pub nodes: MapRef,        // ref HashMap<NodeId, Node>
     pub ports: MapRef,        // ref HashMap<PortId, Port>
     pub edges: MapRef,        // ref HashMap<EdgeId, Edge>
@@ -26,7 +29,7 @@ pub struct YrsSyncPlugin {
 }
 
 impl YrsSyncPlugin {
-    pub fn new() -> Self {
+    pub fn new(graph: Graph) -> Self {
         let doc = Doc::new();
         let root = doc.get_or_insert_map("graph");
         let mut txn = doc.transact_mut();
@@ -37,6 +40,7 @@ impl YrsSyncPlugin {
         drop(txn);
 
         Self {
+            init_graph: graph,
             undo_manager: yrs::UndoManager::new(&doc, &root),
             doc,
             nodes,
@@ -50,8 +54,20 @@ impl YrsSyncPlugin {
         }
     }
 
-    fn from_graph(mut self, graph: Graph) -> Self {
-        todo!()
+    pub fn from_graph(&self) {
+        let mut txn: TransactionMut<'_> = self.doc.transact_mut_with("local_init");
+        for node in self.init_graph.nodes().values() {
+            self.insert_node(&mut txn, node);
+        }
+        for port in self.init_graph.ports.values() {
+            self.add_port(&mut txn, port);
+        }
+        for edge in self.init_graph.edges.values() {
+            self.insert_edge(&mut txn, edge);
+        }
+        for order in self.init_graph.node_order() {
+            self.add_node_order(&mut txn, order);
+        }
     }
 
     fn insert_node(&self, txn: &mut TransactionMut, node: &Node) {
@@ -63,6 +79,15 @@ impl YrsSyncPlugin {
         node_ref.insert(txn, "y", Into::<f32>::into(node.y));
         node_ref.insert(txn, "width", Into::<f32>::into(node.size.width));
         node_ref.insert(txn, "height", Into::<f32>::into(node.size.height));
+
+        let inputs = node_ref.insert(txn, "inputs", ArrayRef::default_prelim());
+        for port_id in &node.inputs {
+            inputs.push_front(txn, port_id.0.to_string());
+        }
+        let outputs = node_ref.insert(txn, "outputs", ArrayRef::default_prelim());
+        for port_id in &node.outputs {
+            outputs.push_front(txn, port_id.0.to_string());
+        }
 
         let data_json = serde_json::to_string(&node.data).unwrap_or_default();
         node_ref.insert(txn, "data", data_json);
@@ -153,7 +178,9 @@ impl SyncPlugin for YrsSyncPlugin {
 
             for (key, change) in event.keys(txn) {
                 if let Some(kind) = parse_node_change(txn, key, change) {
-                    let _ = change_sender_clone.send(GraphChange { kind, source });
+                    Runtime::new().unwrap().block_on(async {
+                        let _ = change_sender_clone.send(GraphChange { kind, source }).await;
+                    });
                 }
             }
         });
@@ -169,7 +196,11 @@ impl SyncPlugin for YrsSyncPlugin {
 
             for (key, change) in event.keys(txn) {
                 if let Some(kind) = parse_port_change(txn, key, change) {
-                    let _ = change_sender_clone2.send(GraphChange { kind, source });
+                    Runtime::new().unwrap().block_on(async {
+                        let _ = change_sender_clone2
+                            .send(GraphChange { kind, source })
+                            .await;
+                    });
                 }
             }
         });
@@ -184,7 +215,11 @@ impl SyncPlugin for YrsSyncPlugin {
 
             for (key, change) in event.keys(txn) {
                 if let Some(kind) = parse_edge_change(txn, key, change) {
-                    let _ = change_sender_clone3.send(GraphChange { kind, source });
+                    Runtime::new().unwrap().block_on(async {
+                        let _ = change_sender_clone3
+                            .send(GraphChange { kind, source })
+                            .await;
+                    });
                 }
             }
         });
@@ -210,20 +245,30 @@ impl SyncPlugin for YrsSyncPlugin {
                             })
                         }
 
-                        GraphChangeKind::Batch(list)
+                        Some(GraphChangeKind::Batch(list))
                     }
-                    yrs::types::Change::Removed(index) => GraphChangeKind::NodeOrderRemove {
+                    yrs::types::Change::Removed(index) => Some(GraphChangeKind::NodeOrderRemove {
                         index: *index as usize,
-                    },
-                    yrs::types::Change::Retain(_) => unreachable!(),
+                    }),
+                    yrs::types::Change::Retain(_) => None,
                 };
-                let _ = change_sender_clone4.send(GraphChange { kind, source });
+
+                if let Some(kind) = kind {
+                    Runtime::new().unwrap().block_on(async {
+                        let _ = change_sender_clone4
+                            .send(GraphChange { kind, source })
+                            .await;
+                    });
+                }
             }
         });
         self._subscription_order = Some(sub);
+
+        self.from_graph();
     }
 
     fn process_intent(&self, intent: GraphOp) {
+        println!("current op: {:?}", intent.clone());
         let mut txn = self.doc.transact_mut_with("local_intent");
         self.inner_process_intent(&mut txn, intent);
     }
@@ -243,6 +288,7 @@ impl SyncPlugin for YrsSyncPlugin {
 
 fn write_port_to_map(txn: &mut TransactionMut, port_map: &MapRef, port: &Port) {
     port_map.insert(txn, "kind", port.kind.to_string());
+    port_map.insert(txn, "node_id", port.node_id.0.to_string());
     port_map.insert(txn, "index", port.index as u32);
     port_map.insert(txn, "position", port.position.to_string());
     port_map.insert(txn, "width", Into::<f32>::into(port.size.width));
@@ -309,14 +355,34 @@ fn read_node_from_map(txn: &yrs::TransactionMut, node_map: &MapRef, id: NodeId) 
     let height: f32 = node_map.get_as(txn, "height").unwrap_or_default();
     let json: String = node_map.get_as(txn, "data").unwrap_or_default();
     let data = serde_json::from_str(&json).unwrap_or_default();
+
+    let out_inputs = node_map.get(txn, "inputs");
+    let mut inputs = vec![];
+    if let Some(Out::YArray(arr)) = out_inputs {
+        for item in arr.iter(txn) {
+            if let Out::Any(Any::String(str)) = item {
+                inputs.push(PortId(str.to_string().parse().unwrap_or_default()));
+            }
+        }
+    }
+
+    let out_outputs = node_map.get(txn, "outputs");
+    let mut outputs = vec![];
+    if let Some(Out::YArray(arr)) = out_outputs {
+        for item in arr.iter(txn) {
+            if let Out::Any(Any::String(str)) = item {
+                outputs.push(PortId(str.to_string().parse().unwrap_or_default()));
+            }
+        }
+    }
     Node {
         id,
         node_type,
         x: px(x),
         y: px(y),
         size: Size::new(px(width), px(height)),
-        inputs: vec![],  // TODO
-        outputs: vec![], // TODO
+        inputs,
+        outputs,
         data,
     }
 }
@@ -347,6 +413,7 @@ fn parse_port_change(
 
 fn read_port_from_map(txn: &yrs::TransactionMut, node_map: &MapRef, id: PortId) -> Port {
     let kind: String = node_map.get_as(txn, "kind").unwrap_or_default();
+    let node_id: String = node_map.get_as(txn, "node_id").unwrap_or_default();
     let index: u32 = node_map.get_as(txn, "index").unwrap_or_default();
     let position: String = node_map.get_as(txn, "position").unwrap_or_default();
     let width: f32 = node_map.get_as(txn, "width").unwrap_or_default();
@@ -360,7 +427,7 @@ fn read_port_from_map(txn: &yrs::TransactionMut, node_map: &MapRef, id: PortId) 
             crate::PortKind::Output
         },
         index: index as usize,
-        node_id: NodeId(0), // TODO
+        node_id: NodeId(node_id.parse().unwrap_or_default()),
         position: crate::PortPosition::from_str(&position).unwrap_or(crate::PortPosition::Left),
         size: Size::new(px(width), px(height)),
     }
