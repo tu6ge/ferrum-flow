@@ -1611,6 +1611,7 @@ dependencies = [
  "gpui",
  "serde",
  "serde_json",
+ "tokio",
  "yrs",
 ]
 

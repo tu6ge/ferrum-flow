@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::mpsc::Sender};
+use std::collections::HashMap;
 
 use gpui::{
     AnyElement, Bounds, KeyDownEvent, KeyUpEvent, MouseDownEvent, MouseMoveEvent, MouseUpEvent,
@@ -6,8 +6,8 @@ use gpui::{
 };
 
 use crate::{
-    Edge, EdgeBuilder, EdgeId, Graph, GraphChange, Node, NodeBuilder, NodeId, NodeRenderer, Port,
-    PortId, RendererRegistry, Viewport,
+    Edge, EdgeBuilder, EdgeId, Graph, Node, NodeBuilder, NodeId, NodeRenderer, Port, PortId,
+    RendererRegistry, Viewport,
     canvas::{
         Command, CommandContext, HistoryProvider, Interaction, InteractionState, PortLayoutCache,
     },
@@ -50,7 +50,7 @@ pub struct InitPluginContext<'a> {
     pub port_offset_cache: &'a mut PortLayoutCache,
     pub viewport: &'a mut Viewport,
     pub renderers: &'a mut RendererRegistry,
-    pub notify: &'a mut dyn FnMut(),
+    // pub notify: &'a mut dyn FnMut(),
 }
 
 impl<'a> InitPluginContext<'a> {

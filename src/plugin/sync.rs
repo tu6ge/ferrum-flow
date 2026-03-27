@@ -1,4 +1,4 @@
-use std::sync::mpsc::Sender;
+use tokio::sync::mpsc::Sender;
 
 use crate::{GraphChange, GraphOp};
 
