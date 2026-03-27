@@ -16,7 +16,9 @@ pub enum GraphOp {
 
     UpdateNodeData { id: NodeId, data: serde_json::Value },
 
-    NodeToFront { id: NodeId },
+    // --- node_order ---
+    NodeOrderInsert { id: NodeId },
+    NodeOrderRemove { index: usize },
 
     // --- Port ---
     AddPort(Port),
@@ -55,42 +57,22 @@ pub enum ChangeSource {
 pub enum GraphChangeKind {
     // --- Node ---
     NodeAdded(Node),
-    NodeRemoved {
-        id: NodeId,
-    },
-    NodeMoved {
-        id: NodeId,
-        old_pos: (f32, f32),
-        new_pos: (f32, f32),
-    },
-    NodeResized {
-        id: NodeId,
-        size: Size<Pixels>,
-    },
-    NodeDataUpdated {
-        id: NodeId,
-        data: serde_json::Value,
-    },
+    NodeRemoved { id: NodeId },
+    NodeMoved { id: NodeId, x: f32, y: f32 },
+    NodeResized { id: NodeId, size: Size<Pixels> },
+    NodeDataUpdated { id: NodeId, data: serde_json::Value },
 
     // --- node_order ---
-    NodeOrderInsert {
-        id: NodeId,
-    },
-    NodeOrderRemove {
-        index: usize,
-    },
+    NodeOrderInsert { id: NodeId },
+    NodeOrderRemove { index: usize },
 
     // --- Port ---
     PortAdded(Port),
-    PortRemoved {
-        id: PortId,
-    },
+    PortRemoved { id: PortId },
 
     // --- Edge ---
     EdgeAdded(Edge),
-    EdgeRemoved {
-        id: EdgeId,
-    },
+    EdgeRemoved { id: EdgeId },
 
     Batch(Vec<GraphChangeKind>),
 }

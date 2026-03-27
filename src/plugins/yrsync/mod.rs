@@ -8,8 +8,8 @@ use yrs::{
 };
 
 use crate::{
-    ChangeSource, Edge, EdgeId, GraphChange, GraphChangeKind, GraphOp, Node, NodeId, Port, PortId,
-    SyncPlugin,
+    ChangeSource, Edge, EdgeId, Graph, GraphChange, GraphChangeKind, GraphOp, Node, NodeId, Port,
+    PortId, SyncPlugin,
 };
 
 pub struct YrsSyncPlugin {
@@ -50,6 +50,10 @@ impl YrsSyncPlugin {
         }
     }
 
+    fn from_graph(mut self, graph: Graph) -> Self {
+        todo!()
+    }
+
     fn insert_node(&self, txn: &mut TransactionMut, node: &Node) {
         let node_map = MapPrelim::default();
         let node_ref = self.nodes.insert(txn, node.id.0.to_string(), node_map);
@@ -62,8 +66,6 @@ impl YrsSyncPlugin {
 
         let data_json = serde_json::to_string(&node.data).unwrap_or_default();
         node_ref.insert(txn, "data", data_json);
-
-        self.node_order.push_back(txn, node.id.0.to_string());
     }
 
     fn update_node_position(&self, txn: &mut TransactionMut, id: &NodeId, x: f32, y: f32) {
@@ -73,33 +75,16 @@ impl YrsSyncPlugin {
         }
     }
 
-    fn node_to_front(&self, txn: &mut TransactionMut, id: &NodeId) {
-        let Some(index) = self.node_order.iter(txn).position(|i| {
-            if let yrs::Out::YText(inner) = i {
-                inner.get_string(txn) == id.0.to_string()
-            } else {
-                return false;
-            }
-        }) else {
-            return;
-        };
-        self.node_order.remove(txn, index as u32);
+    fn add_node_order(&self, txn: &mut TransactionMut, id: &NodeId) {
         self.node_order.push_back(txn, id.0.to_string());
+    }
+
+    fn remove_noder_order(&self, txn: &mut TransactionMut, index: usize) {
+        self.node_order.remove(txn, index as u32);
     }
 
     fn remove_node(&self, txn: &mut TransactionMut, id: &NodeId) {
         self.nodes.remove(txn, &id.0.to_string());
-
-        let Some(index) = self.node_order.iter(txn).position(|i| {
-            if let yrs::Out::YText(inner) = i {
-                inner.get_string(txn) == id.0.to_string()
-            } else {
-                return false;
-            }
-        }) else {
-            return;
-        };
-        self.node_order.remove(txn, index as u32);
     }
 
     fn add_port(&self, txn: &mut TransactionMut, port: &Port) {
@@ -134,7 +119,8 @@ impl YrsSyncPlugin {
             GraphOp::RemoveNode { id } => self.remove_node(txn, &id),
             GraphOp::ResizeNode { id, size } => todo!(),
             GraphOp::UpdateNodeData { id, data } => todo!(),
-            GraphOp::NodeToFront { id } => self.node_to_front(txn, &id),
+            GraphOp::NodeOrderInsert { id } => self.add_node_order(txn, &id),
+            GraphOp::NodeOrderRemove { index } => self.remove_noder_order(txn, index),
             GraphOp::AddPort(port) => self.add_port(txn, &port),
             GraphOp::RemovePort(port_id) => self.remove_port(txn, &port_id),
             GraphOp::AddEdge(edge) => self.insert_edge(txn, &edge),
@@ -216,11 +202,15 @@ impl SyncPlugin for YrsSyncPlugin {
             for change in changes {
                 let kind = match change {
                     yrs::types::Change::Added(outs) => {
-                        let out = outs.get(0).unwrap();
-                        let node_id = out.to_string();
-                        GraphChangeKind::NodeOrderInsert {
-                            id: NodeId(node_id.parse().unwrap_or_default()),
+                        let mut list = vec![];
+                        for out in outs {
+                            let node_id = out.to_string();
+                            list.push(GraphChangeKind::NodeOrderInsert {
+                                id: NodeId(node_id.parse().unwrap_or_default()),
+                            })
                         }
+
+                        GraphChangeKind::Batch(list)
                     }
                     yrs::types::Change::Removed(index) => GraphChangeKind::NodeOrderRemove {
                         index: *index as usize,
@@ -293,8 +283,8 @@ fn parse_node_change(
             if old_x != new_x || old_y != new_y {
                 return Some(GraphChangeKind::NodeMoved {
                     id,
-                    old_pos: (old_x, old_y),
-                    new_pos: (new_x, new_y),
+                    x: new_x,
+                    y: new_y,
                 });
             }
 

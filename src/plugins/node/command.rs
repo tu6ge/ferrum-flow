@@ -42,8 +42,19 @@ impl Command for SelecteNodeCommand {
         *a = self.old_node_order.clone();
     }
 
-    fn to_ops(&self, _ctx: &mut crate::CommandContext) -> Vec<crate::GraphOp> {
-        vec![GraphOp::NodeToFront { id: self.node_id }]
+    fn to_ops(&self, ctx: &mut crate::CommandContext) -> Vec<crate::GraphOp> {
+        let mut list = vec![];
+
+        let index = ctx
+            .graph
+            .node_order()
+            .iter()
+            .position(|v| *v == self.node_id);
+        if let Some(index) = index {
+            list.push(GraphOp::NodeOrderRemove { index })
+        }
+        list.push(GraphOp::NodeOrderInsert { id: self.node_id });
+        list
     }
 }
 
