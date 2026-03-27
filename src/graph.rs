@@ -62,11 +62,8 @@ impl Graph {
                     node.data = data;
                 }
             }
-            GraphChangeKind::NodeOrderInsert { id } => {
-                self.node_order.push(id);
-            }
-            GraphChangeKind::NodeOrderRemove { index } => {
-                self.node_order.remove(index);
+            GraphChangeKind::NodeOrderUpdate(vec) => {
+                self.node_order = vec;
             }
             GraphChangeKind::PortAdded(port) => self.add_point(port),
             GraphChangeKind::PortRemoved { id } => {

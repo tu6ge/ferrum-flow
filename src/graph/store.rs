@@ -63,8 +63,7 @@ pub enum GraphChangeKind {
     NodeDataUpdated { id: NodeId, data: serde_json::Value },
 
     // --- node_order ---
-    NodeOrderInsert { id: NodeId },
-    NodeOrderRemove { index: usize },
+    NodeOrderUpdate(Vec<NodeId>),
 
     // --- Port ---
     PortAdded(Port),
