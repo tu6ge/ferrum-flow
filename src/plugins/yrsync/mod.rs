@@ -4,9 +4,10 @@ use gpui::{Size, px};
 use serde_json::Value;
 use tokio::{runtime::Runtime, sync::mpsc::Sender};
 use yrs::{
-    Any, Array as _, ArrayRef, Doc, Map, MapPrelim, MapRef, Observable as _, Out, Transact,
-    TransactionMut,
-    types::{DefaultPrelim, EntryChange},
+    Any, Array as _, ArrayRef, DeepObservable, Doc, Map, MapPrelim, MapRef, Observable as _,
+    Origin, Out, Transact, TransactionMut,
+    types::{DefaultPrelim, EntryChange, PathSegment},
+    undo::Options,
 };
 
 use crate::{
@@ -37,11 +38,17 @@ impl YrsSyncPlugin {
         let ports = root.get_or_init(&mut txn, "ports");
         let edges = root.get_or_init(&mut txn, "edges");
         let node_order = root.get_or_init(&mut txn, "node_order");
+
         drop(txn);
+
+        let mut option = Options::default();
+        option.tracked_origins.insert("local_intent".into());
+        let mut undo_manager = yrs::UndoManager::with_scope_and_options(&doc, &root, option);
+        undo_manager.include_origin(doc.client_id());
 
         Self {
             init_graph: graph,
-            undo_manager: yrs::UndoManager::new(&doc, &root),
+            undo_manager,
             doc,
             nodes,
             ports,
@@ -169,17 +176,78 @@ impl SyncPlugin for YrsSyncPlugin {
         let change_sender_clone2 = change_sender.clone();
         let change_sender_clone3 = change_sender.clone();
         let change_sender_clone4 = change_sender.clone();
-        let sub = self.nodes.observe(move |txn, event| {
+        let sub = self.nodes.observe_deep(move |txn, event| {
             let source = match txn.origin() {
                 Some(orig) if *orig == "local_intent".into() => ChangeSource::Local,
                 Some(orig) if *orig == "undo_manager".into() => ChangeSource::Undo,
                 _ => ChangeSource::Remote,
             };
 
-            for (key, change) in event.keys(txn) {
-                if let Some(kind) = parse_node_change(txn, key, change) {
+            for ev in event.iter() {
+                if let yrs::types::Event::Map(ev) = ev {
+                    let path = ev.path();
+                    let mut node_id = None;
+                    if let Some(path) = path.iter().last() {
+                        if let PathSegment::Key(key) = path {
+                            node_id = Some(NodeId(key.to_string().parse().unwrap_or_default()))
+                        }
+                    }
+
+                    let mut x = Out::Any(Any::Null);
+                    let mut y = Out::Any(Any::Null);
+                    let mut width = Out::Any(Any::Null);
+                    let mut height = Out::Any(Any::Null);
+                    let mut data = Out::Any(Any::Null);
+                    let mut kind: Vec<GraphChangeKind> = vec![];
+                    for (key, change) in ev.keys(txn) {
+                        match parse_node_field_change(key, change) {
+                            Some((field, value)) => match field.as_str() {
+                                "x" => x = value,
+                                "y" => y = value,
+                                "width" => width = value,
+                                "height" => height = value,
+                                "data" => data = value,
+                                _ => unreachable!(),
+                            },
+                            None => {
+                                if let Some(k) = parse_node_change(txn, key, change) {
+                                    kind.push(k);
+                                }
+                            }
+                        }
+                    }
+
+                    if let Some(id) = node_id {
+                        let x = out_f32(txn, x);
+                        let y = out_f32(txn, y);
+                        let width = out_f32(txn, width);
+                        let height = out_f32(txn, height);
+                        if x > 0.0 || y > 0.0 {
+                            kind.push(GraphChangeKind::NodeMoved { id, x, y });
+                        }
+                        if width > 0.0 || height > 0.0 {
+                            kind.push(GraphChangeKind::NodeResized {
+                                id,
+                                size: Size {
+                                    width: px(width),
+                                    height: px(height),
+                                },
+                            })
+                        }
+
+                        let data = get_json(txn, data);
+                        if let Some(data) = data {
+                            kind.push(GraphChangeKind::NodeDataUpdated { id, data })
+                        }
+                    }
+
                     Runtime::new().unwrap().block_on(async {
-                        let _ = change_sender_clone.send(GraphChange { kind, source }).await;
+                        let _ = change_sender_clone
+                            .send(GraphChange {
+                                kind: GraphChangeKind::Batch(kind),
+                                source,
+                            })
+                            .await;
                     });
                 }
             }
@@ -257,7 +325,7 @@ impl SyncPlugin for YrsSyncPlugin {
 
     fn process_intent(&self, intent: GraphOp) {
         println!("current op: {:?}", intent.clone());
-        let mut txn = self.doc.transact_mut_with("local_intent");
+        let mut txn = self.doc.transact_mut_with(Origin::from("local_intent"));
         self.inner_process_intent(&mut txn, intent);
     }
 
@@ -288,7 +356,7 @@ fn parse_node_change(
     key: &Arc<str>,
     change: &EntryChange,
 ) -> Option<GraphChangeKind> {
-    let id = NodeId(key.to_string().parse().unwrap_or_default());
+    let id = NodeId(key.to_string().parse().ok()?);
 
     match change {
         EntryChange::Inserted(value) => {
@@ -300,38 +368,23 @@ fn parse_node_change(
                 None
             }
         }
-
         EntryChange::Removed(_) => Some(GraphChangeKind::NodeRemoved { id }),
+        EntryChange::Updated(_, _) => None,
+    }
+}
 
-        EntryChange::Updated(old, new) => {
-            let (old_map, new_map) = match (old, new) {
-                (yrs::Out::YMap(o), yrs::Out::YMap(n)) => (o, n),
-                _ => return None,
-            };
-
-            let old_x = get_f32(txn, old_map, "x");
-            let old_y = get_f32(txn, old_map, "y");
-            let new_x = get_f32(txn, new_map, "x");
-            let new_y = get_f32(txn, new_map, "y");
-
-            if old_x != new_x || old_y != new_y {
-                return Some(GraphChangeKind::NodeMoved {
-                    id,
-                    x: new_x,
-                    y: new_y,
-                });
-            }
-
-            // data 变化
-            let old_data = get_json(txn, old_map, "data");
-            let new_data = get_json(txn, new_map, "data");
-
-            if old_data != new_data {
-                return Some(GraphChangeKind::NodeDataUpdated { id, data: new_data });
-            }
-
-            None
+fn parse_node_field_change(key: &Arc<str>, change: &EntryChange) -> Option<(String, Out)> {
+    let string = key.to_string();
+    let field = string.as_str();
+    match (field, change) {
+        ("x", EntryChange::Updated(_, new_value)) => Some(("x".into(), new_value.clone())),
+        ("y", EntryChange::Updated(_, new_value)) => Some(("y".into(), new_value.clone())),
+        ("width", EntryChange::Updated(_, new_value)) => Some(("width".into(), new_value.clone())),
+        ("height", EntryChange::Updated(_, new_value)) => {
+            Some(("height".into(), new_value.clone()))
         }
+        ("data", EntryChange::Updated(_, new_value)) => Some(("data".into(), new_value.clone())),
+        _ => None,
     }
 }
 
@@ -462,9 +515,11 @@ fn get_f32(txn: &yrs::TransactionMut, map: &MapRef, key: &str) -> f32 {
         .unwrap_or(0.0)
 }
 
-fn get_json(txn: &yrs::TransactionMut, map: &MapRef, key: &str) -> Value {
-    map.get(txn, key)
-        .map(|v| v.to_string(txn))
-        .and_then(|str| serde_json::from_str(&str).ok())
-        .unwrap_or_default()
+fn out_f32(txn: &yrs::TransactionMut, out: Out) -> f32 {
+    out.to_string(txn).parse::<f32>().ok().unwrap_or(0.0)
+}
+
+fn get_json(txn: &yrs::TransactionMut, out: Out) -> Option<Value> {
+    let str = out.to_string(txn);
+    serde_json::from_str(&str).ok()
 }
