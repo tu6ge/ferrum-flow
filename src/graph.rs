@@ -52,9 +52,14 @@ impl Graph {
                     node.y = px(y);
                 }
             }
-            GraphChangeKind::NodeResized { id, size } => {
+            GraphChangeKind::NodeSetWidthed { id, width } => {
                 if let Some(node) = self.nodes.get_mut(&id) {
-                    node.size = size;
+                    node.size.width = px(width);
+                }
+            }
+            GraphChangeKind::NodeSetHeighted { id, height } => {
+                if let Some(node) = self.nodes.get_mut(&id) {
+                    node.size.height = px(height);
                 }
             }
             GraphChangeKind::NodeDataUpdated { id, data } => {
