@@ -59,7 +59,8 @@ pub enum GraphChangeKind {
     NodeAdded(Node),
     NodeRemoved { id: NodeId },
     NodeMoved { id: NodeId, x: f32, y: f32 },
-    NodeResized { id: NodeId, size: Size<Pixels> },
+    NodeSetWidthed { id: NodeId, width: f32 },
+    NodeSetHeighted { id: NodeId, height: f32 },
     NodeDataUpdated { id: NodeId, data: serde_json::Value },
 
     // --- node_order ---

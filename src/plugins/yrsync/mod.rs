@@ -225,14 +225,11 @@ impl SyncPlugin for YrsSyncPlugin {
                         if x > 0.0 || y > 0.0 {
                             kind.push(GraphChangeKind::NodeMoved { id, x, y });
                         }
-                        if width > 0.0 || height > 0.0 {
-                            kind.push(GraphChangeKind::NodeResized {
-                                id,
-                                size: Size {
-                                    width: px(width),
-                                    height: px(height),
-                                },
-                            })
+                        if width > 0.0 {
+                            kind.push(GraphChangeKind::NodeSetWidthed { id, width })
+                        }
+                        if height > 0.0 {
+                            kind.push(GraphChangeKind::NodeSetHeighted { id, height })
                         }
 
                         let data = get_json(txn, data);
