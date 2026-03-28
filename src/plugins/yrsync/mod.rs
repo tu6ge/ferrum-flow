@@ -333,10 +333,10 @@ fn handler_node_change(
     }
 
     if let Some(id) = node_id {
-        let x = out_f32(txn, x);
-        let y = out_f32(txn, y);
-        let width = out_f32(txn, width);
-        let height = out_f32(txn, height);
+        let x = get_f32(txn, x);
+        let y = get_f32(txn, y);
+        let width = get_f32(txn, width);
+        let height = get_f32(txn, height);
         if x > 0.0 || y > 0.0 {
             kind.push(GraphChangeKind::NodeMoved { id, x, y });
         }
@@ -514,13 +514,7 @@ fn read_edge_from_map(txn: &yrs::TransactionMut, node_map: &MapRef, id: EdgeId) 
     }
 }
 
-fn get_f32(txn: &yrs::TransactionMut, map: &MapRef, key: &str) -> f32 {
-    map.get(txn, key)
-        .and_then(|v| v.to_string(txn).parse::<f32>().ok())
-        .unwrap_or(0.0)
-}
-
-fn out_f32(txn: &yrs::TransactionMut, out: Out) -> f32 {
+fn get_f32(txn: &yrs::TransactionMut, out: Out) -> f32 {
     out.to_string(txn).parse::<f32>().ok().unwrap_or(0.0)
 }
 
