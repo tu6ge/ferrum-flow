@@ -185,59 +185,7 @@ impl SyncPlugin for YrsSyncPlugin {
 
             for ev in event.iter() {
                 if let yrs::types::Event::Map(ev) = ev {
-                    let path = ev.path();
-                    let mut node_id = None;
-                    if let Some(path) = path.iter().last() {
-                        if let PathSegment::Key(key) = path {
-                            node_id = Some(NodeId(key.to_string().parse().unwrap_or_default()))
-                        }
-                    }
-
-                    let mut x = Out::Any(Any::Null);
-                    let mut y = Out::Any(Any::Null);
-                    let mut width = Out::Any(Any::Null);
-                    let mut height = Out::Any(Any::Null);
-                    let mut data = Out::Any(Any::Null);
-                    let mut kind: Vec<GraphChangeKind> = vec![];
-                    for (key, change) in ev.keys(txn) {
-                        match parse_node_field_change(key, change) {
-                            Some((field, value)) => match field.as_str() {
-                                "x" => x = value,
-                                "y" => y = value,
-                                "width" => width = value,
-                                "height" => height = value,
-                                "data" => data = value,
-                                _ => unreachable!(),
-                            },
-                            None => {
-                                if let Some(k) = parse_node_change(txn, key, change) {
-                                    kind.push(k);
-                                }
-                            }
-                        }
-                    }
-
-                    if let Some(id) = node_id {
-                        let x = out_f32(txn, x);
-                        let y = out_f32(txn, y);
-                        let width = out_f32(txn, width);
-                        let height = out_f32(txn, height);
-                        if x > 0.0 || y > 0.0 {
-                            kind.push(GraphChangeKind::NodeMoved { id, x, y });
-                        }
-                        if width > 0.0 {
-                            kind.push(GraphChangeKind::NodeSetWidthed { id, width })
-                        }
-                        if height > 0.0 {
-                            kind.push(GraphChangeKind::NodeSetHeighted { id, height })
-                        }
-
-                        let data = get_json(txn, data);
-                        if let Some(data) = data {
-                            kind.push(GraphChangeKind::NodeDataUpdated { id, data })
-                        }
-                    }
-
+                    let kind = handler_node_change(txn, ev);
                     Runtime::new().unwrap().block_on(async {
                         let _ = change_sender_clone
                             .send(GraphChange {
@@ -346,6 +294,66 @@ fn write_port_to_map(txn: &mut TransactionMut, port_map: &MapRef, port: &Port) {
     port_map.insert(txn, "position", port.position.to_string());
     port_map.insert(txn, "width", Into::<f32>::into(port.size.width));
     port_map.insert(txn, "height", Into::<f32>::into(port.size.height));
+}
+
+fn handler_node_change(
+    txn: &yrs::TransactionMut,
+    ev: &yrs::types::map::MapEvent,
+) -> Vec<GraphChangeKind> {
+    let path = ev.path();
+    let mut node_id = None;
+    if let Some(path) = path.iter().last() {
+        if let PathSegment::Key(key) = path {
+            node_id = Some(NodeId(key.to_string().parse().unwrap_or_default()))
+        }
+    }
+
+    let mut x = Out::Any(Any::Null);
+    let mut y = Out::Any(Any::Null);
+    let mut width = Out::Any(Any::Null);
+    let mut height = Out::Any(Any::Null);
+    let mut data = Out::Any(Any::Null);
+    let mut kind: Vec<GraphChangeKind> = vec![];
+    for (key, change) in ev.keys(txn) {
+        match parse_node_field_change(key, change) {
+            Some((field, value)) => match field.as_str() {
+                "x" => x = value,
+                "y" => y = value,
+                "width" => width = value,
+                "height" => height = value,
+                "data" => data = value,
+                _ => unreachable!(),
+            },
+            None => {
+                if let Some(k) = parse_node_change(txn, key, change) {
+                    kind.push(k);
+                }
+            }
+        }
+    }
+
+    if let Some(id) = node_id {
+        let x = out_f32(txn, x);
+        let y = out_f32(txn, y);
+        let width = out_f32(txn, width);
+        let height = out_f32(txn, height);
+        if x > 0.0 || y > 0.0 {
+            kind.push(GraphChangeKind::NodeMoved { id, x, y });
+        }
+        if width > 0.0 {
+            kind.push(GraphChangeKind::NodeSetWidthed { id, width })
+        }
+        if height > 0.0 {
+            kind.push(GraphChangeKind::NodeSetHeighted { id, height })
+        }
+
+        let data = get_json(txn, data);
+        if let Some(data) = data {
+            kind.push(GraphChangeKind::NodeDataUpdated { id, data })
+        }
+    }
+
+    kind
 }
 
 fn parse_node_change(
