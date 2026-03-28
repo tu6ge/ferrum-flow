@@ -43,8 +43,12 @@ impl Command for SelecteNodeCommand {
     }
 
     fn to_ops(&self, ctx: &mut crate::CommandContext) -> Vec<crate::GraphOp> {
-        let mut list = vec![];
+        if !self.shift {
+            ctx.clear_selected_edge();
+        }
+        ctx.add_selected_node(self.node_id, self.shift);
 
+        let mut list = vec![];
         let index = ctx
             .graph
             .node_order()
