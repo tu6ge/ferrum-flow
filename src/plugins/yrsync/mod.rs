@@ -1,11 +1,11 @@
 use std::{sync::Arc, vec};
 
-use gpui::{Size, px};
+use gpui::{Context, Size, px};
 use serde_json::Value;
 use tokio::{runtime::Runtime, sync::mpsc::Sender};
 use yrs::{
     Any, Array as _, ArrayRef, DeepObservable, Doc, Map, MapPrelim, MapRef, Observable as _,
-    Origin, Out, Transact, TransactionMut,
+    Origin, Out, ReadTxn as _, Transact, TransactionMut,
     types::{DefaultPrelim, EntryChange, PathSegment},
     undo::Options,
 };
@@ -15,6 +15,8 @@ use crate::{
     PortId, SyncPlugin,
 };
 
+mod server;
+
 pub struct YrsSyncPlugin {
     doc: yrs::Doc,
     init_graph: Graph,
@@ -23,6 +25,7 @@ pub struct YrsSyncPlugin {
     pub edges: MapRef,        // ref HashMap<EdgeId, Edge>
     pub node_order: ArrayRef, // ref Vec<NodeId>
     undo_manager: yrs::UndoManager,
+    _subscription_remote: Option<yrs::Subscription>,
     _subscription_nodes: Option<yrs::Subscription>,
     _subscription_ports: Option<yrs::Subscription>,
     _subscription_edges: Option<yrs::Subscription>,
@@ -54,6 +57,7 @@ impl YrsSyncPlugin {
             ports,
             edges,
             node_order,
+            _subscription_remote: None,
             _subscription_nodes: None,
             _subscription_ports: None,
             _subscription_edges: None,
@@ -264,6 +268,20 @@ impl SyncPlugin for YrsSyncPlugin {
             });
         });
         self._subscription_order = Some(sub);
+
+        let sender = server::start_sync_thread(self.doc.clone());
+
+        let sub = self
+            .doc
+            .observe_update_v1(move |_, update| {
+                let mut msg = vec![2];
+                msg.extend(&update.update);
+
+                sender.send(msg).unwrap();
+            })
+            .unwrap();
+
+        self._subscription_remote = Some(sub);
 
         self.from_graph();
     }
