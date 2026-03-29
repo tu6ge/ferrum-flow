@@ -269,19 +269,7 @@ impl SyncPlugin for YrsSyncPlugin {
         });
         self._subscription_order = Some(sub);
 
-        let sender = server::start_sync_thread(self.doc.clone());
-
-        let sub = self
-            .doc
-            .observe_update_v1(move |_, update| {
-                let mut msg = vec![2];
-                msg.extend(&update.update);
-
-                sender.send(msg).unwrap();
-            })
-            .unwrap();
-
-        self._subscription_remote = Some(sub);
+        server::start_sync_thread(self.doc.clone());
 
         self.from_graph();
     }
