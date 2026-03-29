@@ -1,11 +1,11 @@
 use std::{sync::Arc, vec};
 
-use gpui::{Context, Size, px};
+use gpui::{Size, px};
 use serde_json::Value;
 use tokio::{runtime::Runtime, sync::mpsc::Sender};
 use yrs::{
     Any, Array as _, ArrayRef, DeepObservable, Doc, Map, MapPrelim, MapRef, Observable as _,
-    Origin, Out, ReadTxn as _, Transact, TransactionMut,
+    Origin, Out, Transact, TransactionMut,
     types::{DefaultPrelim, EntryChange, PathSegment},
     undo::Options,
 };
