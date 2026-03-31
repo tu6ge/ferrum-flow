@@ -1,9 +1,15 @@
 use futures::{SinkExt, StreamExt};
-use std::{sync::Arc, thread};
+use std::{
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
+    thread,
+};
 use tokio::runtime::Runtime;
 use tokio_tungstenite::{connect_async, tungstenite::Message};
 use yrs::{
-    Doc,
+    Doc, ReadTxn as _, Transact,
     sync::{Awareness, DefaultProtocol, Protocol},
     updates::encoder::{Encode, Encoder, EncoderV1},
 };
@@ -19,44 +25,37 @@ pub(super) fn start_sync_thread(doc: yrs::Doc) {
 }
 
 async fn run_ws(doc: Doc) {
-    let awareness = Arc::new(Awareness::new(doc.clone()));
-    let protocol = DefaultProtocol;
+    let awareness = Arc::new(Awareness::new(doc));
 
-    let (ws, _) = connect_async("ws://localhost:1234/my-room").await.unwrap();
+    let _ = awareness.set_local_state(r#"{"name":"Alice2"}"#);
+
+    let (ws, _) = connect_async("ws://127.0.0.1:8080/default").await.unwrap();
 
     let (write, mut read) = ws.split();
 
     let (ws_tx, mut ws_rx) = tokio::sync::mpsc::unbounded_channel::<Vec<u8>>();
+    let applying_remote = Arc::new(AtomicBool::new(false));
 
     // === writer ===
     let writer_task = tokio::spawn(async move {
         let mut write = write;
 
         while let Some(msg) = ws_rx.recv().await {
-            if let Err(e) = write.send(msg.into()).await {
-                println!("send failed: {}", e);
-                break;
+            let len = msg.len();
+            match write.send(Message::Binary(msg)).await {
+                Ok(_) => {
+                    println!(">>> WS SEND: {} bytes", len);
+                }
+                Err(e) => {
+                    println!("WS SEND failed: {}", e);
+                    break;
+                }
             }
         }
     });
 
-    // === init sync ===
-    {
-        let mut encoder = EncoderV1::new();
-        protocol.start(&awareness, &mut encoder).unwrap();
-        match ws_tx.send(encoder.to_vec()) {
-            Ok(_) => {
-                println!("initial sync sent");
-            }
-            Err(e) => {
-                println!("send failed: {}", e);
-            }
-        }
-    }
-
-    // === reader ===
-    let ws_tx_clone = ws_tx.clone();
-    let awareness_clone = awareness.clone();
+    // === network receiver ===
+    let (incoming_tx, mut incoming_rx) = tokio::sync::mpsc::unbounded_channel::<Vec<u8>>();
 
     let reader_task = tokio::spawn(async move {
         while let Some(Ok(msg)) = read.next().await {
@@ -66,37 +65,21 @@ async fn run_ws(doc: Doc) {
                 _ => continue,
             };
 
-            match protocol.handle(&awareness, &data) {
-                Ok(responses) => {
-                    for msg in responses {
-                        let mut encoder = EncoderV1::new();
-                        msg.encode(&mut encoder);
-
-                        match ws_tx_clone.send(encoder.to_vec()) {
-                            Ok(_) => {
-                                println!("response sent");
-                            }
-                            Err(e) => {
-                                println!("send failed: {}", e);
-                                break;
-                            }
-                        }
-                    }
-                }
-                Err(e) => {
-                    println!("protocol error: {:?}", e);
-                }
-            }
+            println!("<<< WS RECV: {} bytes", data.len());
+            let _ = incoming_tx.send(data);
         }
     });
 
     // === GPUI → ws ===
-    let ws_tx = ws_tx.clone();
-
-    let _sub = awareness_clone
-        .doc()
-        .observe_update_v1(move |_, update| {
+    let ws_tx_clone = ws_tx.clone();
+    let _sub = {
+        let applying_remote = Arc::clone(&applying_remote);
+        match awareness.doc().observe_update_v1(move |_, update| {
             use yrs::sync::{Message, SyncMessage};
+
+            if applying_remote.load(Ordering::SeqCst) {
+                return;
+            }
 
             let msg = Message::Sync(SyncMessage::Update(update.update.clone()));
 
@@ -111,11 +94,83 @@ async fn run_ws(doc: Doc) {
                     println!("sended sync message failed: {}", e);
                 }
             }
+        }) {
+            Ok(sub) => sub,
+            Err(err) => {
+                println!("observe_update_v1 failed: {}", err);
+                return;
+            }
+        }
+    };
+
+    {
+        let sv = awareness.doc().transact().state_vector();
+        let step1 = yrs::sync::Message::Sync(yrs::sync::SyncMessage::SyncStep1(sv));
+        ws_tx_clone.send(encode_messages([step1])).unwrap();
+    }
+
+    if let Ok(au) = awareness.update() {
+        let mut enc = EncoderV1::new();
+        yrs::sync::Message::Awareness(au).encode(&mut enc);
+        ws_tx_clone.send(enc.to_vec()).unwrap();
+    }
+
+    // === apply protocol ===
+    let applier_task = {
+        let applying_remote_clone = Arc::clone(&applying_remote);
+        let awareness = Arc::clone(&awareness);
+        tokio::spawn(async move {
+            while let Some(data) = incoming_rx.recv().await {
+                let before_sv_len = awareness.doc().transact().state_vector().len();
+
+                applying_remote_clone.store(true, Ordering::SeqCst);
+                let replies = match DefaultProtocol.handle(&awareness, &data) {
+                    Ok(responses) => responses,
+                    Err(e) => {
+                        applying_remote_clone.store(false, Ordering::SeqCst);
+                        println!("protocol error: {:?}", e);
+                        continue;
+                    }
+                };
+                applying_remote_clone.store(false, Ordering::SeqCst);
+
+                let after_sv_len = awareness.doc().transact().state_vector().len();
+                if after_sv_len != before_sv_len {
+                    println!(
+                        "yrs doc state_vector len changed: {} -> {}",
+                        before_sv_len, after_sv_len
+                    );
+                }
+
+                if !replies.is_empty() {
+                    println!("protocol replies: {}", replies.len());
+                    for r in &replies {
+                        match ws_tx_clone.send(encode_messages([r.clone()])) {
+                            Ok(_) => {
+                                println!("response sent");
+                            }
+                            Err(e) => {
+                                println!("send failed2: {}", e);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
         })
-        .unwrap();
+    };
 
     tokio::select! {
         _ = writer_task => {},
         _ = reader_task => {},
+        _ = applier_task => {},
     };
+}
+
+fn encode_messages(msgs: impl IntoIterator<Item = yrs::sync::Message>) -> Vec<u8> {
+    let mut enc = EncoderV1::new();
+    for m in msgs {
+        m.encode(&mut enc);
+    }
+    enc.to_vec()
 }

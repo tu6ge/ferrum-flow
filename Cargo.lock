@@ -6971,6 +6971,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "yrsync-ws-server"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "futures",
+ "tokio",
+ "tokio-tungstenite",
+]
+
+[[package]]
 name = "zbus"
 version = "5.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
