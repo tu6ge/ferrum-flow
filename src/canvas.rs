@@ -270,6 +270,21 @@ impl Render for FlowCanvas {
             }
         }
 
+        if let Some(sync_plugin) = &mut self.sync_plugin {
+            let mut ctx = RenderContext::new(
+                graph,
+                port_offset_cache,
+                viewport,
+                renderder,
+                window,
+                RenderLayer::Overlay,
+            );
+            let els = sync_plugin.render(&mut ctx);
+            for el in els {
+                layers[RenderLayer::Overlay.index()].push(el);
+            }
+        }
+
         div()
             .size_full()
             .track_focus(&self.focus_handle)
