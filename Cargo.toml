@@ -17,3 +17,7 @@ yrs = {version = "0.25.0", features = ["sync"] }
 
 tokio-tungstenite = "0.21"
 futures = "0.3"
+
+[workspace]
+members = [".", "examples/yrsync-ws-server"]
+resolver = "2"

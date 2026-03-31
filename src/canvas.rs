@@ -1,3 +1,4 @@
+use futures::{StreamExt, channel::mpsc};
 use gpui::*;
 
 use crate::{
@@ -329,7 +330,7 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
         //     self.ctx.notify();
         // };
 
-        let (change_sender, mut change_receiver) = tokio::sync::mpsc::channel::<GraphChange>(100);
+        let (change_sender, mut change_receiver) = mpsc::unbounded::<GraphChange>();
 
         let mut canvas = FlowCanvas {
             graph: self.graph,
@@ -346,7 +347,7 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
 
         self.ctx
             .spawn(async move |this, ctx| {
-                while let Some(change) = change_receiver.recv().await {
+                while let Some(change) = change_receiver.next().await {
                     let _ = this.update(ctx, |this, cx| {
                         this.graph.apply(change.kind);
                         cx.notify();

@@ -264,6 +264,7 @@ impl<'a> PluginContext<'a> {
             for op in ops.into_iter() {
                 sync.process_intent(op);
             }
+            self.notify();
         } else {
             self.history.push(Box::new(command), &mut ctx);
 
