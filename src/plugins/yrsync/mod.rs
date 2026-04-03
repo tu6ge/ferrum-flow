@@ -18,7 +18,7 @@ mod server;
 
 pub struct YrsSyncPlugin {
     doc: yrs::Doc,
-    root: MapRef,             // ref root "graph"
+    root: MapRef, // ref root "graph"
     init_graph: Graph,
     pub nodes: MapRef,        // ref HashMap<NodeId, Node>
     pub ports: MapRef,        // ref HashMap<PortId, Port>
@@ -36,8 +36,8 @@ impl YrsSyncPlugin {
     pub fn new(graph: Graph) -> Self {
         let doc = Doc::new();
         let root = doc.get_or_insert_map("graph");
+        let nodes = doc.get_or_insert_map("nodes");
         let mut txn = doc.transact_mut();
-        let nodes = root.get_or_init(&mut txn, "nodes");
         let ports = root.get_or_init(&mut txn, "ports");
         let edges = root.get_or_init(&mut txn, "edges");
         let node_order = root.get_or_init(&mut txn, "node_order");
@@ -113,15 +113,6 @@ impl YrsSyncPlugin {
             return;
         }
 
-        // Fallback: `self.nodes` may become stale if remote side replaced `graph.nodes`.
-        if let Some(yrs::Out::YMap(nodes_map)) = self.root.get(txn, "nodes") {
-            if let Some(yrs::Out::YMap(node_ref)) = nodes_map.get(txn, &key) {
-                node_ref.insert(txn, "x", x);
-                node_ref.insert(txn, "y", y);
-                return;
-            }
-        }
-
         println!("update_node_position: node {} not found in yrs map", id.0);
     }
 
@@ -193,9 +184,10 @@ impl SyncPlugin for YrsSyncPlugin {
         {
             // Rebind refs from current root before subscribing.
             let root = self.doc.get_or_insert_map("graph");
-            let mut txn = self.doc.transact_mut();
+
             self.root = root.clone();
-            self.nodes = root.get_or_init(&mut txn, "nodes");
+            self.nodes = self.doc.get_or_insert_map("nodes");
+            let mut txn = self.doc.transact_mut();
             self.ports = root.get_or_init(&mut txn, "ports");
             self.edges = root.get_or_init(&mut txn, "edges");
             self.node_order = root.get_or_init(&mut txn, "node_order");
@@ -447,7 +439,6 @@ fn parse_node_change(
     }
 }
 
-
 fn read_node_from_map(txn: &yrs::TransactionMut, node_map: &MapRef, id: NodeId) -> Node {
     let node_type: String = node_map.get_as(txn, "type").unwrap_or_default();
     let x = read_map_f32(txn, node_map, "x").unwrap_or_default();
@@ -569,10 +560,7 @@ fn read_edge_from_map(txn: &yrs::TransactionMut, node_map: &MapRef, id: EdgeId) 
     }
 }
 
-fn collect_node_layout_changes(
-    txn: &TransactionMut,
-    root: &MapRef,
-) -> Vec<GraphChangeKind> {
+fn collect_node_layout_changes(txn: &TransactionMut, root: &MapRef) -> Vec<GraphChangeKind> {
     let nodes = match root.get(txn, "nodes") {
         Some(Out::YMap(m)) => m,
         _ => return vec![],

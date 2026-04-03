@@ -1,11 +1,5 @@
 use futures::{SinkExt, StreamExt};
-use std::{
-    sync::{
-        Arc,
-        atomic::{AtomicBool, Ordering},
-    },
-    thread,
-};
+use std::{sync::Arc, thread};
 use tokio::runtime::Runtime;
 use tokio_tungstenite::{connect_async, tungstenite::Message};
 use yrs::{
@@ -29,12 +23,11 @@ async fn run_ws(doc: Doc) {
 
     let _ = awareness.set_local_state(r#"{"name":"Alice2"}"#);
 
-    let (ws, _) = connect_async("ws://127.0.0.1:8080/default").await.unwrap();
+    let (ws, _) = connect_async("ws://127.0.0.1:9001").await.unwrap();
 
     let (write, mut read) = ws.split();
 
     let (ws_tx, mut ws_rx) = tokio::sync::mpsc::unbounded_channel::<Vec<u8>>();
-    let applying_remote = Arc::new(AtomicBool::new(false));
 
     // === writer ===
     let writer_task = tokio::spawn(async move {
@@ -73,11 +66,11 @@ async fn run_ws(doc: Doc) {
     // === GPUI → ws ===
     let ws_tx_clone = ws_tx.clone();
     let _sub = {
-        let applying_remote = Arc::clone(&applying_remote);
-        match awareness.doc().observe_update_v1(move |_, update| {
+        match awareness.doc().observe_update_v1(move |txn, update| {
             use yrs::sync::{Message, SyncMessage};
 
-            if applying_remote.load(Ordering::SeqCst) {
+            // 非 local_intent 来源的 update 不转发（远端同步进来的）
+            if !matches!(txn.origin(), Some(o) if *o == yrs::Origin::from("local_intent")) {
                 return;
             }
 
@@ -117,22 +110,22 @@ async fn run_ws(doc: Doc) {
 
     // === apply protocol ===
     let applier_task = {
-        let applying_remote_clone = Arc::clone(&applying_remote);
+        // let applying_remote_clone = Arc::clone(&applying_remote);
         let awareness = Arc::clone(&awareness);
         tokio::spawn(async move {
             while let Some(data) = incoming_rx.recv().await {
                 let before_sv_len = awareness.doc().transact().state_vector().len();
 
-                applying_remote_clone.store(true, Ordering::SeqCst);
+                //applying_remote_clone.store(true, Ordering::SeqCst);
                 let replies = match DefaultProtocol.handle(&awareness, &data) {
                     Ok(responses) => responses,
                     Err(e) => {
-                        applying_remote_clone.store(false, Ordering::SeqCst);
+                        //applying_remote_clone.store(false, Ordering::SeqCst);
                         println!("protocol error: {:?}", e);
                         continue;
                     }
                 };
-                applying_remote_clone.store(false, Ordering::SeqCst);
+                //applying_remote_clone.store(false, Ordering::SeqCst);
 
                 let after_sv_len = awareness.doc().transact().state_vector().len();
                 if after_sv_len != before_sv_len {
@@ -160,11 +153,7 @@ async fn run_ws(doc: Doc) {
         })
     };
 
-    tokio::select! {
-        _ = writer_task => {},
-        _ = reader_task => {},
-        _ = applier_task => {},
-    };
+    let _ = tokio::join!(writer_task, reader_task, applier_task);
 }
 
 fn encode_messages(msgs: impl IntoIterator<Item = yrs::sync::Message>) -> Vec<u8> {
