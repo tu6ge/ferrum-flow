@@ -1,248 +1,187 @@
 use futures::{SinkExt, StreamExt};
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Mutex};
 use tokio::net::TcpListener;
-use tokio::sync::broadcast;
 use tokio::sync::mpsc;
 use tokio_tungstenite::accept_async;
-use tokio_tungstenite::connect_async;
 use tokio_tungstenite::tungstenite::Message;
-use yrs::MapRef;
-use yrs::Out;
-use yrs::Subscription;
+use yrs::sync::{Awareness, DefaultProtocol, Protocol, SyncMessage};
 use yrs::updates::decoder::Decode as _;
-use yrs::{Doc, Map, ReadTxn as _, StateVector, Transact, Update};
+use yrs::updates::encoder::Encoder as _;
+use yrs::{
+    Doc, ReadTxn as _, Transact,
+    updates::encoder::{Encode, EncoderV1},
+};
 
 // =====================
-// Graph CRDT 封装
+// 共享 Hub
 // =====================
 
-#[derive(Clone)]
-struct GraphCRDT {
-    doc: Arc<Doc>,
-    applying_remote: Arc<AtomicBool>,
+type ClientHub = Arc<Mutex<Vec<(u64, mpsc::UnboundedSender<Vec<u8>>)>>>;
+
+// =====================
+// 判断消息类型
+// =====================
+
+enum MsgKind {
+    /// 需要广播给其他客户端的 Update
+    Update,
+    /// 只需点对点回复的握手/Awareness 消息
+    PointToPoint,
 }
 
-impl GraphCRDT {
-    fn new() -> Self {
-        let doc = Doc::new();
-
-        let graph = doc.get_or_insert_map("graph");
-        let mut txn = doc.transact_mut();
-        let _nodes: MapRef = graph.get_or_init(&mut txn, "nodes");
-        drop(txn);
-
-        Self {
-            doc: Arc::new(doc),
-            applying_remote: Arc::new(AtomicBool::new(false)),
-        }
-    }
-
-    fn add_node(&self, id: u64, x: f64, y: f64) {
-        let graph = self.doc.get_or_insert_map("graph");
-
-        let mut txn = self.doc.transact_mut();
-        let nodes: MapRef = graph.get_or_init(&mut txn, "nodes");
-        let node: MapRef = nodes.get_or_init(&mut txn, id.to_string());
-        node.insert(&mut txn, "x", x);
-        node.insert(&mut txn, "y", y);
-    }
-
-    fn move_node(&self, id: u64, x: f64, y: f64) {
-        let graph = self.doc.get_or_insert_map("graph");
-
-        let mut txn = self.doc.transact_mut();
-        let nodes: MapRef = graph.get_or_init(&mut txn, "nodes");
-
-        if let Some(Out::YMap(node)) = nodes.get(&txn, &id.to_string()) {
-            node.try_update(&mut txn, "x", x);
-            node.try_update(&mut txn, "y", y);
-        }
-    }
-
-    fn apply_update(&self, bytes: &[u8]) {
-        let update = Update::decode_v1(bytes).unwrap();
-        self.applying_remote.store(true, Ordering::SeqCst);
-        let mut txn = self.doc.transact_mut();
-        txn.apply_update(update).unwrap();
-        self.applying_remote.store(false, Ordering::SeqCst);
-    }
-
-    fn encode_update(&self) -> Vec<u8> {
-        let txn = self.doc.transact();
-        txn.encode_state_as_update_v1(&StateVector::default())
-    }
-
-    fn observe<F>(&self, f: F) -> Subscription
-    where
-        F: Fn(Vec<u8>) + Send + Sync + 'static,
-    {
-        let doc = self.doc.clone();
-        let applying_remote = self.applying_remote.clone();
-
-        doc.observe_update_v1(move |_, update| {
-            if applying_remote.load(Ordering::SeqCst) {
-                return;
-            }
-            f(update.update.to_vec());
-        })
-        .unwrap()
-    }
-
-    fn print(&self) {
-        let graph = self.doc.get_or_insert_map("graph");
-        let txn = self.doc.transact();
-
-        let Some(Out::YMap(nodes)) = graph.get(&txn, "nodes") else {
-            return;
-        };
-
-        println!("--- Graph State ---");
-        let mut has_nodes = false;
-        for (k, v) in nodes.iter(&txn) {
-            if let Out::YMap(node) = v {
-                has_nodes = true;
-                let x = node.get(&txn, "x").unwrap();
-                let y = node.get(&txn, "y").unwrap();
-
-                println!("Node {} => x: {}, y: {}", k, x, y);
-            }
-        }
-
-        if !has_nodes {
-            println!("No nodes");
-        }
+fn classify(data: &[u8]) -> MsgKind {
+    use yrs::sync::Message;
+    match Message::decode_v1(data) {
+        Ok(Message::Sync(SyncMessage::Update(_))) => MsgKind::Update,
+        _ => MsgKind::PointToPoint,
     }
 }
 
 // =====================
-// WebSocket Server
+// Server
 // =====================
 
-async fn run_server(tx: broadcast::Sender<Vec<u8>>) {
+pub async fn run_server() {
+    let hub: ClientHub = Arc::new(Mutex::new(Vec::new()));
+    let next_id = Arc::new(AtomicU64::new(1));
+
+    // 服务端持有一个权威 Doc，用于：
+    //   1. 用 DefaultProtocol 处理握手（SyncStep1 → SyncStep2）
+    //   2. 应用所有 Update，保持全量状态
+    //   3. 新客户端连接时推送全量快照
+    let server_doc = Arc::new(Doc::new());
+    let awareness = Arc::new(Awareness::new((*server_doc).clone()));
+
     let listener = TcpListener::bind("127.0.0.1:9001").await.unwrap();
+    println!("[server] listening on 127.0.0.1:9001");
 
-    while let Ok((stream, _)) = listener.accept().await {
-        let tx = tx.clone();
-        let mut rx = tx.subscribe();
+    while let Ok((stream, addr)) = listener.accept().await {
+        let hub = hub.clone();
+        let awareness = awareness.clone();
+        let client_id = next_id.fetch_add(1, Ordering::Relaxed);
 
-        tokio::spawn(async move {
-            let ws = accept_async(stream).await.unwrap();
-            let (mut write, mut read) = ws.split();
+        println!("[server] client {} connected: {}", client_id, addr);
 
-            // 收消息 → 广播
-            let tx_clone = tx.clone();
-            tokio::spawn(async move {
-                while let Some(Ok(msg)) = read.next().await {
-                    if let Message::Binary(data) = msg {
-                        let _ = tx_clone.send(data);
-                    }
-                }
-            });
-
-            // 广播 → 发给客户端
-            while let Ok(msg) = rx.recv().await {
-                let _ = write.send(Message::Binary(msg)).await;
-            }
-        });
+        tokio::spawn(handle_client(stream, client_id, hub, awareness));
     }
 }
 
-// =====================
-// WebSocket Client
-// =====================
-
-async fn run_client(name: &'static str) {
-    // 处理 server 尚未就绪的竞态，避免 spawn 任务里 panic 后静默退出
-    let ws = loop {
-        match connect_async("ws://127.0.0.1:9001").await {
-            Ok((ws, _)) => break ws,
-            Err(err) => {
-                println!("[{}] connect failed: {}. retrying...", name, err);
-                tokio::time::sleep(std::time::Duration::from_millis(300)).await;
-            }
+async fn handle_client(
+    stream: tokio::net::TcpStream,
+    client_id: u64,
+    hub: ClientHub,
+    awareness: Arc<Awareness>,
+) {
+    let ws = match accept_async(stream).await {
+        Ok(ws) => ws,
+        Err(e) => {
+            println!("[server] ws handshake failed for {}: {}", client_id, e);
+            return;
         }
     };
 
-    let (write, mut read) = ws.split();
-
-    let graph = GraphCRDT::new();
-
-    // 在 observe 回调里避免阻塞：只入队，由独立异步任务发送 websocket 消息
+    let (mut write, mut read) = ws.split();
     let (out_tx, mut out_rx) = mpsc::unbounded_channel::<Vec<u8>>();
-    tokio::spawn(async move {
-        let mut write = write;
-        while let Some(update) = out_rx.recv().await {
-            if write.send(Message::Binary(update)).await.is_err() {
+
+    // 注册到 hub
+    hub.lock().unwrap().push((client_id, out_tx.clone()));
+
+    // 新客户端连上来，立刻推送服务端全量状态（SyncStep1 + SyncStep2）
+    // 客户端收到 SyncStep1 后会回一个 SyncStep2 把自己有而服务端没有的部分补上
+    {
+        let txn = awareness.doc().transact();
+        let sv = txn.state_vector();
+
+        // 先发 SyncStep1
+        let step1 = yrs::sync::Message::Sync(SyncMessage::SyncStep1(sv));
+        let mut enc = EncoderV1::new();
+        step1.encode(&mut enc);
+        let _ = out_tx.send(enc.to_vec());
+
+        // 再发 SyncStep2（全量）
+        let update = txn.encode_state_as_update_v1(&yrs::StateVector::default());
+        let step2 = yrs::sync::Message::Sync(SyncMessage::SyncStep2(update));
+        let mut enc = EncoderV1::new();
+        step2.encode(&mut enc);
+        let _ = out_tx.send(enc.to_vec());
+    }
+
+    // 读任务：处理来自该客户端的消息
+    let hub_read = hub.clone();
+    let awareness_read = awareness.clone();
+    let out_tx_read = out_tx.clone();
+
+    let read_task = tokio::spawn(async move {
+        while let Some(result) = read.next().await {
+            let data = match result {
+                Ok(Message::Binary(d)) => d,
+                Ok(Message::Close(_)) | Err(_) => break,
+                _ => continue,
+            };
+
+            let sv_before = awareness_read.doc().transact().state_vector();
+
+            let replies = match DefaultProtocol.handle(&awareness_read, &data) {
+                Ok(r) => r,
+                Err(e) => {
+                    println!("[server] protocol error from {}: {:?}", client_id, e);
+                    continue;
+                }
+            };
+
+            // 点对点回复（SyncStep1 的回复等）
+            for reply in replies {
+                let mut enc = EncoderV1::new();
+                reply.encode(&mut enc);
+                let _ = out_tx_read.send(enc.to_vec());
+            }
+
+            // apply 之后，把新增的内容广播给其他所有客户端
+            // 用 sv_before 来 diff，只广播本次新增的部分
+            let sv_after = awareness_read.doc().transact().state_vector();
+            if sv_after != sv_before {
+                let diff = awareness_read
+                    .doc()
+                    .transact()
+                    .encode_state_as_update_v1(&sv_before);
+
+                let broadcast_msg = yrs::sync::Message::Sync(yrs::sync::SyncMessage::Update(diff));
+                let mut enc = EncoderV1::new();
+                broadcast_msg.encode(&mut enc);
+                let bytes = enc.to_vec();
+
+                let targets: Vec<_> = hub_read
+                    .lock()
+                    .unwrap()
+                    .iter()
+                    .filter(|(id, _)| *id != client_id)
+                    .map(|(_, tx)| tx.clone())
+                    .collect();
+
+                for tx in targets {
+                    let _ = tx.send(bytes.clone());
+                }
+            }
+        }
+
+        println!("[server] client {} disconnected", client_id);
+        hub_read.lock().unwrap().retain(|(id, _)| *id != client_id);
+    });
+
+    // 写任务：把所有出站消息发给该客户端
+    let write_task = tokio::spawn(async move {
+        while let Some(msg) = out_rx.recv().await {
+            if write.send(Message::Binary(msg)).await.is_err() {
                 break;
             }
         }
     });
-    let out_tx_for_observe = out_tx.clone();
-    let _sub = graph.observe(move |update| {
-        let _ = out_tx_for_observe.send(update);
-    });
 
-    // 首次连接主动发一次当前全量状态，避免错过早期增量
-    let init_update = graph.encode_update();
-    let _ = out_tx.send(init_update);
-
-    // 接收远程更新
-    let graph_clone = graph.clone();
-    tokio::spawn(async move {
-        while let Some(Ok(msg)) = read.next().await {
-            if let Message::Binary(data) = msg {
-                graph_clone.apply_update(&data);
-                //println!("[{}] received update", name);
-                //graph_clone.print();
-            }
-        }
-    });
-
-    // 模拟操作：先由 A 创建节点
-    tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-
-    if name == "A" {
-        graph.add_node(1, 0.0, 0.0);
-        println!("[A] add node (0, 0)");
-        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
-        graph.print();
-    }
-
-    // 第 1 轮：B 拖动，观察 A 是否收到
-    tokio::time::sleep(std::time::Duration::from_secs(2)).await;
-
-    if name == "B" {
-        graph.move_node(1, 100.0, 200.0);
-        println!("[B] move node -> (100, 200)");
-        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
-        graph.print();
-    }
-
-    // 第 2 轮：A 再拖动，观察 B 是否收到
-    tokio::time::sleep(std::time::Duration::from_secs(2)).await;
-
-    if name == "A" {
-        println!("[A] print");
-        graph.print();
-        graph.move_node(1, 300.0, 400.0);
-        println!("[A] move node -> (300, 400)");
-        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
-        graph.print();
-    }
-
-    // 第 2 轮：A 再拖动，观察 B 是否收到
-    tokio::time::sleep(std::time::Duration::from_secs(4)).await;
-
-    if name == "B" {
-        println!("[B] print");
-        graph.print();
-    }
-
-    loop {
-        // 显式持有订阅，避免被编译器提前 drop
-        //let _keep_observer_alive = &sub;
-        tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+    // 任意一个任务退出就取消另一个，避免泄漏
+    tokio::select! {
+        _ = read_task => {}
+        _ = write_task => {}
     }
 }
 
@@ -252,17 +191,5 @@ async fn run_client(name: &'static str) {
 
 #[tokio::main]
 async fn main() {
-    let (tx, _) = broadcast::channel(100);
-
-    // 启动服务器
-    tokio::spawn(run_server(tx.clone()));
-    tokio::time::sleep(std::time::Duration::from_millis(300)).await;
-
-    // 启动两个客户端
-    tokio::spawn(run_client("A"));
-    tokio::spawn(run_client("B"));
-
-    loop {
-        tokio::time::sleep(std::time::Duration::from_secs(60)).await;
-    }
+    run_server().await;
 }
