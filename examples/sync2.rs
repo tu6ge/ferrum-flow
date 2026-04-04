@@ -118,8 +118,9 @@ async fn handle_client(
                 let _ = out_tx_read.send(enc.to_vec());
             }
 
-            // 用「相对 sv_before 的增量」决定是否广播。不能只用 state_vector 是否变化：
-            // 纯删除往往不改变各 client 的 clock，但 encode 出的 Update 仍含 delete set，必须转发。
+            // Decide broadcast using the delta relative to `sv_before`; do not rely only on whether the
+            // state vector changed: pure deletes often leave every client's clock unchanged, yet the
+            // encoded Update still carries a delete set and must be forwarded.
             let diff = awareness_read
                 .doc()
                 .transact()
