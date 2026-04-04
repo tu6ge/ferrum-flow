@@ -14,10 +14,15 @@ use crate::{
 
 pub trait Command {
     fn name(&self) -> &'static str;
+
+    /// execute command detail, e.g: move node
     fn execute(&mut self, ctx: &mut CommandContext);
+
+    // undo command , when open sync plugin, this is diabeled.
     fn undo(&mut self, ctx: &mut CommandContext);
 
     /// used by sync plugin
+    /// when open sync plugin, execute method is diasbeld, and using to_ops send graph intent
     fn to_ops(&self, ctx: &mut CommandContext) -> Vec<GraphOp>;
 }
 
