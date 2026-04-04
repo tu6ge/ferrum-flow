@@ -274,7 +274,7 @@ impl SyncPlugin for YrsSyncPlugin {
     }
 
     fn process_intent(&self, intent: GraphOp) {
-        println!("current op: {:?}", intent.clone());
+        // println!("current op: {:?}", intent.clone());
         let mut txn = self.doc.transact_mut_with(Origin::from("local_intent"));
         self.inner_process_intent(&mut txn, intent);
     }
