@@ -201,12 +201,13 @@ impl SyncPlugin for YrsSyncPlugin {
         let change_sender_clone3 = change_sender.clone();
         let change_sender_clone4 = change_sender.clone();
         let change_sender_layout = change_sender.clone();
+        let undo_origin = self.undo_origin.clone();
         let nodes_ref = self.nodes.clone();
         let root_for_layout = self.root.clone();
         let sub = self.nodes.observe_deep(move |txn, event| {
             let source = match txn.origin() {
-                Some(orig) if *orig == "local_intent".into() => ChangeSource::Local,
-                Some(orig) if *orig == "undo_manager".into() => ChangeSource::Undo,
+                Some(orig) if *orig == Origin::from("local_intent") => ChangeSource::Local,
+                Some(orig) if *orig == undo_origin => ChangeSource::Undo,
                 _ => ChangeSource::Remote,
             };
 
@@ -225,6 +226,8 @@ impl SyncPlugin for YrsSyncPlugin {
 
         self._subscription_nodes = Some(sub);
 
+        let undo_origin = self.undo_origin.clone();
+
         // Deep map events can miss nested x/y in some merge paths; update_v1 runs after commit with
         // a consistent read txn — sync layout for all non-local-intent transactions (remote, undo, init).
         let sub = self
@@ -234,7 +237,7 @@ impl SyncPlugin for YrsSyncPlugin {
                     return;
                 }
                 let source = match txn.origin() {
-                    Some(orig) if *orig == "undo_manager".into() => ChangeSource::Undo,
+                    Some(orig) if *orig == undo_origin => ChangeSource::Undo,
                     _ => ChangeSource::Remote,
                 };
                 let kinds = collect_node_layout_changes(txn, &root_for_layout);
@@ -249,10 +252,11 @@ impl SyncPlugin for YrsSyncPlugin {
             .expect("observe_update_v1");
         self._subscription_doc_update = Some(sub);
 
+        let undo_origin = self.undo_origin.clone();
         let sub = self.ports.observe(move |txn, event| {
             let source = match txn.origin() {
-                Some(orig) if *orig == "local_intent".into() => ChangeSource::Local,
-                Some(orig) if *orig == "undo_manager".into() => ChangeSource::Undo,
+                Some(orig) if *orig == Origin::from("local_intent") => ChangeSource::Local,
+                Some(orig) if *orig == undo_origin => ChangeSource::Undo,
                 _ => ChangeSource::Remote,
             };
 
@@ -264,10 +268,12 @@ impl SyncPlugin for YrsSyncPlugin {
         });
         self._subscription_ports = Some(sub);
 
+        let undo_origin = self.undo_origin.clone();
+
         let sub = self.edges.observe(move |txn, event| {
             let source = match txn.origin() {
-                Some(orig) if *orig == "local_intent".into() => ChangeSource::Local,
-                Some(orig) if *orig == "undo_manager".into() => ChangeSource::Undo,
+                Some(orig) if *orig == Origin::from("local_intent") => ChangeSource::Local,
+                Some(orig) if *orig == undo_origin => ChangeSource::Undo,
                 _ => ChangeSource::Remote,
             };
 
@@ -279,10 +285,11 @@ impl SyncPlugin for YrsSyncPlugin {
         });
         self._subscription_edges = Some(sub);
 
+        let undo_origin = self.undo_origin.clone();
         let sub = self.node_order.observe(move |txn, event| {
             let source = match txn.origin() {
-                Some(orig) if *orig == "local_intent".into() => ChangeSource::Local,
-                Some(orig) if *orig == "undo_manager".into() => ChangeSource::Undo,
+                Some(orig) if *orig == Origin::from("local_intent") => ChangeSource::Local,
+                Some(orig) if *orig == undo_origin => ChangeSource::Undo,
                 _ => ChangeSource::Remote,
             };
 
