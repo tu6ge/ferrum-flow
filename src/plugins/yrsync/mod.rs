@@ -155,8 +155,8 @@ impl YrsSyncPlugin {
             }
             GraphOp::AddNode(node) => self.insert_node(txn, &node),
             GraphOp::RemoveNode { id } => self.remove_node(txn, &id),
-            GraphOp::ResizeNode { id, size } => todo!(),
-            GraphOp::UpdateNodeData { id, data } => todo!(),
+            GraphOp::ResizeNode { .. } => todo!(),
+            GraphOp::UpdateNodeData { .. } => todo!(),
             GraphOp::NodeOrderInsert { id } => self.add_node_order(txn, &id),
             GraphOp::NodeOrderRemove { index } => self.remove_noder_order(txn, index),
             GraphOp::AddPort(port) => self.add_port(txn, &port),
