@@ -6,9 +6,10 @@ use tokio::sync::mpsc;
 use tokio_tungstenite::accept_async;
 use tokio_tungstenite::tungstenite::Message;
 use yrs::sync::{Awareness, DefaultProtocol, Protocol, SyncMessage};
+use yrs::updates::decoder::Decode as _;
 use yrs::updates::encoder::Encoder as _;
 use yrs::{
-    Doc, ReadTxn as _, Transact,
+    Doc, ReadTxn as _, Transact, Update,
     updates::encoder::{Encode, EncoderV1},
 };
 
@@ -117,15 +118,18 @@ async fn handle_client(
                 let _ = out_tx_read.send(enc.to_vec());
             }
 
-            // after applying, broadcast the new content to all other clients
-            // use sv_before to diff, only broadcast the parts that were added this time
-            let sv_after = awareness_read.doc().transact().state_vector();
-            if sv_after != sv_before {
-                let diff = awareness_read
-                    .doc()
-                    .transact()
-                    .encode_state_as_update_v1(&sv_before);
+            // 用「相对 sv_before 的增量」决定是否广播。不能只用 state_vector 是否变化：
+            // 纯删除往往不改变各 client 的 clock，但 encode 出的 Update 仍含 delete set，必须转发。
+            let diff = awareness_read
+                .doc()
+                .transact()
+                .encode_state_as_update_v1(&sv_before);
 
+            let should_broadcast = Update::decode_v1(diff.as_slice())
+                .map(|u| !u.is_empty())
+                .unwrap_or(!diff.is_empty());
+
+            if should_broadcast {
                 let broadcast_msg = yrs::sync::Message::Sync(yrs::sync::SyncMessage::Update(diff));
                 let mut enc = EncoderV1::new();
                 broadcast_msg.encode(&mut enc);
