@@ -1,6 +1,5 @@
 mod command;
 mod interaction;
-mod renderer;
 
 pub use command::DragNodesCommand;
 use gpui::{Element, ParentElement, div};

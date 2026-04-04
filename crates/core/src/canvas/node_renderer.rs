@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use crate::node::Node;
 use crate::plugin::RenderContext;
-use crate::{Graph, Port, PortId, PortPosition};
+use crate::{Graph, NodeId, Port, PortId, PortPosition};
 
 pub trait NodeRenderer: Send + Sync {
     /// render node inner UI
@@ -122,7 +122,7 @@ impl NodeRenderer for DefaultNodeRenderer {
             .border_color(rgb(if selected { 0xFF7800 } else { 0x1A192B }))
             .child(
                 div()
-                    .child(format!("Node {}", node_id))
+                    .child(format!("Node {}", short_name(&node_id)))
                     .text_color(rgb(0x1A192B)),
             )
             .into_any()
@@ -166,4 +166,10 @@ pub fn port_screen_position(
     let offset = ctx.port_offset_cached(&node.id, &port_id)?;
 
     Some(ctx.viewport.world_to_screen(node_pos + offset))
+}
+
+fn short_name(node_id: &NodeId) -> String {
+    let str = node_id.as_uuid().to_string();
+
+    str[..6].to_string()
 }
