@@ -19,6 +19,7 @@ tokio-tungstenite = "0.21"
 futures = { workspace = true }
 serde_json = { workspace = true }
 gpui = { workspace = true }
+uuid = { workspace = true }
 
 [dev-dependencies]
 tokio = { version = "1.50.0", features = ["full"] }

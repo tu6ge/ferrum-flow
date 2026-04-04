@@ -1,8 +1,9 @@
-use std::{collections::HashMap, fmt::Display};
+use std::{collections::HashMap, fmt::Display, str::FromStr};
 
 use gpui::{Bounds, Pixels, Point, Size, px};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use uuid::Uuid;
 
 use crate::Graph;
 
@@ -10,11 +11,28 @@ pub const DEFAULT_NODE_WIDTH: Pixels = px(120.0);
 pub const DEFAULT_NODE_HEIGHT: Pixels = px(60.0);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct NodeId(pub u64);
+pub struct NodeId(Uuid);
 
 impl Display for NodeId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
+    }
+}
+
+impl NodeId {
+    pub fn new() -> Self {
+        Self(Uuid::new_v4())
+    }
+    pub fn from_string(s: impl Into<String>) -> Option<Self> {
+        let string = s.into();
+        Uuid::from_str(&string).ok().map(Self)
+    }
+    pub fn from_uuid(uuid: Uuid) -> Self {
+        Self(uuid)
+    }
+
+    pub fn as_uuid(&self) -> &Uuid {
+        &self.0
     }
 }
 
@@ -32,9 +50,9 @@ pub struct Node {
 }
 
 impl Node {
-    pub fn new(id: u64, x: f32, y: f32) -> Self {
+    pub fn new(x: f32, y: f32) -> Self {
         Self {
-            id: NodeId(id),
+            id: NodeId::new(),
             node_type: String::new(),
             x: x.into(),
             y: y.into(),

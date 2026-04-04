@@ -2,6 +2,7 @@ use std::{sync::Arc, vec};
 
 use futures::channel::mpsc::UnboundedSender;
 use gpui::{Size, px};
+use uuid::Uuid;
 use yrs::{
     Any, Array as _, ArrayRef, DeepObservable, Doc, Map, MapPrelim, MapRef, Observable as _,
     Origin, Out, ReadTxn, Transact, TransactionMut,
@@ -85,7 +86,7 @@ impl YrsSyncPlugin {
 
     fn insert_node(&self, txn: &mut TransactionMut, node: &Node) {
         let node_map = MapPrelim::default();
-        let node_ref = self.nodes.insert(txn, node.id.0.to_string(), node_map);
+        let node_ref = self.nodes.insert(txn, node.id.to_string(), node_map);
 
         node_ref.insert(txn, "type", node.node_type.clone());
         node_ref.insert(txn, "x", Into::<f32>::into(node.x));
@@ -107,14 +108,14 @@ impl YrsSyncPlugin {
     }
 
     fn update_node_position(&self, txn: &mut TransactionMut, id: &NodeId, x: f32, y: f32) {
-        if let Some(yrs::Out::YMap(node_ref)) = self.nodes.get(txn, &id.0.to_string()) {
+        if let Some(yrs::Out::YMap(node_ref)) = self.nodes.get(txn, &id.to_string()) {
             node_ref.insert(txn, "x", x);
             node_ref.insert(txn, "y", y);
         }
     }
 
     fn add_node_order(&self, txn: &mut TransactionMut, id: &NodeId) {
-        self.node_order.push_back(txn, id.0.to_string());
+        self.node_order.push_back(txn, id.to_string());
     }
 
     fn remove_noder_order(&self, txn: &mut TransactionMut, index: usize) {
@@ -122,7 +123,7 @@ impl YrsSyncPlugin {
     }
 
     fn remove_node(&self, txn: &mut TransactionMut, id: &NodeId) {
-        self.nodes.remove(txn, &id.0.to_string());
+        self.nodes.remove(txn, &id.to_string());
     }
 
     fn add_port(&self, txn: &mut TransactionMut, port: &Port) {
@@ -252,7 +253,9 @@ impl SyncPlugin for YrsSyncPlugin {
             let mut list = vec![];
             for item in array.iter(txn) {
                 if let Out::Any(Any::String(str)) = item {
-                    list.push(NodeId(str.parse().unwrap_or_default()));
+                    if let Ok(uuid) = str.to_string().parse() {
+                        list.push(NodeId::from_uuid(uuid));
+                    }
                 }
             }
 
@@ -263,7 +266,10 @@ impl SyncPlugin for YrsSyncPlugin {
         });
         self._subscription_order = Some(sub);
 
-        self.from_graph();
+        if std::env::var("IS_INIT").unwrap_or_default() == "1" {
+            self.from_graph();
+        }
+
         start_sync_thread(self.doc.clone(), self.undo_origin.clone());
     }
 
@@ -288,7 +294,7 @@ impl SyncPlugin for YrsSyncPlugin {
 
 fn write_port_to_map(txn: &mut TransactionMut, port_map: &MapRef, port: &Port) {
     port_map.insert(txn, "kind", port.kind.to_string());
-    port_map.insert(txn, "node_id", port.node_id.0.to_string());
+    port_map.insert(txn, "node_id", port.node_id.to_string());
     port_map.insert(txn, "index", port.index as u32);
     port_map.insert(txn, "position", port.position.to_string());
     port_map.insert(txn, "width", Into::<f32>::into(port.size.width));
@@ -305,8 +311,8 @@ fn node_id_for_map_event(
 ) -> Option<NodeId> {
     for segment in ev.path().iter().rev() {
         if let PathSegment::Key(key) = segment {
-            if let Ok(id) = key.to_string().parse::<u64>() {
-                return Some(NodeId(id));
+            if let Ok(id) = key.to_string().parse::<Uuid>() {
+                return Some(NodeId::from_uuid(id));
             }
         }
     }
@@ -315,7 +321,7 @@ fn node_id_for_map_event(
     for (key, out) in nodes.iter(txn) {
         if let Out::YMap(m) = out {
             if m == *target {
-                return key.to_string().parse::<u64>().ok().map(NodeId);
+                return key.to_string().parse::<Uuid>().ok().map(NodeId::from_uuid);
             }
         }
     }
@@ -331,7 +337,7 @@ fn handler_node_change(
     let node_id = node_id_for_map_event(txn, nodes, ev);
 
     let changed_keys: Vec<&str> = ev.keys(txn).keys().map(|k| k.as_ref()).collect();
-    let is_nodes_map_child_change = changed_keys.iter().any(|k| k.parse::<u64>().is_ok());
+    let is_nodes_map_child_change = changed_keys.iter().any(|k| k.parse::<Uuid>().is_ok());
 
     let mut kind: Vec<GraphChangeKind> = vec![];
 
@@ -386,7 +392,7 @@ fn parse_node_change(
     key: &Arc<str>,
     change: &EntryChange,
 ) -> Option<GraphChangeKind> {
-    let id = NodeId(key.to_string().parse().ok()?);
+    let id = NodeId::from_uuid(key.to_string().parse().ok()?);
 
     match change {
         EntryChange::Inserted(value) => {
@@ -483,7 +489,7 @@ fn read_port_from_map(txn: &yrs::TransactionMut, node_map: &MapRef, id: PortId) 
             PortKind::Output
         },
         index: index as usize,
-        node_id: NodeId(node_id.parse().unwrap_or_default()),
+        node_id: NodeId::from_uuid(node_id.parse().unwrap_or_default()),
         position: PortPosition::from_str(&position).unwrap_or(PortPosition::Left),
         size: Size::new(px(width), px(height)),
     }
