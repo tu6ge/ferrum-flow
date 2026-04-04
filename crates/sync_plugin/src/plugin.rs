@@ -286,10 +286,6 @@ impl SyncPlugin for YrsSyncPlugin {
     fn redo(&mut self) {
         self.undo_manager.redo_blocking();
     }
-
-    fn get_full_snapshot(&self) -> Vec<GraphChange> {
-        vec![]
-    }
 }
 
 fn write_port_to_map(txn: &mut TransactionMut, port_map: &MapRef, port: &Port) {

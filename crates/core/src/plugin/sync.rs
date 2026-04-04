@@ -13,8 +13,6 @@ pub trait SyncPlugin {
     fn undo(&mut self);
     fn redo(&mut self);
 
-    fn get_full_snapshot(&self) -> Vec<GraphChange>;
-
     fn render(&mut self, _ctx: &mut RenderContext) -> Vec<AnyElement> {
         vec![]
     }
