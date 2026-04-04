@@ -38,17 +38,17 @@ impl YrsSyncPlugin {
         let doc = Doc::new();
         let root = doc.get_or_insert_map("graph");
         let nodes = doc.get_or_insert_map("nodes");
-        let mut txn = doc.transact_mut();
-        let ports = root.get_or_init(&mut txn, "ports");
-        let edges = root.get_or_init(&mut txn, "edges");
-        let node_order = root.get_or_init(&mut txn, "node_order");
-
-        drop(txn);
+        let ports = doc.get_or_insert_map("ports");
+        let edges = doc.get_or_insert_map("edges");
+        let node_order = doc.get_or_insert_array("node_order");
 
         let mut option = Options::default();
         option.tracked_origins.insert("local_intent".into());
         let mut undo_manager = yrs::UndoManager::with_scope_and_options(&doc, &root, option);
         undo_manager.expand_scope(&nodes);
+        undo_manager.expand_scope(&ports);
+        undo_manager.expand_scope(&edges);
+        undo_manager.expand_scope(&node_order);
         let undo_origin = undo_manager.as_origin();
 
         Self {
@@ -184,26 +184,17 @@ impl SyncPlugin for YrsSyncPlugin {
     }
 
     fn setup(&mut self, change_sender: UnboundedSender<GraphChange>) {
-        {
-            // Rebind refs from current root before subscribing.
-            let root = self.doc.get_or_insert_map("graph");
-
-            self.root = root.clone();
-            self.nodes = self.doc.get_or_insert_map("nodes");
-            let mut txn = self.doc.transact_mut();
-            self.ports = root.get_or_init(&mut txn, "ports");
-            self.edges = root.get_or_init(&mut txn, "edges");
-            self.node_order = root.get_or_init(&mut txn, "node_order");
-        }
+        // self.nodes = self.doc.get_or_insert_map("nodes");
+        // self.ports = self.doc.get_or_insert_map("ports");
+        // self.edges = self.doc.get_or_insert_map("edges");
+        // self.node_order = self.doc.get_or_insert_array("node_order");
 
         let change_sender_clone = change_sender.clone();
         let change_sender_clone2 = change_sender.clone();
         let change_sender_clone3 = change_sender.clone();
         let change_sender_clone4 = change_sender.clone();
-        let change_sender_layout = change_sender.clone();
         let undo_origin = self.undo_origin.clone();
         let nodes_ref = self.nodes.clone();
-        let root_for_layout = self.root.clone();
         let sub = self.nodes.observe_deep(move |txn, event| {
             let source = match txn.origin() {
                 Some(orig) if *orig == Origin::from("local_intent") => ChangeSource::Local,
@@ -225,32 +216,6 @@ impl SyncPlugin for YrsSyncPlugin {
         });
 
         self._subscription_nodes = Some(sub);
-
-        let undo_origin = self.undo_origin.clone();
-
-        // Deep map events can miss nested x/y in some merge paths; update_v1 runs after commit with
-        // a consistent read txn — sync layout for all non-local-intent transactions (remote, undo, init).
-        let sub = self
-            .doc
-            .observe_update_v1(move |txn, _| {
-                if matches!(txn.origin(), Some(o) if *o == Origin::from("local_intent")) {
-                    return;
-                }
-                let source = match txn.origin() {
-                    Some(orig) if *orig == undo_origin => ChangeSource::Undo,
-                    _ => ChangeSource::Remote,
-                };
-                let kinds = collect_node_layout_changes(txn, &root_for_layout);
-                if kinds.is_empty() {
-                    return;
-                }
-                let _ = change_sender_layout.unbounded_send(GraphChange {
-                    kind: GraphChangeKind::Batch(kinds),
-                    source,
-                });
-            })
-            .expect("observe_update_v1");
-        self._subscription_doc_update = Some(sub);
 
         let undo_origin = self.undo_origin.clone();
         let sub = self.ports.observe(move |txn, event| {
@@ -570,53 +535,6 @@ fn read_edge_from_map(txn: &yrs::TransactionMut, node_map: &MapRef, id: EdgeId) 
     }
 }
 
-fn collect_node_layout_changes(txn: &TransactionMut, root: &MapRef) -> Vec<GraphChangeKind> {
-    let nodes = match root.get(txn, "nodes") {
-        Some(Out::YMap(m)) => m,
-        _ => return vec![],
-    };
-
-    let mut kinds = Vec::new();
-    for (key, out) in nodes.iter(txn) {
-        let id = match key.parse::<u64>() {
-            Ok(n) => NodeId(n),
-            Err(_) => continue,
-        };
-        let Out::YMap(node_map) = out else {
-            continue;
-        };
-        if let (Some(x), Some(y)) = (
-            read_map_f32(txn, &node_map, "x"),
-            read_map_f32(txn, &node_map, "y"),
-        ) {
-            kinds.push(GraphChangeKind::NodeMoved { id, x, y });
-        }
-        if let Some(width) = read_map_f32(txn, &node_map, "width") {
-            kinds.push(GraphChangeKind::NodeSetWidthed { id, width });
-        }
-        if let Some(height) = read_map_f32(txn, &node_map, "height") {
-            kinds.push(GraphChangeKind::NodeSetHeighted { id, height });
-        }
-    }
-    kinds
-}
-
 fn read_map_f32<T: ReadTxn>(txn: &T, map: &MapRef, key: &str) -> Option<f32> {
-    if let Some(out) = map.get(txn, key) {
-        if let Some(f) = out_as_f32(txn, out) {
-            return Some(f);
-        }
-    }
     map.get_as::<_, f64>(txn, key).ok().map(|v| v as f32)
-}
-
-fn out_as_f32<T: ReadTxn>(txn: &T, out: Out) -> Option<f32> {
-    match out {
-        Out::Any(Any::Number(n)) => Some(n as f32),
-        Out::Any(Any::BigInt(n)) => Some(n as f32),
-        Out::Any(Any::String(s)) => s.parse().ok(),
-        Out::Any(Any::Null | Any::Undefined) => None,
-        Out::Any(a) => a.to_string().parse().ok(),
-        other => other.to_string(txn).parse().ok(),
-    }
 }
