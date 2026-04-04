@@ -12,4 +12,4 @@ anyhow = "1.0.102"
 gpui = { workspace = true }
 serde = { version = "1", features = ["derive"] }
 serde_json = { workspace = true }
-futures = { workspace = true }
+futures = { workspace = true, features = ["std"] }

@@ -345,8 +345,6 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
         //     self.ctx.notify();
         // };
 
-        let (change_sender, mut change_receiver) = mpsc::unbounded::<GraphChange>();
-
         let mut canvas = FlowCanvas {
             graph: self.graph,
             viewport: Viewport::new(),
@@ -360,18 +358,19 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
             port_offset_cache: PortLayoutCache::new(),
         };
 
-        self.ctx
-            .spawn(async move |this, ctx| {
-                while let Some(change) = change_receiver.next().await {
-                    let _ = this.update(ctx, |this, cx| {
-                        this.graph.apply(change.kind);
-                        cx.notify();
-                    });
-                }
-            })
-            .detach();
-
         if let Some(sync_plugin) = &mut canvas.sync_plugin {
+            let (change_sender, mut change_receiver) = mpsc::unbounded::<GraphChange>();
+
+            self.ctx
+                .spawn(async move |this, ctx| {
+                    while let Some(change) = change_receiver.next().await {
+                        let _ = this.update(ctx, |this, cx| {
+                            this.graph.apply(change.kind);
+                            cx.notify();
+                        });
+                    }
+                })
+                .detach();
             sync_plugin.setup(change_sender);
         }
 
