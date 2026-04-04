@@ -1,9 +1,9 @@
 use ferrum_flow::*;
-use ferrum_flow_sync_plugin::YrsSyncPlugin;
+use ferrum_flow_sync_plugin::{Assets, YrsSyncPlugin};
 use gpui::{AppContext as _, Application, Size, WindowOptions, px};
 
 fn main() {
-    Application::new().run(|cx| {
+    Application::new().with_assets(Assets).run(|cx| {
         let mut graph = Graph::new();
 
         graph

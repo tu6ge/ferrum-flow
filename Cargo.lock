@@ -1625,9 +1625,11 @@ dependencies = [
 name = "ferrum-flow-sync-plugin"
 version = "0.0.1"
 dependencies = [
+ "anyhow",
  "ferrum-flow",
  "futures",
  "gpui",
+ "rust-embed",
  "serde_json",
  "tokio",
  "tokio-tungstenite",
