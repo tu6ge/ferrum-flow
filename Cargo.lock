@@ -83,9 +83,9 @@ checksum = "c3d036a3c4ab069c7b410a2ce876bd74808d2d0888a82667669f8e783a898bf1"
 
 [[package]]
 name = "arc-swap"
-version = "1.9.0"
+version = "1.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a07d1f37ff60921c83bdfc7407723bdefe89b44b98a9b772f225c8f9d67141a6"
+checksum = "6a3a1fd6f75306b68087b831f025c712524bcb19aad54e557b1129cfa0a2b207"
 dependencies = [
  "rustversion",
 ]
@@ -1617,6 +1617,16 @@ dependencies = [
  "futures",
  "gpui",
  "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "ferrum-flow-sync-plugin"
+version = "0.0.1"
+dependencies = [
+ "ferrum-flow",
+ "futures",
+ "gpui",
  "serde_json",
  "tokio",
  "tokio-tungstenite",

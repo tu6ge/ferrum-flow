@@ -1,0 +1,18 @@
+[package]
+name = "ferrum-flow-sync-plugin"
+version = "0.0.1"
+edition = "2024"
+license = "Apache-2.0"
+authors = ["tu6ge"]
+repository = "https://github.com/tu6ge/ferrum-flow"
+description = "A high-performance node-based editor framework built with Rust and GPUI."
+
+[dependencies]
+ferrum-flow = { workspace = true }
+tokio = { version = "1.50.0", features = ["full", "rt-multi-thread"] }
+yrs = { version = "0.25.0", features = ["sync"] }
+
+tokio-tungstenite = "0.21"
+futures = { workspace = true }
+serde_json = { workspace = true }
+gpui = { workspace = true }

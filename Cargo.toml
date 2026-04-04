@@ -1,5 +1,12 @@
 
-
 [workspace]
-members = ["crates/core"]
+members = ["crates/core", "crates/sync_plugin"]
 resolver = "2"
+
+[workspace.dependencies]
+
+ferrum-flow = { path = "crates/core" }
+
+gpui = "0.2.2"
+serde_json = "1"
+futures = "0.3"
