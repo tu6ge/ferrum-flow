@@ -11,6 +11,7 @@ description = "A high-performance node-based editor framework built with Rust an
 ferrum-flow = { workspace = true }
 tokio = { version = "1.50.0", features = [
   "rt-multi-thread",
+  "macros",
 ], default-features = false }
 yrs = { version = "0.25.0", features = ["sync"] }
 
