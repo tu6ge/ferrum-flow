@@ -1,9 +1,35 @@
+use std::{fmt::Display, str::FromStr as _};
+
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 use crate::{Graph, PortId};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct EdgeId(pub u64);
+pub struct EdgeId(Uuid);
+
+impl Display for EdgeId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl EdgeId {
+    pub fn new() -> Self {
+        Self(Uuid::new_v4())
+    }
+    pub fn from_string(s: impl Into<String>) -> Option<Self> {
+        let string = s.into();
+        Uuid::from_str(&string).ok().map(Self)
+    }
+    pub fn from_uuid(uuid: Uuid) -> Self {
+        Self(uuid)
+    }
+
+    pub fn as_uuid(&self) -> &Uuid {
+        &self.0
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Edge {
@@ -14,9 +40,9 @@ pub struct Edge {
 }
 
 impl Edge {
-    pub fn new(id: EdgeId) -> Self {
+    pub fn new() -> Self {
         Self {
-            id,
+            id: EdgeId::new(),
             source_port: PortId::new(),
             target_port: PortId::new(),
         }
