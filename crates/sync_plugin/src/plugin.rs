@@ -139,14 +139,14 @@ impl YrsSyncPlugin {
 
     fn insert_edge(&self, txn: &mut TransactionMut, edge: &Edge) {
         let edge_map = MapPrelim::default();
-        let edge_ref = self.edges.insert(txn, edge.id.0.to_string(), edge_map);
+        let edge_ref = self.edges.insert(txn, edge.id.to_string(), edge_map);
 
         edge_ref.insert(txn, "source_port", edge.source_port.to_string());
         edge_ref.insert(txn, "target_port", edge.target_port.to_string());
     }
 
     fn remove_edge(&self, txn: &mut TransactionMut, id: &EdgeId) {
-        self.edges.remove(txn, &id.0.to_string());
+        self.edges.remove(txn, &id.to_string());
     }
 
     fn inner_process_intent(&self, txn: &mut TransactionMut, intent: GraphOp) {
@@ -504,7 +504,7 @@ fn parse_edge_change(
     key: &Arc<str>,
     change: &EntryChange,
 ) -> Option<GraphChangeKind> {
-    let id = EdgeId(key.to_string().parse().unwrap_or_default());
+    let id = EdgeId::from_uuid(key.to_string().parse().ok()?);
 
     match change {
         EntryChange::Inserted(value) => {

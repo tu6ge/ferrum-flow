@@ -101,8 +101,7 @@ impl Graph {
     }
 
     pub fn next_edge_id(&self) -> EdgeId {
-        let id = self.edges.len() as u64 + 1;
-        EdgeId(id)
+        EdgeId::new()
     }
 
     pub fn add_node(&mut self, node: Node) {
@@ -128,9 +127,7 @@ impl Graph {
     }
 
     pub fn new_edge(&self) -> Edge {
-        let id = self.edges.len() + 1;
-
-        Edge::new(EdgeId(id as u64))
+        Edge::new()
     }
 
     pub fn add_edge(&mut self, edge: Edge) {
