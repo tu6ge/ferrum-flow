@@ -6,7 +6,6 @@ mod node;
 mod port;
 mod selection;
 mod viewport;
-mod yrsync;
 
 pub use background::BackgroundPlugin;
 pub use delete::DeletePlugin;
@@ -16,4 +15,3 @@ pub use node::{NodeInteractionPlugin, NodePlugin};
 pub use port::PortInteractionPlugin;
 pub use selection::SelectionPlugin;
 pub use viewport::ViewportPlugin;
-pub use yrsync::YrsSyncPlugin;

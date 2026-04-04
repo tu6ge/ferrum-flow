@@ -124,7 +124,7 @@ impl ToString for PortPosition {
 }
 
 impl PortPosition {
-    pub(crate) fn from_str(str: &str) -> Option<Self> {
+    pub fn from_str(str: &str) -> Option<Self> {
         match str {
             "right" => Some(Self::Right),
             "top" => Some(Self::Top),
