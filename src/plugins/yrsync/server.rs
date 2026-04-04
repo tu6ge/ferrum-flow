@@ -3,22 +3,22 @@ use std::{sync::Arc, thread};
 use tokio::runtime::Runtime;
 use tokio_tungstenite::{connect_async, tungstenite::Message};
 use yrs::{
-    Doc, ReadTxn as _, Transact,
+    Doc, Origin, ReadTxn as _, Transact,
     sync::{Awareness, DefaultProtocol, Protocol},
     updates::encoder::{Encode, Encoder, EncoderV1},
 };
 
-pub(super) fn start_sync_thread(doc: yrs::Doc) {
+pub(super) fn start_sync_thread(doc: Doc, undo_origin: Origin) {
     thread::spawn(move || {
         let rt = Runtime::new().unwrap();
 
         rt.block_on(async move {
-            run_ws(doc).await;
+            run_ws(doc, undo_origin).await;
         });
     });
 }
 
-async fn run_ws(doc: Doc) {
+async fn run_ws(doc: Doc, undo_origin: Origin) {
     let awareness = Arc::new(Awareness::new(doc));
 
     let _ = awareness.set_local_state(r#"{"name":"Alice2"}"#);
@@ -69,8 +69,13 @@ async fn run_ws(doc: Doc) {
         match awareness.doc().observe_update_v1(move |txn, update| {
             use yrs::sync::{Message, SyncMessage};
 
-            // 非 local_intent 来源的 update 不转发（远端同步进来的）
-            if !matches!(txn.origin(), Some(o) if *o == yrs::Origin::from("local_intent")) {
+            let should_send = matches!(
+                txn.origin(),
+                Some(o) if *o == yrs::Origin::from("local_intent")
+                        || *o == undo_origin
+            );
+
+            if !should_send {
                 return;
             }
 
