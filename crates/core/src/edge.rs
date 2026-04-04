@@ -17,8 +17,8 @@ impl Edge {
     pub fn new(id: EdgeId) -> Self {
         Self {
             id,
-            source_port: PortId(0),
-            target_port: PortId(0),
+            source_port: PortId::new(),
+            target_port: PortId::new(),
         }
     }
     pub fn source(mut self, port: PortId) -> Self {
