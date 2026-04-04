@@ -33,6 +33,7 @@ pub struct CommandContext<'a> {
     pub port_offset_cache: &'a mut PortLayoutCache,
     pub viewport: &'a mut Viewport,
     pub renderers: &'a mut RendererRegistry,
+    pub(crate) notify: &'a mut dyn FnMut(),
 }
 const MAX_HISTORY: usize = 100;
 pub struct LocalHistory {
@@ -241,5 +242,9 @@ impl<'a> CommandContext<'a> {
 
     pub fn cache_node_port_offset(&mut self, node_id: &NodeId) {
         cache_node_port_offset(self.graph, self.renderers, self.port_offset_cache, node_id);
+    }
+
+    pub fn notify(&mut self) {
+        (self.notify)();
     }
 }
