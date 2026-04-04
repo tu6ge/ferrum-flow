@@ -25,6 +25,7 @@ pub struct YrsSyncPlugin {
     pub edges: MapRef,        // ref HashMap<EdgeId, Edge>
     pub node_order: ArrayRef, // ref Vec<NodeId>
     undo_manager: yrs::UndoManager,
+    undo_origin: Origin,
     _subscription_nodes: Option<yrs::Subscription>,
     _subscription_ports: Option<yrs::Subscription>,
     _subscription_edges: Option<yrs::Subscription>,
@@ -47,12 +48,14 @@ impl YrsSyncPlugin {
         let mut option = Options::default();
         option.tracked_origins.insert("local_intent".into());
         let mut undo_manager = yrs::UndoManager::with_scope_and_options(&doc, &root, option);
-        undo_manager.include_origin(doc.client_id());
+        undo_manager.expand_scope(&nodes);
+        let undo_origin = undo_manager.as_origin();
 
         Self {
             root,
             init_graph: graph,
             undo_manager,
+            undo_origin,
             doc,
             nodes,
             ports,
@@ -300,7 +303,7 @@ impl SyncPlugin for YrsSyncPlugin {
         self._subscription_order = Some(sub);
 
         self.from_graph();
-        server::start_sync_thread(self.doc.clone());
+        server::start_sync_thread(self.doc.clone(), self.undo_origin.clone());
     }
 
     fn process_intent(&self, intent: GraphOp) {
