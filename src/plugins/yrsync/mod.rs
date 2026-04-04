@@ -107,14 +107,10 @@ impl YrsSyncPlugin {
     }
 
     fn update_node_position(&self, txn: &mut TransactionMut, id: &NodeId, x: f32, y: f32) {
-        let key = id.0.to_string();
-        if let Some(yrs::Out::YMap(node_ref)) = self.nodes.get(txn, &key) {
+        if let Some(yrs::Out::YMap(node_ref)) = self.nodes.get(txn, &id.0.to_string()) {
             node_ref.insert(txn, "x", x);
             node_ref.insert(txn, "y", y);
-            return;
         }
-
-        println!("update_node_position: node {} not found in yrs map", id.0);
     }
 
     fn add_node_order(&self, txn: &mut TransactionMut, id: &NodeId) {
@@ -182,11 +178,6 @@ impl SyncPlugin for YrsSyncPlugin {
     }
 
     fn setup(&mut self, change_sender: UnboundedSender<GraphChange>) {
-        // self.nodes = self.doc.get_or_insert_map("nodes");
-        // self.ports = self.doc.get_or_insert_map("ports");
-        // self.edges = self.doc.get_or_insert_map("edges");
-        // self.node_order = self.doc.get_or_insert_array("node_order");
-
         let change_sender_clone = change_sender.clone();
         let change_sender_clone2 = change_sender.clone();
         let change_sender_clone3 = change_sender.clone();
