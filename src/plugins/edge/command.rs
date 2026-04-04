@@ -1,6 +1,6 @@
 use std::{collections::HashSet, vec};
 
-use crate::{EdgeId, GraphOp, NodeId, canvas::Command, plugin::PluginContext};
+use crate::{EdgeId, NodeId, canvas::Command, plugin::PluginContext};
 
 pub(super) struct SelectEdgeCommand {
     edge_id: EdgeId,
@@ -34,7 +34,11 @@ impl Command for SelectEdgeCommand {
         ctx.graph.selected_node = self.old_selected_node.clone();
         ctx.graph.selected_edge = self.old_selected_edge.clone();
     }
-    fn to_ops(&self, _ctx: &mut crate::CommandContext) -> Vec<crate::GraphOp> {
+    fn to_ops(&self, ctx: &mut crate::CommandContext) -> Vec<crate::GraphOp> {
+        if !self.shift {
+            ctx.clear_selected_node();
+        }
+        ctx.add_selected_edge(self.edge_id, self.shift);
         vec![]
     }
 }
@@ -62,12 +66,8 @@ impl Command for ClearEdgeCommand {
         ctx.graph.selected_edge = self.old_selected_edge.clone();
     }
 
-    fn to_ops(&self, _ctx: &mut crate::CommandContext) -> Vec<crate::GraphOp> {
-        let mut list = vec![];
-        for id in &self.old_selected_edge {
-            list.push(GraphOp::RemoveEdge(*id));
-        }
-
-        list
+    fn to_ops(&self, ctx: &mut crate::CommandContext) -> Vec<crate::GraphOp> {
+        ctx.clear_selected_edge();
+        vec![]
     }
 }
