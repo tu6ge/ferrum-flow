@@ -1,7 +1,7 @@
 use std::{sync::Arc, vec};
 
 use futures::channel::mpsc::UnboundedSender;
-use gpui::{Size, px};
+use gpui::{Element as _, ParentElement, Size, Styled as _, div, px};
 use uuid::Uuid;
 use yrs::{
     Any, Array as _, ArrayRef, DeepObservable, Doc, Map, MapPrelim, MapRef, Observable as _,
@@ -285,6 +285,17 @@ impl SyncPlugin for YrsSyncPlugin {
 
     fn redo(&mut self) {
         self.undo_manager.redo_blocking();
+    }
+
+    fn render(&mut self, _ctx: &mut ferrum_flow::RenderContext) -> Vec<gpui::AnyElement> {
+        vec![
+            div()
+                .absolute()
+                .left(px(50.0))
+                .top(px(100.0))
+                .child(gpui::img("./cursor.png").w(px(16.0)).h(px(16.0)))
+                .into_any(),
+        ]
     }
 }
 

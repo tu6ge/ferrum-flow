@@ -8,7 +8,7 @@ repository = "https://github.com/tu6ge/ferrum-flow"
 description = "A high-performance node-based editor framework built with Rust and GPUI."
 
 [dependencies]
-anyhow = "1.0.102"
+anyhow = { workspace = true }
 gpui = { workspace = true }
 serde = { version = "1", features = ["derive"] }
 serde_json = { workspace = true }

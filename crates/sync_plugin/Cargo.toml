@@ -20,6 +20,8 @@ futures = { workspace = true }
 serde_json = { workspace = true }
 gpui = { workspace = true }
 uuid = { workspace = true }
+rust-embed = { workspace = true }
+anyhow = { workspace = true }
 
 [dev-dependencies]
 tokio = { version = "1.50.0", features = ["full"] }
