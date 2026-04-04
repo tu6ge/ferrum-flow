@@ -18,7 +18,6 @@ mod server;
 
 pub struct YrsSyncPlugin {
     doc: yrs::Doc,
-    root: MapRef, // ref root "graph"
     init_graph: Graph,
     pub nodes: MapRef,        // ref HashMap<NodeId, Node>
     pub ports: MapRef,        // ref HashMap<PortId, Port>
@@ -52,7 +51,6 @@ impl YrsSyncPlugin {
         let undo_origin = undo_manager.as_origin();
 
         Self {
-            root,
             init_graph: graph,
             undo_manager,
             undo_origin,
