@@ -96,11 +96,11 @@ impl YrsSyncPlugin {
 
         let inputs = node_ref.insert(txn, "inputs", ArrayRef::default_prelim());
         for port_id in &node.inputs {
-            inputs.push_front(txn, port_id.0.to_string());
+            inputs.push_front(txn, port_id.to_string());
         }
         let outputs = node_ref.insert(txn, "outputs", ArrayRef::default_prelim());
         for port_id in &node.outputs {
-            outputs.push_front(txn, port_id.0.to_string());
+            outputs.push_front(txn, port_id.to_string());
         }
 
         let data_json = serde_json::to_string(&node.data).unwrap_or_default();
@@ -129,20 +129,20 @@ impl YrsSyncPlugin {
     fn add_port(&self, txn: &mut TransactionMut, port: &Port) {
         let port_map = self
             .ports
-            .insert(txn, port.id.0.to_string(), MapPrelim::default());
+            .insert(txn, port.id.to_string(), MapPrelim::default());
         write_port_to_map(txn, &port_map, port);
     }
 
     fn remove_port(&self, txn: &mut TransactionMut, id: &PortId) {
-        self.ports.remove(txn, &id.0.to_string());
+        self.ports.remove(txn, &id.to_string());
     }
 
     fn insert_edge(&self, txn: &mut TransactionMut, edge: &Edge) {
         let edge_map = MapPrelim::default();
         let edge_ref = self.edges.insert(txn, edge.id.0.to_string(), edge_map);
 
-        edge_ref.insert(txn, "source_port", edge.source_port.0.to_string());
-        edge_ref.insert(txn, "target_port", edge.target_port.0.to_string());
+        edge_ref.insert(txn, "source_port", edge.source_port.to_string());
+        edge_ref.insert(txn, "target_port", edge.target_port.to_string());
     }
 
     fn remove_edge(&self, txn: &mut TransactionMut, id: &EdgeId) {
@@ -423,7 +423,9 @@ fn read_node_from_map(txn: &yrs::TransactionMut, node_map: &MapRef, id: NodeId) 
     if let Some(Out::YArray(arr)) = out_inputs {
         for item in arr.iter(txn) {
             if let Out::Any(Any::String(str)) = item {
-                inputs.push(PortId(str.to_string().parse().unwrap_or_default()));
+                if let Ok(uuid) = str.to_string().parse() {
+                    inputs.push(PortId::from_uuid(uuid));
+                }
             }
         }
     }
@@ -433,7 +435,9 @@ fn read_node_from_map(txn: &yrs::TransactionMut, node_map: &MapRef, id: NodeId) 
     if let Some(Out::YArray(arr)) = out_outputs {
         for item in arr.iter(txn) {
             if let Out::Any(Any::String(str)) = item {
-                outputs.push(PortId(str.to_string().parse().unwrap_or_default()));
+                if let Ok(uuid) = str.to_string().parse() {
+                    outputs.push(PortId::from_uuid(uuid));
+                }
             }
         }
     }
@@ -454,7 +458,7 @@ fn parse_port_change(
     key: &Arc<str>,
     change: &EntryChange,
 ) -> Option<GraphChangeKind> {
-    let id = PortId(key.to_string().parse().unwrap_or_default());
+    let id = PortId::from_uuid(key.to_string().parse().ok()?);
 
     match change {
         EntryChange::Inserted(value) => {
@@ -507,7 +511,7 @@ fn parse_edge_change(
             if let yrs::Out::YMap(edge_map) = value {
                 Some(GraphChangeKind::EdgeAdded(read_edge_from_map(
                     txn, edge_map, id,
-                )))
+                )?))
             } else {
                 None
             }
@@ -519,15 +523,15 @@ fn parse_edge_change(
     }
 }
 
-fn read_edge_from_map(txn: &yrs::TransactionMut, node_map: &MapRef, id: EdgeId) -> Edge {
+fn read_edge_from_map(txn: &yrs::TransactionMut, node_map: &MapRef, id: EdgeId) -> Option<Edge> {
     let source_port: String = node_map.get_as(txn, "source_port").unwrap_or_default();
     let target_port: String = node_map.get_as(txn, "target_port").unwrap_or_default();
 
-    Edge {
+    Some(Edge {
         id,
-        source_port: PortId(source_port.parse().unwrap_or_default()),
-        target_port: PortId(target_port.parse().unwrap_or_default()),
-    }
+        source_port: PortId::from_uuid(source_port.parse().ok()?),
+        target_port: PortId::from_uuid(target_port.parse().ok()?),
+    })
 }
 
 fn read_map_f32<T: ReadTxn>(txn: &T, map: &MapRef, key: &str) -> Option<f32> {

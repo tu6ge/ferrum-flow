@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use gpui::{px, Bounds, Pixels, Point, Size};
+use gpui::{Bounds, Pixels, Point, Size, px};
 use serde::{Deserialize, Serialize};
 
 use crate::edge::{Edge, EdgeId};
@@ -97,8 +97,7 @@ impl Graph {
     }
 
     pub fn next_port_id(&self) -> PortId {
-        let id = self.ports.len() as u64 + 1;
-        PortId(id)
+        PortId::new()
     }
 
     pub fn next_edge_id(&self) -> EdgeId {
