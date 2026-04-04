@@ -258,6 +258,7 @@ impl<'a> PluginContext<'a> {
             port_offset_cache: self.port_offset_cache,
             viewport: self.viewport,
             renderers: self.renderers,
+            notify: self.notify,
         };
         if let Some(sync) = &mut self.sync_plugin {
             let ops = command.to_ops(&mut ctx);
@@ -281,6 +282,7 @@ impl<'a> PluginContext<'a> {
                 port_offset_cache: self.port_offset_cache,
                 viewport: self.viewport,
                 renderers: self.renderers,
+                notify: self.notify,
             };
 
             self.history.undo(&mut ctx);
@@ -298,6 +300,7 @@ impl<'a> PluginContext<'a> {
                 port_offset_cache: self.port_offset_cache,
                 viewport: self.viewport,
                 renderers: self.renderers,
+                notify: self.notify,
             };
 
             self.history.redo(&mut ctx);
