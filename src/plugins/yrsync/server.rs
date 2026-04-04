@@ -32,15 +32,10 @@ async fn run_ws(doc: Doc, undo_origin: Origin) {
     // === writer ===
     let writer_task = tokio::spawn(async move {
         let mut write = write;
-
         while let Some(msg) = ws_rx.recv().await {
-            let len = msg.len();
             match write.send(Message::Binary(msg)).await {
-                Ok(_) => {
-                    println!(">>> WS SEND: {} bytes", len);
-                }
-                Err(e) => {
-                    println!("WS SEND failed: {}", e);
+                Ok(_) => {}
+                Err(_) => {
                     break;
                 }
             }
@@ -58,7 +53,6 @@ async fn run_ws(doc: Doc, undo_origin: Origin) {
                 _ => continue,
             };
 
-            println!("<<< WS RECV: {} bytes", data.len());
             let _ = incoming_tx.send(data);
         }
     });
@@ -84,14 +78,7 @@ async fn run_ws(doc: Doc, undo_origin: Origin) {
             let mut encoder = EncoderV1::new();
             msg.encode(&mut encoder);
 
-            match ws_tx.send(encoder.to_vec()) {
-                Ok(_) => {
-                    println!("sync message sent");
-                }
-                Err(e) => {
-                    println!("sended sync message failed: {}", e);
-                }
-            }
+            ws_tx.send(encoder.to_vec()).unwrap();
         }) {
             Ok(sub) => sub,
             Err(err) => {
@@ -115,24 +102,20 @@ async fn run_ws(doc: Doc, undo_origin: Origin) {
 
     // === apply protocol ===
     let applier_task = {
-        // let applying_remote_clone = Arc::clone(&applying_remote);
         let awareness = Arc::clone(&awareness);
         tokio::spawn(async move {
             while let Some(data) = incoming_rx.recv().await {
                 let before_sv_len = awareness.doc().transact().state_vector().len();
 
-                //applying_remote_clone.store(true, Ordering::SeqCst);
                 let replies = match DefaultProtocol.handle(&awareness, &data) {
                     Ok(responses) => responses,
-                    Err(e) => {
-                        //applying_remote_clone.store(false, Ordering::SeqCst);
-                        println!("protocol error: {:?}", e);
+                    Err(_) => {
                         continue;
                     }
                 };
-                //applying_remote_clone.store(false, Ordering::SeqCst);
 
                 let after_sv_len = awareness.doc().transact().state_vector().len();
+
                 if after_sv_len != before_sv_len {
                     println!(
                         "yrs doc state_vector len changed: {} -> {}",
@@ -141,17 +124,8 @@ async fn run_ws(doc: Doc, undo_origin: Origin) {
                 }
 
                 if !replies.is_empty() {
-                    println!("protocol replies: {}", replies.len());
                     for r in &replies {
-                        match ws_tx_clone.send(encode_messages([r.clone()])) {
-                            Ok(_) => {
-                                println!("response sent");
-                            }
-                            Err(e) => {
-                                println!("send failed2: {}", e);
-                                break;
-                            }
-                        }
+                        ws_tx_clone.send(encode_messages([r.clone()])).unwrap();
                     }
                 }
             }
