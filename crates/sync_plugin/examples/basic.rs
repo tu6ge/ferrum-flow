@@ -1,4 +1,5 @@
 use ferrum_flow::*;
+use ferrum_flow_sync_plugin::YrsSyncPlugin;
 use gpui::{AppContext as _, Application, Size, WindowOptions, px};
 
 fn main() {

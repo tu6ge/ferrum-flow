@@ -9,12 +9,12 @@ use yrs::{
     undo::Options,
 };
 
-use crate::{
+use ferrum_flow::{
     ChangeSource, Edge, EdgeId, Graph, GraphChange, GraphChangeKind, GraphOp, Node, NodeId, Port,
-    PortId, SyncPlugin,
+    PortId, PortKind, PortPosition, SyncPlugin,
 };
 
-mod server;
+use crate::server::start_sync_thread;
 
 pub struct YrsSyncPlugin {
     doc: yrs::Doc,
@@ -264,7 +264,7 @@ impl SyncPlugin for YrsSyncPlugin {
         self._subscription_order = Some(sub);
 
         self.from_graph();
-        server::start_sync_thread(self.doc.clone(), self.undo_origin.clone());
+        start_sync_thread(self.doc.clone(), self.undo_origin.clone());
     }
 
     fn process_intent(&self, intent: GraphOp) {
@@ -478,13 +478,13 @@ fn read_port_from_map(txn: &yrs::TransactionMut, node_map: &MapRef, id: PortId) 
     Port {
         id,
         kind: if kind == "input" {
-            crate::PortKind::Input
+            PortKind::Input
         } else {
-            crate::PortKind::Output
+            PortKind::Output
         },
         index: index as usize,
         node_id: NodeId(node_id.parse().unwrap_or_default()),
-        position: crate::PortPosition::from_str(&position).unwrap_or(crate::PortPosition::Left),
+        position: PortPosition::from_str(&position).unwrap_or(PortPosition::Left),
         size: Size::new(px(width), px(height)),
     }
 }
