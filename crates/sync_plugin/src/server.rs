@@ -8,7 +8,7 @@ use yrs::{
     updates::encoder::{Encode, Encoder, EncoderV1},
 };
 
-pub(super) fn start_sync_thread(doc: Doc, undo_origin: Origin) {
+pub(crate) fn start_sync_thread(doc: Doc, undo_origin: Origin) {
     thread::spawn(move || {
         let rt = Runtime::new().unwrap();
 
