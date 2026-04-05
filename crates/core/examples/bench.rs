@@ -25,6 +25,7 @@ fn main() {
                 FlowCanvas::builder(graph, ctx)
                     .plugin(MinimapPlugin::new())
                     .plugin(ClipboardPlugin::new())
+                    .plugin(SelectAllViewportPlugin::new())
                     .plugin(SelectionPlugin::new())
                     .plugin(NodeInteractionPlugin::new())
                     .plugin(ViewportPlugin::new())

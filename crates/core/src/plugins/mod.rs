@@ -7,6 +7,7 @@ mod minimap;
 mod node;
 mod port;
 mod selection;
+mod select_all_viewport;
 mod viewport;
 
 pub use background::BackgroundPlugin;
@@ -20,5 +21,6 @@ pub use port::{
     CreateEdge, CreateNode, CreatePort, PortInteractionPlugin, edge_bezier, filled_disc_path,
     port_screen_big_bounds, port_screen_bounds,
 };
+pub use select_all_viewport::SelectAllViewportPlugin;
 pub use selection::SelectionPlugin;
 pub use viewport::ViewportPlugin;

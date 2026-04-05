@@ -49,6 +49,7 @@ fn main() {
                     .plugin(NodePlugin::new())
                     .plugin(MinimapPlugin::new())
                     .plugin(ClipboardPlugin::new())
+                    .plugin(SelectAllViewportPlugin::new())
                     .plugin(PortInteractionPlugin::new())
                     .plugin(EdgePlugin::new())
                     .plugin(DeletePlugin::new())

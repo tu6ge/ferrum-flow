@@ -44,6 +44,7 @@ fn main() {
                     .plugin(PortInteractionPlugin::new())
                     .plugin(EdgePlugin::new())
                     .plugin(ClipboardPlugin::new())
+                    .plugin(SelectAllViewportPlugin::new())
                     .plugin(DeletePlugin::new())
                     .plugin(HistoryPlugin::new())
                     .build()
