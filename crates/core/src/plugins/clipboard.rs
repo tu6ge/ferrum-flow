@@ -1,0 +1,194 @@
+use std::collections::{HashMap, HashSet};
+
+use gpui::px;
+
+use crate::{
+    CompositeCommand, Edge, Graph, Node, NodeId, Port,
+    plugin::{FlowEvent, Plugin, PluginContext},
+};
+
+use super::{CreateEdge, CreateNode, CreatePort};
+
+/// Copy / paste selected nodes, their ports, and edges **between** those ports (one undo on paste).
+pub struct ClipboardPlugin {
+    clipboard: Option<CopiedSubgraph>,
+}
+
+#[derive(Clone)]
+struct CopiedSubgraph {
+    nodes: Vec<Node>,
+    ports: Vec<Port>,
+    edges: Vec<Edge>,
+}
+
+impl ClipboardPlugin {
+    pub fn new() -> Self {
+        Self { clipboard: None }
+    }
+}
+
+fn shortcut_modifier(ev: &gpui::KeyDownEvent) -> bool {
+    #[cfg(target_os = "macos")]
+    {
+        ev.keystroke.modifiers.platform
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        ev.keystroke.modifiers.control
+    }
+}
+
+fn extract_subgraph(graph: &Graph) -> Option<CopiedSubgraph> {
+    if graph.selected_node.is_empty() {
+        return None;
+    }
+    let selected = &graph.selected_node;
+    let node_ids: Vec<NodeId> = graph
+        .node_order()
+        .iter()
+        .filter(|id| selected.contains(id))
+        .copied()
+        .collect();
+    if node_ids.is_empty() {
+        return None;
+    }
+
+    let mut port_ids = HashSet::new();
+    let mut nodes = Vec::new();
+    for nid in &node_ids {
+        let n = graph.nodes.get(nid)?.clone();
+        for pid in n.inputs.iter().chain(n.outputs.iter()) {
+            port_ids.insert(*pid);
+        }
+        nodes.push(n);
+    }
+
+    let mut ports = Vec::new();
+    for nid in &node_ids {
+        let n = graph.nodes.get(nid)?;
+        for pid in n.inputs.iter().chain(n.outputs.iter()) {
+            if let Some(p) = graph.ports.get(pid) {
+                ports.push(p.clone());
+            }
+        }
+    }
+
+    let mut edges = Vec::new();
+    for e in graph.edges.values() {
+        if port_ids.contains(&e.source_port) && port_ids.contains(&e.target_port) {
+            edges.push(e.clone());
+        }
+    }
+
+    Some(CopiedSubgraph {
+        nodes,
+        ports,
+        edges,
+    })
+}
+
+fn paste_subgraph(ctx: &mut PluginContext, sub: &CopiedSubgraph) {
+    const OFFSET: f32 = 40.0;
+    let offset = px(OFFSET);
+
+    let mut node_map = HashMap::new();
+    for n in &sub.nodes {
+        node_map.insert(n.id, ctx.graph.next_node_id());
+    }
+    let mut port_map = HashMap::new();
+    for p in &sub.ports {
+        port_map.insert(p.id, ctx.graph.next_port_id());
+    }
+
+    let mut composite = CompositeCommand::new();
+
+    let mut new_node_ids = Vec::new();
+
+    for old in &sub.nodes {
+        let new_id = node_map[&old.id];
+        let node = Node {
+            id: new_id,
+            node_type: old.node_type.clone(),
+            execute_type: old.execute_type.clone(),
+            x: old.x + offset,
+            y: old.y + offset,
+            size: old.size,
+            inputs: old.inputs.iter().map(|p| port_map[p]).collect(),
+            outputs: old.outputs.iter().map(|p| port_map[p]).collect(),
+            data: old.data.clone(),
+        };
+        new_node_ids.push(new_id);
+        composite.push(CreateNode::new(node));
+    }
+
+    for old in &sub.ports {
+        let port = Port {
+            id: port_map[&old.id],
+            kind: old.kind,
+            index: old.index,
+            node_id: node_map[&old.node_id],
+            position: old.position,
+            size: old.size,
+        };
+        composite.push(CreatePort::new(port));
+    }
+
+    for old in &sub.edges {
+        let edge = Edge {
+            id: ctx.graph.next_edge_id(),
+            source_port: port_map[&old.source_port],
+            target_port: port_map[&old.target_port],
+        };
+        composite.push(CreateEdge::new(edge));
+    }
+
+    let pasted_ids: Vec<NodeId> = sub.nodes.iter().map(|n| node_map[&n.id]).collect();
+
+    ctx.execute_command(composite);
+    ctx.clear_selected_edge();
+    ctx.clear_selected_node();
+    for (i, nid) in pasted_ids.iter().enumerate() {
+        ctx.add_selected_node(*nid, i != 0);
+    }
+    ctx.cache_port_offset_with_node(&new_node_ids);
+}
+
+impl Plugin for ClipboardPlugin {
+    fn name(&self) -> &'static str {
+        "clipboard"
+    }
+
+    fn setup(&mut self, _ctx: &mut crate::plugin::InitPluginContext) {}
+
+    fn priority(&self) -> i32 {
+        95
+    }
+
+    fn on_event(
+        &mut self,
+        event: &FlowEvent,
+        ctx: &mut PluginContext,
+    ) -> crate::plugin::EventResult {
+        if let FlowEvent::Input(crate::plugin::InputEvent::KeyDown(ev)) = event {
+            if !shortcut_modifier(ev) {
+                return crate::plugin::EventResult::Continue;
+            }
+            match ev.keystroke.key.as_str() {
+                "c" => {
+                    if let Some(sub) = extract_subgraph(ctx.graph) {
+                        self.clipboard = Some(sub);
+                    }
+                    return crate::plugin::EventResult::Stop;
+                }
+                "v" => {
+                    if let Some(sub) = self.clipboard.as_ref() {
+                        paste_subgraph(ctx, sub);
+                    }
+                    return crate::plugin::EventResult::Stop;
+                }
+                _ => {}
+            }
+        }
+        crate::plugin::EventResult::Continue
+    }
+}

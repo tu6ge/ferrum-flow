@@ -35,6 +35,7 @@ fn main() {
                     .plugin(plugins::NodeTypePickerPlugin::new())
                     .plugin(plugins::MeiliPortInteractionPlugin::new())
                     .plugin(EdgePlugin::new())
+                    .plugin(ClipboardPlugin::new())
                     .plugin(DeletePlugin::new())
                     .plugin(HistoryPlugin::new())
                     .node_renderer("io_start", WorkflowNodeRenderer::new(WorkflowKind::IoStart))

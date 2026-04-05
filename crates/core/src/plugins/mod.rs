@@ -1,4 +1,5 @@
 mod background;
+mod clipboard;
 mod delete;
 mod edge;
 mod history;
@@ -9,6 +10,7 @@ mod selection;
 mod viewport;
 
 pub use background::BackgroundPlugin;
+pub use clipboard::ClipboardPlugin;
 pub use delete::DeletePlugin;
 pub use edge::EdgePlugin;
 pub use history::HistoryPlugin;

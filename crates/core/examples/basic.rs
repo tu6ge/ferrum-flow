@@ -43,6 +43,7 @@ fn main() {
                     .plugin(NodePlugin::new())
                     .plugin(PortInteractionPlugin::new())
                     .plugin(EdgePlugin::new())
+                    .plugin(ClipboardPlugin::new())
                     .plugin(DeletePlugin::new())
                     .plugin(HistoryPlugin::new())
                     .build()

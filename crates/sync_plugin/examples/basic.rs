@@ -47,6 +47,8 @@ fn main() {
                     .plugin(ViewportPlugin::new())
                     .plugin(BackgroundPlugin::new())
                     .plugin(NodePlugin::new())
+                    .plugin(MinimapPlugin::new())
+                    .plugin(ClipboardPlugin::new())
                     .plugin(PortInteractionPlugin::new())
                     .plugin(EdgePlugin::new())
                     .plugin(DeletePlugin::new())

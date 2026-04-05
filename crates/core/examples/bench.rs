@@ -24,6 +24,7 @@ fn main() {
             cx.new(|ctx| {
                 FlowCanvas::builder(graph, ctx)
                     .plugin(MinimapPlugin::new())
+                    .plugin(ClipboardPlugin::new())
                     .plugin(SelectionPlugin::new())
                     .plugin(NodeInteractionPlugin::new())
                     .plugin(ViewportPlugin::new())
