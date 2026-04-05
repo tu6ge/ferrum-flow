@@ -114,6 +114,7 @@ impl YrsSyncPlugin {
         let node_ref = self.nodes.insert(txn, node.id.to_string(), node_map);
 
         node_ref.insert(txn, "type", node.node_type.clone());
+        node_ref.insert(txn, "execute_type", node.execute_type.clone());
         node_ref.insert(txn, "x", Into::<f32>::into(node.x));
         node_ref.insert(txn, "y", Into::<f32>::into(node.y));
         node_ref.insert(txn, "width", Into::<f32>::into(node.size.width));
@@ -490,6 +491,7 @@ fn parse_node_change(
 
 fn read_node_from_map(txn: &yrs::TransactionMut, node_map: &MapRef, id: NodeId) -> Node {
     let node_type: String = node_map.get_as(txn, "type").unwrap_or_default();
+    let execute_type: String = node_map.get_as(txn, "execute_type").unwrap_or_default();
     let x = read_map_f32(txn, node_map, "x").unwrap_or_default();
     let y = read_map_f32(txn, node_map, "y").unwrap_or_default();
     let width = read_map_f32(txn, node_map, "width").unwrap_or_default();
@@ -523,6 +525,7 @@ fn read_node_from_map(txn: &yrs::TransactionMut, node_map: &MapRef, id: NodeId) 
     Node {
         id,
         node_type,
+        execute_type,
         x: px(x),
         y: px(y),
         size: Size::new(px(width), px(height)),
