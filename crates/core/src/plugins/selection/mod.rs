@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::time::{Duration, Instant};
 
 use gpui::{
     AnyElement, Bounds, Element, MouseMoveEvent, MouseUpEvent, Pixels, Point, Size, Styled, div,
@@ -14,6 +15,7 @@ use crate::{
 };
 
 const DRAG_THRESHOLD: Pixels = px(2.0);
+const DRAG_COMMAND_INTERVAL: Duration = Duration::from_millis(50);
 
 pub struct SelectionPlugin {
     selected: Option<Selected>,
@@ -87,6 +89,7 @@ impl Plugin for SelectionPlugin {
 
 pub struct SelectionInteraction {
     state: SelectionState,
+    last_drag_command_at: Option<Instant>,
 }
 
 enum SelectionState {
@@ -113,6 +116,7 @@ impl SelectionInteraction {
     pub fn new(start: Point<Pixels>) -> Self {
         Self {
             state: SelectionState::Pending { start },
+            last_drag_command_at: None,
         }
     }
     pub fn start_move(
@@ -127,6 +131,7 @@ impl SelectionInteraction {
                 bounds: bounds,
                 nodes,
             },
+            last_drag_command_at: None,
         }
     }
 }
@@ -168,6 +173,25 @@ impl Interaction for SelectionInteraction {
                     }
                 }
                 *bounds = Bounds::new(start_bounds.origin + delta, start_bounds.size);
+
+                if ctx.has_sync_plugin() {
+                    let now = Instant::now();
+                    let should_command = self
+                        .last_drag_command_at
+                        .map(|t| now.duration_since(t) >= DRAG_COMMAND_INTERVAL)
+                        .unwrap_or(true);
+                    if should_command {
+                        let start_position: Vec<_> = nodes
+                            .iter()
+                            .map(|(id, point)| (id.clone(), point.clone()))
+                            .collect();
+                        ctx.execute_command(super::node::DragNodesCommand::new(
+                            &start_position,
+                            &ctx,
+                        ));
+                        self.last_drag_command_at = Some(now);
+                    }
+                }
 
                 ctx.notify();
             }

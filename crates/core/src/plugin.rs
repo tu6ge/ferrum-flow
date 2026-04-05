@@ -252,6 +252,10 @@ impl<'a> PluginContext<'a> {
         self.notify();
     }
 
+    pub fn has_sync_plugin(&self) -> bool {
+        self.sync_plugin.is_some()
+    }
+
     pub fn execute_command(&mut self, command: impl Command + 'static) {
         let mut ctx = CommandContext {
             graph: self.graph,

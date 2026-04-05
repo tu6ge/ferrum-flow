@@ -1,3 +1,5 @@
+use std::time::{Duration, Instant};
+
 use gpui::{Pixels, Point, px};
 
 use crate::{
@@ -8,6 +10,7 @@ use crate::{
 };
 
 const DRAG_THRESHOLD: Pixels = px(2.0);
+const DRAG_COMMAND_INTERVAL: Duration = Duration::from_millis(50);
 
 pub struct NodeInteractionPlugin;
 
@@ -51,6 +54,7 @@ impl Plugin for NodeInteractionPlugin {
 
 pub struct NodeDragInteraction {
     state: NodeDragState,
+    last_drag_command_at: Option<Instant>,
 }
 
 enum NodeDragState {
@@ -73,6 +77,7 @@ impl NodeDragInteraction {
                 start_mouse,
                 shift,
             },
+            last_drag_command_at: None,
         }
     }
 }
@@ -122,6 +127,18 @@ impl Interaction for NodeDragInteraction {
                     if let Some(node) = ctx.get_node_mut(id) {
                         node.x = point.x + dx;
                         node.y = point.y + dy;
+                    }
+                }
+
+                if ctx.has_sync_plugin() {
+                    let now = Instant::now();
+                    let should_command = self
+                        .last_drag_command_at
+                        .map(|t| now.duration_since(t) >= DRAG_COMMAND_INTERVAL)
+                        .unwrap_or(true);
+                    if should_command {
+                        ctx.execute_command(DragNodesCommand::new(start_positions, &ctx));
+                        self.last_drag_command_at = Some(now);
                     }
                 }
                 ctx.notify();
