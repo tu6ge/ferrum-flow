@@ -245,6 +245,7 @@ fn main() {
                     .plugin(SnapGuidesPlugin::new())
                     .plugin(ViewportPlugin::new())
                     .plugin(FocusSelectionPlugin::new())
+                    .plugin(FitAllGraphPlugin::new())
                     .plugin(BackgroundPlugin::new())
                     .plugin(NodePlugin::new())
                     .plugin(PortInteractionPlugin::new())

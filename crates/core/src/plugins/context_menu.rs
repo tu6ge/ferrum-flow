@@ -12,6 +12,7 @@ use crate::{
 use super::{
     clipboard_ops::{extract_subgraph, paste_subgraph},
     delete::delete_selection,
+    fit_all::fit_entire_graph,
     focus_selection::focus_viewport_on_selection,
     select_all_viewport::select_all_in_viewport,
 };
@@ -34,6 +35,7 @@ struct OpenMenu {
 
 #[derive(Clone)]
 enum MenuAction {
+    FitAllGraph,
     Paste,
     SelectAllViewport,
     FocusSelection,
@@ -66,6 +68,7 @@ impl ContextMenuPlugin {
 
     fn label(action: &MenuAction) -> &'static str {
         match action {
+            MenuAction::FitAllGraph => "Fit entire graph",
             MenuAction::Paste => "Paste",
             MenuAction::SelectAllViewport => "Select all in view",
             MenuAction::FocusSelection => "Focus selection",
@@ -76,11 +79,12 @@ impl ContextMenuPlugin {
         }
     }
 
-    /// Matches [`ClipboardPlugin`], [`SelectAllViewportPlugin`], [`FocusSelectionPlugin`], [`DeletePlugin`].
+    /// Matches [`FitAllGraphPlugin`], [`ClipboardPlugin`], [`SelectAllViewportPlugin`], [`FocusSelectionPlugin`], [`DeletePlugin`].
     fn shortcut_hint(action: &MenuAction) -> Option<&'static str> {
         #[cfg(target_os = "macos")]
         {
             match action {
+                MenuAction::FitAllGraph => Some("⌘0"),
                 MenuAction::Paste => Some("⌘V"),
                 MenuAction::SelectAllViewport => Some("⌘A"),
                 MenuAction::FocusSelection => Some("⌘⇧F"),
@@ -93,6 +97,7 @@ impl ContextMenuPlugin {
         #[cfg(not(target_os = "macos"))]
         {
             match action {
+                MenuAction::FitAllGraph => Some("Ctrl+0"),
                 MenuAction::Paste => Some("Ctrl+V"),
                 MenuAction::SelectAllViewport => Some("Ctrl+A"),
                 MenuAction::FocusSelection => Some("Ctrl+Shift+F"),
@@ -106,6 +111,8 @@ impl ContextMenuPlugin {
 
     fn canvas_actions(ctx: &PluginContext) -> Vec<MenuAction> {
         let mut v = Vec::new();
+        v.push(MenuAction::FitAllGraph);
+        v.push(MenuAction::Separator);
         if ctx.clipboard_subgraph.is_some() {
             v.push(MenuAction::Paste);
             v.push(MenuAction::Separator);
@@ -130,6 +137,7 @@ impl ContextMenuPlugin {
     fn run_action(ctx: &mut PluginContext, action: &MenuAction) {
         match action {
             MenuAction::Separator => {}
+            MenuAction::FitAllGraph => fit_entire_graph(ctx),
             MenuAction::Paste => {
                 if let Some(sub) = ctx.clipboard_subgraph.clone() {
                     paste_subgraph(ctx, &sub);

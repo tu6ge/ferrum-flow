@@ -29,6 +29,7 @@ fn main() {
                     .plugin(SelectAllViewportPlugin::new())
                     .plugin(AlignPlugin::new())
                     .plugin(FocusSelectionPlugin::new())
+                    .plugin(FitAllGraphPlugin::new())
                     .plugin(SelectionPlugin::new())
                     .plugin(NodeInteractionPlugin::new())
                     .plugin(SnapGuidesPlugin::new())

@@ -41,6 +41,7 @@ fn main() {
                     .plugin(SelectAllViewportPlugin::new())
                     .plugin(AlignPlugin::new())
                     .plugin(FocusSelectionPlugin::new())
+                    .plugin(FitAllGraphPlugin::new())
                     .plugin(DeletePlugin::new())
                     .plugin(HistoryPlugin::new())
                     .node_renderer("io_start", WorkflowNodeRenderer::new(WorkflowKind::IoStart))

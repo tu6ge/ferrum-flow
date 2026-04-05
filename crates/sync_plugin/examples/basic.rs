@@ -54,6 +54,7 @@ fn main() {
                     .plugin(SelectAllViewportPlugin::new())
                     .plugin(AlignPlugin::new())
                     .plugin(FocusSelectionPlugin::new())
+                    .plugin(FitAllGraphPlugin::new())
                     .plugin(PortInteractionPlugin::new())
                     .plugin(EdgePlugin::new())
                     .plugin(DeletePlugin::new())
