@@ -35,6 +35,7 @@ fn main() {
         cx.open_window(WindowOptions::default(), |_, cx| {
             cx.new(|ctx| {
                 FlowCanvas::builder(graph, ctx)
+                    .plugin(MinimapPlugin::new())
                     .plugin(SelectionPlugin::new())
                     .plugin(NodeInteractionPlugin::new())
                     .plugin(ViewportPlugin::new())

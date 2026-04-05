@@ -27,6 +27,7 @@ fn main() {
                 FlowCanvas::builder(graph, ctx)
                     .plugin(plugins::AgentBackgroundPlugin::new())
                     .plugin(plugins::AgentHudPlugin::new())
+                    .plugin(MinimapPlugin::new())
                     .plugin(SelectionPlugin::new())
                     .plugin(NodeInteractionPlugin::new())
                     .plugin(ViewportPlugin::new())

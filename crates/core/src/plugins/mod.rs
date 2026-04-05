@@ -2,6 +2,7 @@ mod background;
 mod delete;
 mod edge;
 mod history;
+mod minimap;
 mod node;
 mod port;
 mod selection;
@@ -11,6 +12,7 @@ pub use background::BackgroundPlugin;
 pub use delete::DeletePlugin;
 pub use edge::EdgePlugin;
 pub use history::HistoryPlugin;
+pub use minimap::MinimapPlugin;
 pub use node::{NodeInteractionPlugin, NodePlugin};
 pub use port::{
     CreateEdge, CreateNode, CreatePort, PortInteractionPlugin, edge_bezier, filled_disc_path,
