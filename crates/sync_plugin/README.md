@@ -52,11 +52,14 @@ A **ferrum-flow** collaboration plugin built on [Yjs / yrs](https://github.com/y
   - `graph`: if non-empty at `setup`, it is written into the Y.Doc as initial content (in multi-client setups, decide whether only one peer should supply that seed).
   - `ws_url`: WebSocket URL; must match server relay semantics for y-sync (**document updates** and **awareness**).
 
+WebSocket connect uses retries with exponential backoff (defaults: 10 attempts, 1–30s backoff). After the socket closes, the client waits `reconnect_delay` and starts a new connect phase with the same limits. Customize via **`YrsSyncPlugin::with_ws_config`** and **`WsSyncConfig`** (`max_connect_retries`: use `u32::MAX` for unlimited attempts per phase).
+
 ## Public API
 
 | Item | Description |
 | --- | --- |
 | `YrsSyncPlugin` | Implements `ferrum_flow::SyncPlugin` |
+| `WsSyncConfig` | Retry / backoff / reconnect delay for the sync WebSocket thread |
 | `Assets` | GPUI `AssetSource` embedding `cursor.png` |
 
 ## Server notes
