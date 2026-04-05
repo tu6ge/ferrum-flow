@@ -320,6 +320,11 @@ impl SyncPlugin for YrsSyncPlugin {
         let _ = self.awareness.set_local_state(&state);
     }
 
+    fn on_mouse_leave(&mut self) {
+        self.last_awareness_push = None;
+        self.awareness.clean_local_state();
+    }
+
     fn render(&mut self, ctx: &mut ferrum_flow::RenderContext) -> Vec<gpui::AnyElement> {
         let me = self.awareness.client_id();
         let mut out = Vec::new();

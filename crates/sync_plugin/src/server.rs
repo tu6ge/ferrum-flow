@@ -70,9 +70,18 @@ async fn run_ws(
         let repaint = repaint_tx.clone();
         awareness.on_update(move |aw, ev, _origin| {
             let mine = aw.client_id();
-            let local_changed = ev.added().contains(&mine) || ev.updated().contains(&mine);
+            let local_changed = ev.added().contains(&mine)
+                || ev.updated().contains(&mine)
+                || ev.removed().contains(&mine);
             if local_changed {
-                if let Ok(au) = aw.update() {
+                // `update()` skips clients with no payload; after `clean_local_state` we must send
+                // a null entry via `update_with_clients` so peers clear the cursor.
+                let au_res = if ev.removed().contains(&mine) {
+                    aw.update_with_clients([mine])
+                } else {
+                    aw.update()
+                };
+                if let Ok(au) = au_res {
                     let mut enc = EncoderV1::new();
                     yrs::sync::Message::Awareness(au).encode(&mut enc);
                     let _ = ws_for_awareness.send(enc.to_vec());
