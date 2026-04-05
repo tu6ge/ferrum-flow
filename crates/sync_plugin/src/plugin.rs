@@ -22,7 +22,7 @@ use ferrum_flow::{
     PortId, PortKind, PortPosition, SyncPlugin,
 };
 
-use crate::server::start_sync_thread;
+use crate::server::{WsSyncConfig, start_sync_thread};
 
 pub struct YrsSyncPlugin {
     doc: yrs::Doc,
@@ -41,10 +41,16 @@ pub struct YrsSyncPlugin {
     _subscription_doc_update: Option<yrs::Subscription>,
     last_awareness_push: Option<Instant>,
     ws_url: String,
+    ws_sync_config: WsSyncConfig,
 }
 
 impl YrsSyncPlugin {
     pub fn new(graph: Graph, ws_url: &str) -> Self {
+        Self::with_ws_config(graph, ws_url, WsSyncConfig::default())
+    }
+
+    /// Same as [`Self::new`], but uses a custom WebSocket reconnect / retry policy.
+    pub fn with_ws_config(graph: Graph, ws_url: &str, ws_sync_config: WsSyncConfig) -> Self {
         let doc = Doc::new();
         let root = doc.get_or_insert_map("graph");
         let nodes = doc.get_or_insert_map("nodes");
@@ -80,6 +86,7 @@ impl YrsSyncPlugin {
             _subscription_order: None,
             _subscription_doc_update: None,
             ws_url: ws_url.to_string(),
+            ws_sync_config,
         }
     }
 
@@ -291,6 +298,7 @@ impl SyncPlugin for YrsSyncPlugin {
             self.undo_origin.clone(),
             change_sender,
             self.ws_url.clone(),
+            self.ws_sync_config.clone(),
         );
     }
 

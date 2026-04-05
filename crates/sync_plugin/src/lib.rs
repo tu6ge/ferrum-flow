@@ -4,3 +4,4 @@ mod server;
 
 pub use assets::Assets;
 pub use plugin::YrsSyncPlugin;
+pub use server::WsSyncConfig;
