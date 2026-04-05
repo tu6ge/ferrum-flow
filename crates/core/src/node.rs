@@ -297,7 +297,7 @@ impl NodeBuilder {
 
         let mut input_counters: HashMap<PortPosition, usize> = HashMap::new();
 
-        // 创建 input ports
+        // Create input ports
         for spec in self.inputs {
             let port_id = graph.next_port_id();
 
@@ -322,7 +322,7 @@ impl NodeBuilder {
 
         let mut output_counters: HashMap<PortPosition, usize> = HashMap::new();
 
-        // 创建 output ports
+        // Create output ports
         for spec in self.outputs {
             let port_id = graph.next_port_id();
 
