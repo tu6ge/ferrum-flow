@@ -28,10 +28,10 @@ pub struct YrsSyncPlugin {
     doc: yrs::Doc,
     awareness: Arc<Awareness>,
     init_graph: Graph,
-    pub nodes: MapRef,        // ref HashMap<NodeId, Node>
-    pub ports: MapRef,        // ref HashMap<PortId, Port>
-    pub edges: MapRef,        // ref HashMap<EdgeId, Edge>
-    pub node_order: ArrayRef, // ref Vec<NodeId>
+    nodes: MapRef,        // ref HashMap<NodeId, Node>
+    ports: MapRef,        // ref HashMap<PortId, Port>
+    edges: MapRef,        // ref HashMap<EdgeId, Edge>
+    node_order: ArrayRef, // ref Vec<NodeId>
     undo_manager: yrs::UndoManager,
     undo_origin: Origin,
     _subscription_nodes: Option<yrs::Subscription>,
@@ -358,7 +358,7 @@ impl SyncPlugin for YrsSyncPlugin {
 
 /// Cursor position in graph (world) coordinates; stored in Yjs awareness as JSON.
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct RemoteCursorState {
+struct RemoteCursorState {
     pub x: f32,
     pub y: f32,
 }

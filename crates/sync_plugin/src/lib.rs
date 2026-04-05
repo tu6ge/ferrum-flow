@@ -3,4 +3,4 @@ mod plugin;
 mod server;
 
 pub use assets::Assets;
-pub use plugin::{RemoteCursorState, YrsSyncPlugin};
+pub use plugin::YrsSyncPlugin;
