@@ -37,6 +37,7 @@ fn main() {
                     .plugin(EdgePlugin::new())
                     .plugin(ClipboardPlugin::new())
                     .plugin(SelectAllViewportPlugin::new())
+                    .plugin(AlignPlugin::new())
                     .plugin(DeletePlugin::new())
                     .plugin(HistoryPlugin::new())
                     .node_renderer("io_start", WorkflowNodeRenderer::new(WorkflowKind::IoStart))

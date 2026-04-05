@@ -80,6 +80,14 @@ impl DragNodesCommand {
             to,
         }
     }
+
+    /// Explicit before/after positions (same node order, same length). Use for align / distribute.
+    pub fn from_positions(
+        from: Vec<(NodeId, Point<Pixels>)>,
+        to: Vec<(NodeId, Point<Pixels>)>,
+    ) -> Self {
+        Self { from, to }
+    }
 }
 
 impl Command for DragNodesCommand {

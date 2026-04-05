@@ -50,6 +50,7 @@ fn main() {
                     .plugin(MinimapPlugin::new())
                     .plugin(ClipboardPlugin::new())
                     .plugin(SelectAllViewportPlugin::new())
+                    .plugin(AlignPlugin::new())
                     .plugin(PortInteractionPlugin::new())
                     .plugin(EdgePlugin::new())
                     .plugin(DeletePlugin::new())

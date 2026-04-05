@@ -26,6 +26,7 @@ fn main() {
                     .plugin(MinimapPlugin::new())
                     .plugin(ClipboardPlugin::new())
                     .plugin(SelectAllViewportPlugin::new())
+                    .plugin(AlignPlugin::new())
                     .plugin(SelectionPlugin::new())
                     .plugin(NodeInteractionPlugin::new())
                     .plugin(ViewportPlugin::new())

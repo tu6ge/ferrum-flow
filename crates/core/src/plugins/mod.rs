@@ -1,3 +1,4 @@
+mod align;
 mod background;
 mod clipboard;
 mod delete;
@@ -10,6 +11,7 @@ mod selection;
 mod select_all_viewport;
 mod viewport;
 
+pub use align::AlignPlugin;
 pub use background::BackgroundPlugin;
 pub use clipboard::ClipboardPlugin;
 pub use delete::DeletePlugin;
