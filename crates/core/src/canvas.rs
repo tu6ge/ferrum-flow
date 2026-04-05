@@ -355,10 +355,6 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
     pub fn build(self) -> FlowCanvas {
         let focus_handle = self.ctx.focus_handle();
 
-        // let mut notify = || {
-        //     self.ctx.notify();
-        // };
-
         let mut canvas = FlowCanvas {
             graph: self.graph,
             viewport: Viewport::new(),
@@ -399,6 +395,7 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
                 port_offset_cache: &mut canvas.port_offset_cache,
                 viewport: &mut canvas.viewport,
                 renderers: &mut canvas.renderers,
+                gpui_ctx: &self.ctx,
                 //notify: &mut notify,
             };
 

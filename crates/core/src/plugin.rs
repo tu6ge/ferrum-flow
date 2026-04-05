@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 
 use gpui::{
-    AnyElement, Bounds, KeyDownEvent, KeyUpEvent, MouseDownEvent, MouseMoveEvent, MouseUpEvent,
-    Pixels, Point, ScrollWheelEvent, Window,
+    AnyElement, Bounds, Context, KeyDownEvent, KeyUpEvent, MouseDownEvent, MouseMoveEvent,
+    MouseUpEvent, Pixels, Point, ScrollWheelEvent, Window,
 };
 
 use crate::{
-    Edge, EdgeBuilder, EdgeId, Graph, Node, NodeBuilder, NodeId, NodeRenderer, Port, PortId,
-    RendererRegistry, Viewport,
+    Edge, EdgeBuilder, EdgeId, FlowCanvas, Graph, Node, NodeBuilder, NodeId, NodeRenderer, Port,
+    PortId, RendererRegistry, Viewport,
     canvas::{
         Command, CommandContext, HistoryProvider, Interaction, InteractionState, PortLayoutCache,
     },
@@ -45,15 +45,16 @@ pub trait Plugin {
     }
 }
 
-pub struct InitPluginContext<'a> {
+pub struct InitPluginContext<'a, 'b> {
     pub graph: &'a mut Graph,
     pub port_offset_cache: &'a mut PortLayoutCache,
     pub viewport: &'a mut Viewport,
     pub renderers: &'a mut RendererRegistry,
+    pub gpui_ctx: &'a Context<'b, FlowCanvas>,
     // pub notify: &'a mut dyn FnMut(),
 }
 
-impl<'a> InitPluginContext<'a> {
+impl<'a, 'b> InitPluginContext<'a, 'b> {
     pub fn create_node(&self, node_type: &str) -> NodeBuilder {
         self.graph.create_node(node_type)
     }
