@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
-use crate::context::NodeHandler;
+use crate::context::NodeProcessor;
 
 pub struct NodeRegistry {
-    handlers: HashMap<String, Box<dyn NodeHandler>>,
+    handlers: HashMap<String, Box<dyn NodeProcessor>>,
 }
 
 impl NodeRegistry {
@@ -13,12 +13,12 @@ impl NodeRegistry {
         }
     }
 
-    pub fn register(&mut self, handler: impl NodeHandler + 'static) {
+    pub fn register(&mut self, handler: impl NodeProcessor + 'static) {
         self.handlers
             .insert(handler.name().to_string(), Box::new(handler));
     }
 
-    pub fn get(&self, node_type: &str) -> Option<&dyn NodeHandler> {
+    pub fn get(&self, node_type: &str) -> Option<&dyn NodeProcessor> {
         self.handlers.get(node_type).map(|h| h.as_ref())
     }
 }

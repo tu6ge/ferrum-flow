@@ -2,14 +2,14 @@ use std::collections::HashMap;
 
 use ferrum_flow::{Graph, Node};
 use ferrum_flow_executor::{
-    ExecutionMode, ExecutorContext, GraphExecutor, NodeHandler, NodeOutput, NodeRegistry,
+    ExecutionMode, ExecutorContext, GraphExecutor, NodeOutput, NodeProcessor, NodeRegistry,
     PortValues,
 };
 use serde_json::Value;
 
 pub struct AddNumbersHandler;
 
-impl NodeHandler for AddNumbersHandler {
+impl NodeProcessor for AddNumbersHandler {
     fn name(&self) -> &str {
         "add_numbers"
     }

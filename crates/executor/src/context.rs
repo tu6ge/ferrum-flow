@@ -31,7 +31,7 @@ pub struct NodeOutput {
     pub error: Option<anyhow::Error>,
 }
 
-pub trait NodeHandler: Send + Sync {
+pub trait NodeProcessor: Send + Sync {
     fn name(&self) -> &str;
 
     fn execute(&self, node: &Node, ctx: &mut ExecutorContext) -> Result<NodeOutput>;
