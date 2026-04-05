@@ -213,6 +213,10 @@ impl FlowCanvas {
 
     fn on_mouse_move(&mut self, ev: &MouseMoveEvent, _: &mut Window, cx: &mut Context<Self>) {
         self.handle_event(FlowEvent::Input(InputEvent::MouseMove(ev.clone())), cx);
+        if let Some(sync_plugin) = &mut self.sync_plugin {
+            let world = self.viewport.screen_to_world(ev.position);
+            sync_plugin.on_mouse_move(ev, world);
+        }
         self.process_event_queue(cx);
     }
 

@@ -4,9 +4,10 @@ use std::sync::{Arc, Mutex};
 use tokio::net::TcpListener;
 use tokio::sync::mpsc;
 use tokio_tungstenite::accept_async;
-use tokio_tungstenite::tungstenite::Message;
-use yrs::sync::{Awareness, DefaultProtocol, Protocol, SyncMessage};
-use yrs::updates::decoder::Decode as _;
+use tokio_tungstenite::tungstenite::Message as WsMessage;
+use yrs::encoding::read::Cursor;
+use yrs::sync::{Awareness, DefaultProtocol, MessageReader, Protocol, SyncMessage};
+use yrs::updates::decoder::{Decode as _, DecoderV1};
 use yrs::updates::encoder::Encoder as _;
 use yrs::{
     Doc, ReadTxn as _, Transact, Update,
@@ -86,6 +87,13 @@ async fn handle_client(
         let mut enc = EncoderV1::new();
         step2.encode(&mut enc);
         let _ = out_tx.send(enc.to_vec());
+
+        // Merge everyone else's awareness (cursors, etc.) into this new client.
+        if let Ok(au) = awareness.update() {
+            let mut enc = EncoderV1::new();
+            yrs::sync::Message::Awareness(au).encode(&mut enc);
+            let _ = out_tx.send(enc.to_vec());
+        }
     }
 
     // read task: handle messages from the client
@@ -96,8 +104,8 @@ async fn handle_client(
     let read_task = tokio::spawn(async move {
         while let Some(result) = read.next().await {
             let data = match result {
-                Ok(Message::Binary(d)) => d,
-                Ok(Message::Close(_)) | Err(_) => break,
+                Ok(WsMessage::Binary(d)) => d,
+                Ok(WsMessage::Close(_)) | Err(_) => break,
                 _ => continue,
             };
 
@@ -148,6 +156,31 @@ async fn handle_client(
                     let _ = tx.send(bytes.clone());
                 }
             }
+
+            // Awareness is separate from the Y.Doc: relay each Awareness frame so other peers get cursors.
+            let mut dec = DecoderV1::new(Cursor::new(data.as_slice()));
+            let mut reader = MessageReader::new(&mut dec);
+            while let Some(msg_res) = reader.next() {
+                let Ok(msg) = msg_res else {
+                    break;
+                };
+                let yrs::sync::Message::Awareness(au) = msg else {
+                    continue;
+                };
+                let mut enc = EncoderV1::new();
+                yrs::sync::Message::Awareness(au).encode(&mut enc);
+                let bytes = enc.to_vec();
+                let targets: Vec<_> = hub_read
+                    .lock()
+                    .unwrap()
+                    .iter()
+                    .filter(|(id, _)| *id != client_id)
+                    .map(|(_, tx)| tx.clone())
+                    .collect();
+                for tx in targets {
+                    let _ = tx.send(bytes.clone());
+                }
+            }
         }
 
         println!("[server] client {} disconnected", client_id);
@@ -157,7 +190,7 @@ async fn handle_client(
     // write task: send all outgoing messages to the client
     let write_task = tokio::spawn(async move {
         while let Some(msg) = out_rx.recv().await {
-            if write.send(Message::Binary(msg)).await.is_err() {
+            if write.send(WsMessage::Binary(msg)).await.is_err() {
                 break;
             }
         }

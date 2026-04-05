@@ -10,7 +10,7 @@ description = "A high-performance node-based editor framework built with Rust an
 [dependencies]
 anyhow = { workspace = true }
 gpui = { workspace = true }
-serde = { version = "1", features = ["derive"] }
+serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 futures = { workspace = true, features = ["std"] }
 uuid = { workspace = true }

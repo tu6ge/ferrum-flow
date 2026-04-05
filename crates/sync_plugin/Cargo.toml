@@ -22,6 +22,7 @@ gpui = { workspace = true }
 uuid = { workspace = true }
 rust-embed = { workspace = true }
 anyhow = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
 tokio = { version = "1.50.0", features = ["full"] }
