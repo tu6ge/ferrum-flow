@@ -74,5 +74,8 @@ pub enum GraphChangeKind {
     EdgeAdded(Edge),
     EdgeRemoved { id: EdgeId },
 
+    /// No graph mutation; used to request a frame repaint (e.g. after remote awareness updates).
+    RedrawRequested,
+
     Batch(Vec<GraphChangeKind>),
 }

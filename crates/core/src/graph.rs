@@ -76,6 +76,7 @@ impl Graph {
             }
             GraphChangeKind::EdgeAdded(edge) => self.add_edge(edge),
             GraphChangeKind::EdgeRemoved { id } => self.remove_edge(id),
+            GraphChangeKind::RedrawRequested => {}
             GraphChangeKind::Batch(graph_change_kinds) => {
                 for change in graph_change_kinds {
                     self.apply(change);

@@ -1,28 +1,33 @@
-use futures::{SinkExt, StreamExt};
+use ferrum_flow::{ChangeSource, GraphChange, GraphChangeKind};
+use futures::{SinkExt, StreamExt, channel::mpsc::UnboundedSender};
 use std::{sync::Arc, thread};
 use tokio::runtime::Runtime;
 use tokio_tungstenite::{connect_async, tungstenite::Message};
 use yrs::{
-    Doc, Origin, ReadTxn as _, Transact,
+    Origin, ReadTxn as _, Transact,
     sync::{Awareness, DefaultProtocol, Protocol},
     updates::encoder::{Encode, Encoder, EncoderV1},
 };
 
-pub(crate) fn start_sync_thread(doc: Doc, undo_origin: Origin) {
+pub(crate) fn start_sync_thread(
+    awareness: Arc<Awareness>,
+    undo_origin: Origin,
+    repaint_tx: UnboundedSender<GraphChange>,
+) {
     thread::spawn(move || {
         let rt = Runtime::new().unwrap();
 
         rt.block_on(async move {
-            run_ws(doc, undo_origin).await;
+            run_ws(awareness, undo_origin, repaint_tx).await;
         });
     });
 }
 
-async fn run_ws(doc: Doc, undo_origin: Origin) {
-    let awareness = Arc::new(Awareness::new(doc));
-
-    let _ = awareness.set_local_state(r#"{"name":"Alice2"}"#);
-
+async fn run_ws(
+    awareness: Arc<Awareness>,
+    undo_origin: Origin,
+    repaint_tx: UnboundedSender<GraphChange>,
+) {
     let (ws, _) = connect_async("ws://127.0.0.1:9001").await.unwrap();
 
     let (write, mut read) = ws.split();
@@ -59,6 +64,30 @@ async fn run_ws(doc: Doc, undo_origin: Origin) {
 
     // === GPUI → ws ===
     let ws_tx_clone = ws_tx.clone();
+    let _awareness_sub = {
+        let awareness = Arc::clone(&awareness);
+        let ws_for_awareness = ws_tx.clone();
+        let repaint = repaint_tx.clone();
+        awareness.on_update(move |aw, ev, _origin| {
+            let mine = aw.client_id();
+            let local_changed = ev.added().contains(&mine) || ev.updated().contains(&mine);
+            if local_changed {
+                if let Ok(au) = aw.update() {
+                    let mut enc = EncoderV1::new();
+                    yrs::sync::Message::Awareness(au).encode(&mut enc);
+                    let _ = ws_for_awareness.send(enc.to_vec());
+                }
+            }
+            let remote_affected = ev.all_changes().iter().any(|&id| id != mine);
+            if remote_affected {
+                let _ = repaint.unbounded_send(GraphChange {
+                    kind: GraphChangeKind::RedrawRequested,
+                    source: ChangeSource::Remote,
+                });
+            }
+        })
+    };
+
     let _sub = {
         match awareness.doc().observe_update_v1(move |txn, update| {
             use yrs::sync::{Message, SyncMessage};

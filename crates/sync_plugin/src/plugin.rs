@@ -1,11 +1,18 @@
-use std::{sync::Arc, vec};
+use std::{
+    sync::Arc,
+    time::{Duration, Instant},
+};
 
 use futures::channel::mpsc::UnboundedSender;
-use gpui::{Element as _, ParentElement, Size, Styled as _, div, px};
+use gpui::{
+    Element as _, MouseMoveEvent, ParentElement, Pixels, Point, Size, Styled as _, div, px,
+};
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use yrs::{
     Any, Array as _, ArrayRef, DeepObservable, Doc, Map, MapPrelim, MapRef, Observable as _,
     Origin, Out, ReadTxn, Transact, TransactionMut,
+    sync::Awareness,
     types::{DefaultPrelim, EntryChange, PathSegment},
     undo::Options,
 };
@@ -19,6 +26,7 @@ use crate::server::start_sync_thread;
 
 pub struct YrsSyncPlugin {
     doc: yrs::Doc,
+    awareness: Arc<Awareness>,
     init_graph: Graph,
     pub nodes: MapRef,        // ref HashMap<NodeId, Node>
     pub ports: MapRef,        // ref HashMap<PortId, Port>
@@ -31,6 +39,7 @@ pub struct YrsSyncPlugin {
     _subscription_edges: Option<yrs::Subscription>,
     _subscription_order: Option<yrs::Subscription>,
     _subscription_doc_update: Option<yrs::Subscription>,
+    last_awareness_push: Option<Instant>,
 }
 
 impl YrsSyncPlugin {
@@ -51,7 +60,11 @@ impl YrsSyncPlugin {
         undo_manager.expand_scope(&node_order);
         let undo_origin = undo_manager.as_origin();
 
+        let awareness = Arc::new(Awareness::new(doc.clone()));
+
         Self {
+            awareness,
+            last_awareness_push: None,
             init_graph: graph,
             undo_manager,
             undo_origin,
@@ -270,7 +283,11 @@ impl SyncPlugin for YrsSyncPlugin {
             self.from_graph();
         }
 
-        start_sync_thread(self.doc.clone(), self.undo_origin.clone());
+        start_sync_thread(
+            Arc::clone(&self.awareness),
+            self.undo_origin.clone(),
+            change_sender,
+        );
     }
 
     fn process_intent(&self, intent: GraphOp) {
@@ -287,16 +304,54 @@ impl SyncPlugin for YrsSyncPlugin {
         self.undo_manager.redo_blocking();
     }
 
-    fn render(&mut self, _ctx: &mut ferrum_flow::RenderContext) -> Vec<gpui::AnyElement> {
-        vec![
-            div()
-                .absolute()
-                .left(px(50.0))
-                .top(px(100.0))
-                .child(gpui::img("./cursor.png").w(px(16.0)).h(px(16.0)))
-                .into_any(),
-        ]
+    fn on_mouse_move(&mut self, _event: &MouseMoveEvent, world: Point<Pixels>) {
+        const MIN_INTERVAL: Duration = Duration::from_millis(33);
+        let now = Instant::now();
+        if let Some(prev) = self.last_awareness_push {
+            if now.saturating_duration_since(prev) < MIN_INTERVAL {
+                return;
+            }
+        }
+        self.last_awareness_push = Some(now);
+        let state = RemoteCursorState {
+            x: world.x.into(),
+            y: world.y.into(),
+        };
+        let _ = self.awareness.set_local_state(&state);
     }
+
+    fn render(&mut self, ctx: &mut ferrum_flow::RenderContext) -> Vec<gpui::AnyElement> {
+        let me = self.awareness.client_id();
+        let mut out = Vec::new();
+        for (client_id, state) in self.awareness.iter() {
+            if client_id == me {
+                continue;
+            }
+            let Some(data) = state.data.as_ref() else {
+                continue;
+            };
+            let Ok(cursor) = serde_json::from_str::<RemoteCursorState>(data) else {
+                continue;
+            };
+            let screen = ctx.world_to_screen(Point::new(px(cursor.x), px(cursor.y)));
+            out.push(
+                div()
+                    .absolute()
+                    .left(screen.x)
+                    .top(screen.y)
+                    .child(gpui::img("./cursor.png").w(px(16.0)).h(px(16.0)))
+                    .into_any(),
+            );
+        }
+        out
+    }
+}
+
+/// Cursor position in graph (world) coordinates; stored in Yjs awareness as JSON.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct RemoteCursorState {
+    pub x: f32,
+    pub y: f32,
 }
 
 fn write_port_to_map(txn: &mut TransactionMut, port_map: &MapRef, port: &Port) {
