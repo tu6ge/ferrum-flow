@@ -16,6 +16,9 @@ pub trait SyncPlugin {
     /// `world` is the cursor in flow (graph) space, e.g. `viewport.screen_to_world(event.position)`.
     fn on_mouse_move(&mut self, event: &MouseMoveEvent, world: Point<Pixels>);
 
+    /// Cursor left the canvas; clear shared presence so peers hide your cursor.
+    fn on_mouse_leave(&mut self) {}
+
     fn render(&mut self, _ctx: &mut RenderContext) -> Vec<AnyElement> {
         vec![]
     }

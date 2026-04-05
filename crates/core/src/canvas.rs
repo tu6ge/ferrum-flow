@@ -229,6 +229,15 @@ impl FlowCanvas {
         self.handle_event(FlowEvent::Input(InputEvent::Wheel(ev.clone())), cx);
         self.process_event_queue(cx);
     }
+
+    fn on_canvas_hover(&mut self, hovered: &bool, _: &mut Window, cx: &mut Context<Self>) {
+        if !*hovered {
+            if let Some(sync_plugin) = &mut self.sync_plugin {
+                sync_plugin.on_mouse_leave();
+            }
+            cx.notify();
+        }
+    }
 }
 
 impl Render for FlowCanvas {
@@ -290,6 +299,7 @@ impl Render for FlowCanvas {
         }
 
         div()
+            .id("ferrum_flow_canvas")
             .size_full()
             .track_focus(&self.focus_handle)
             .on_key_down(window.listener_for(&entity, Self::on_key_down))
@@ -299,6 +309,7 @@ impl Render for FlowCanvas {
                 window.listener_for(&entity, Self::on_mouse_down),
             )
             .on_mouse_move(window.listener_for(&entity, Self::on_mouse_move))
+            .on_hover(window.listener_for(&entity, Self::on_canvas_hover))
             .on_mouse_up(
                 MouseButton::Left,
                 window.listener_for(&entity, Self::on_mouse_up),
