@@ -40,10 +40,11 @@ pub struct YrsSyncPlugin {
     _subscription_order: Option<yrs::Subscription>,
     _subscription_doc_update: Option<yrs::Subscription>,
     last_awareness_push: Option<Instant>,
+    ws_url: String,
 }
 
 impl YrsSyncPlugin {
-    pub fn new(graph: Graph) -> Self {
+    pub fn new(graph: Graph, ws_url: &str) -> Self {
         let doc = Doc::new();
         let root = doc.get_or_insert_map("graph");
         let nodes = doc.get_or_insert_map("nodes");
@@ -78,10 +79,14 @@ impl YrsSyncPlugin {
             _subscription_edges: None,
             _subscription_order: None,
             _subscription_doc_update: None,
+            ws_url: ws_url.to_string(),
         }
     }
 
     pub fn from_graph(&self) {
+        if self.init_graph.is_empty() {
+            return;
+        }
         let mut txn: TransactionMut<'_> = self.doc.transact_mut_with("local_init");
         for node in self.init_graph.nodes().values() {
             self.insert_node(&mut txn, node);
@@ -279,14 +284,13 @@ impl SyncPlugin for YrsSyncPlugin {
         });
         self._subscription_order = Some(sub);
 
-        if std::env::var("IS_INIT").unwrap_or_default() == "1" {
-            self.from_graph();
-        }
+        self.from_graph();
 
         start_sync_thread(
             Arc::clone(&self.awareness),
             self.undo_origin.clone(),
             change_sender,
+            self.ws_url.clone(),
         );
     }
 
