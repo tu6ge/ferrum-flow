@@ -2,7 +2,7 @@ use gpui::{Pixels, Point, px};
 
 use crate::{
     NodeId,
-    plugin::{FlowEvent, Plugin, PluginContext},
+    plugin::{FlowEvent, Plugin, PluginContext, primary_platform_modifier},
     plugins::node::DragNodesCommand,
 };
 
@@ -25,19 +25,8 @@ impl AlignPlugin {
     }
 }
 
-fn primary_modifier(ev: &gpui::KeyDownEvent) -> bool {
-    #[cfg(target_os = "macos")]
-    {
-        ev.keystroke.modifiers.platform
-    }
-    #[cfg(not(target_os = "macos"))]
-    {
-        ev.keystroke.modifiers.control
-    }
-}
-
 fn align_shortcut(ev: &gpui::KeyDownEvent) -> bool {
-    primary_modifier(ev) && ev.keystroke.modifiers.shift
+    primary_platform_modifier(ev) && ev.keystroke.modifiers.shift
 }
 
 fn px_to_f32(p: Pixels) -> f32 {

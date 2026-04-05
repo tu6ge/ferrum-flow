@@ -1,6 +1,9 @@
 use crate::{
     Edge, EdgeId, NodeId,
-    plugin::{FlowEvent, Plugin, PluginContext, is_edge_visible, is_node_visible},
+    plugin::{
+        FlowEvent, Plugin, PluginContext, is_edge_visible, is_node_visible,
+        primary_platform_modifier,
+    },
 };
 
 /// Select every node and edge that intersects the current window viewport (⌘A / Ctrl+A).
@@ -9,17 +12,6 @@ pub struct SelectAllViewportPlugin;
 impl SelectAllViewportPlugin {
     pub fn new() -> Self {
         Self
-    }
-}
-
-fn shortcut_modifier(ev: &gpui::KeyDownEvent) -> bool {
-    #[cfg(target_os = "macos")]
-    {
-        ev.keystroke.modifiers.platform
-    }
-    #[cfg(not(target_os = "macos"))]
-    {
-        ev.keystroke.modifiers.control
     }
 }
 
@@ -65,7 +57,7 @@ impl Plugin for SelectAllViewportPlugin {
         ctx: &mut PluginContext,
     ) -> crate::plugin::EventResult {
         if let FlowEvent::Input(crate::plugin::InputEvent::KeyDown(ev)) = event {
-            if shortcut_modifier(ev) && ev.keystroke.key == "a" {
+            if primary_platform_modifier(ev) && ev.keystroke.key == "a" {
                 select_visible(ctx);
                 ctx.notify();
                 return crate::plugin::EventResult::Stop;

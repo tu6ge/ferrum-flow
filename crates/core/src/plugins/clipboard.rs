@@ -4,7 +4,7 @@ use gpui::px;
 
 use crate::{
     CompositeCommand, Edge, Graph, Node, NodeId, Port,
-    plugin::{FlowEvent, Plugin, PluginContext},
+    plugin::{FlowEvent, Plugin, PluginContext, primary_platform_modifier},
 };
 
 use super::{CreateEdge, CreateNode, CreatePort};
@@ -24,17 +24,6 @@ struct CopiedSubgraph {
 impl ClipboardPlugin {
     pub fn new() -> Self {
         Self { clipboard: None }
-    }
-}
-
-fn shortcut_modifier(ev: &gpui::KeyDownEvent) -> bool {
-    #[cfg(target_os = "macos")]
-    {
-        ev.keystroke.modifiers.platform
-    }
-    #[cfg(not(target_os = "macos"))]
-    {
-        ev.keystroke.modifiers.control
     }
 }
 
@@ -170,7 +159,7 @@ impl Plugin for ClipboardPlugin {
         ctx: &mut PluginContext,
     ) -> crate::plugin::EventResult {
         if let FlowEvent::Input(crate::plugin::InputEvent::KeyDown(ev)) = event {
-            if !shortcut_modifier(ev) {
+            if !primary_platform_modifier(ev) {
                 return crate::plugin::EventResult::Continue;
             }
             match ev.keystroke.key.as_str() {

@@ -1,10 +1,22 @@
 use std::collections::HashMap;
 
-use gpui::{Pixels, Point};
+use gpui::{KeyDownEvent, Pixels, Point};
 
 use crate::{
     Edge, EdgeId, Graph, NodeId, Port, PortId, RendererRegistry, Viewport, canvas::PortLayoutCache,
 };
+
+/// Primary shortcut modifier: ⌘ on macOS, Ctrl on other platforms.
+pub fn primary_platform_modifier(ev: &KeyDownEvent) -> bool {
+    #[cfg(target_os = "macos")]
+    {
+        ev.keystroke.modifiers.platform
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        ev.keystroke.modifiers.control
+    }
+}
 
 pub fn is_node_visible(graph: &Graph, viewport: &Viewport, node_id: &NodeId) -> bool {
     let Some(node) = graph.get_node(node_id) else {

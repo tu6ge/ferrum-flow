@@ -21,6 +21,7 @@ pub use sync::SyncPlugin;
 pub use utils::{
     cache_all_node_port_offset, cache_node_port_offset, cache_port_offset_with_edge,
     cache_port_offset_with_port, is_edge_visible, is_node_visible, port_offset_cached,
+    primary_platform_modifier,
 };
 
 pub trait Plugin {

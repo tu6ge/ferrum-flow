@@ -2,7 +2,7 @@ use gpui::{Pixels, Point, px};
 
 use crate::{
     canvas::{Command, CommandContext},
-    plugin::{FlowEvent, Plugin, PluginContext},
+    plugin::{FlowEvent, Plugin, PluginContext, primary_platform_modifier},
 };
 
 /// Pan + zoom the viewport so selected nodes fit the window (⌘⇧F / Ctrl⇧F). Undo restores prior view.
@@ -14,19 +14,8 @@ impl FocusSelectionPlugin {
     }
 }
 
-fn primary_modifier(ev: &gpui::KeyDownEvent) -> bool {
-    #[cfg(target_os = "macos")]
-    {
-        ev.keystroke.modifiers.platform
-    }
-    #[cfg(not(target_os = "macos"))]
-    {
-        ev.keystroke.modifiers.control
-    }
-}
-
 fn focus_shortcut(ev: &gpui::KeyDownEvent) -> bool {
-    primary_modifier(ev) && ev.keystroke.modifiers.shift
+    primary_platform_modifier(ev) && ev.keystroke.modifiers.shift
 }
 
 /// Same zoom limits as [`crate::plugins::ViewportPlugin`] wheel zoom.

@@ -1,4 +1,4 @@
-use crate::plugin::{FlowEvent, Plugin};
+use crate::plugin::{FlowEvent, Plugin, primary_platform_modifier};
 
 pub struct HistoryPlugin;
 
@@ -19,16 +19,11 @@ impl Plugin for HistoryPlugin {
         ctx: &mut crate::plugin::PluginContext,
     ) -> crate::plugin::EventResult {
         if let FlowEvent::Input(crate::plugin::InputEvent::KeyDown(ev)) = event {
-            #[cfg(target_os = "macos")]
-            let platform = ev.keystroke.modifiers.platform;
-
-            #[cfg(not(target_os = "macos"))]
-            let platform = ev.keystroke.modifiers.control;
-
-            if ev.keystroke.key == "z" && platform && ev.keystroke.modifiers.shift {
+            let primary = primary_platform_modifier(ev);
+            if ev.keystroke.key == "z" && primary && ev.keystroke.modifiers.shift {
                 ctx.redo();
                 return crate::plugin::EventResult::Stop;
-            } else if ev.keystroke.key == "z" && platform {
+            } else if ev.keystroke.key == "z" && primary {
                 ctx.undo();
                 return crate::plugin::EventResult::Stop;
             }
