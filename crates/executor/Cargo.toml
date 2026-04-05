@@ -9,6 +9,9 @@ description = "A simple node-based editor executor."
 
 [dependencies]
 ferrum-flow = { workspace = true }
+gpui = { workspace = true }
+futures = { workspace = true, features = ["std"] }
+futures-timer = "3"
 
 anyhow = { workspace = true }
 serde_json = { workspace = true }

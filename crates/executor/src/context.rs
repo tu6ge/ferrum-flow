@@ -7,6 +7,7 @@ use std::collections::HashMap;
 pub type PortValues = HashMap<PortId, Value>;
 
 /// Context for one graph execution (whole run lifecycle).
+#[derive(Default)]
 pub struct ExecutorContext {
     /// Computed port values (prior outputs plus current node writes).
     pub values: PortValues,

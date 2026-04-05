@@ -32,44 +32,59 @@ impl GraphExecutor {
         self
     }
 
+    /// Topological order and edge wiring for step-by-step execution (see [`Self::execute_node`]).
+    pub fn execution_plan(
+        &self,
+        graph: &Graph,
+    ) -> Result<(Vec<NodeId>, HashMap<PortId, PortId>), anyhow::Error> {
+        Ok((self.topological_sort(graph)?, self.build_edge_map(graph)))
+    }
+
+    /// Run a single node: wire inputs from `edge_map`, invoke handler, store outputs in `ctx`.
+    pub fn execute_node(
+        &self,
+        graph: &Graph,
+        node_id: &NodeId,
+        ctx: &mut ExecutorContext,
+        edge_map: &HashMap<PortId, PortId>,
+    ) -> Result<NodeOutput, anyhow::Error> {
+        let node = graph
+            .get_node(node_id)
+            .ok_or_else(|| anyhow::anyhow!("Node not found: {}", node_id))?;
+
+        for input_port_id in &node.inputs {
+            if let Some(source_port_id) = edge_map.get(input_port_id) {
+                if let Some(val) = ctx.values.get(source_port_id).cloned() {
+                    ctx.values.insert(*input_port_id, val);
+                }
+            }
+        }
+
+        let handler = self.registry.get(&node.execute_type).ok_or_else(|| {
+            anyhow::anyhow!("No handler for node type: {}", node.execute_type)
+        })?;
+
+        let output = handler.execute(node, ctx)?;
+
+        for (port_id, value) in &output.outputs {
+            ctx.values.insert(*port_id, value.clone());
+        }
+
+        Ok(output)
+    }
+
     /// Executes the full graph and returns each node's output.
     pub fn run(
         &self,
         graph: &Graph,
         initial_ctx: ExecutorContext,
     ) -> Result<Vec<NodeOutput>, anyhow::Error> {
-        let order = self.topological_sort(graph)?;
+        let (order, edge_map) = self.execution_plan(graph)?;
         let mut ctx = initial_ctx;
         let mut results = Vec::new();
 
-        // Map each edge: target input port -> source output port
-        let edge_map = self.build_edge_map(graph);
-
         for node_id in &order {
-            let node = graph
-                .get_node(node_id)
-                .ok_or_else(|| anyhow::anyhow!("Node not found: {}", node_id))?;
-
-            // Propagate upstream output port values into this node's input ports
-            for input_port_id in &node.inputs {
-                if let Some(source_port_id) = edge_map.get(input_port_id) {
-                    if let Some(val) = ctx.values.get(source_port_id).cloned() {
-                        ctx.values.insert(*input_port_id, val);
-                    }
-                }
-            }
-
-            let handler = self.registry.get(&node.execute_type).ok_or_else(|| {
-                anyhow::anyhow!("No handler for node type: {}", node.execute_type)
-            })?;
-
-            let output = handler.execute(node, &mut ctx)?;
-
-            for (port_id, value) in &output.outputs {
-                ctx.values.insert(*port_id, value.clone());
-            }
-
-            results.push(output);
+            results.push(self.execute_node(graph, node_id, &mut ctx, &edge_map)?);
         }
 
         Ok(results)
