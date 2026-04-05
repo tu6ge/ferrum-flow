@@ -106,6 +106,10 @@ fn focus_selected(ctx: &mut PluginContext) {
     });
 }
 
+pub(crate) fn focus_viewport_on_selection(ctx: &mut PluginContext) {
+    focus_selected(ctx);
+}
+
 impl Plugin for FocusSelectionPlugin {
     fn name(&self) -> &'static str {
         "focus_selection"

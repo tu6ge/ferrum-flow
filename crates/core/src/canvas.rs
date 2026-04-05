@@ -3,6 +3,7 @@ use gpui::*;
 
 use crate::{
     GraphChange, SyncPlugin,
+    copied_subgraph::CopiedSubgraph,
     graph::Graph,
     plugin::{
         EventResult, FlowEvent, InitPluginContext, InputEvent, Plugin, PluginContext,
@@ -43,6 +44,9 @@ pub struct FlowCanvas {
 
     pub event_queue: Vec<FlowEvent>,
     pub port_offset_cache: PortLayoutCache,
+
+    /// Shared with [`crate::plugins::ClipboardPlugin`] and context menu.
+    pub(crate) clipboard_subgraph: Option<CopiedSubgraph>,
 }
 
 // // TODO
@@ -73,6 +77,7 @@ impl FlowCanvas {
             history: Box::new(LocalHistory::new()),
             event_queue: vec![],
             port_offset_cache: PortLayoutCache::new(),
+            clipboard_subgraph: None,
         }
     }
 
@@ -110,6 +115,7 @@ impl FlowCanvas {
                 &mut self.renderers,
                 &mut self.sync_plugin,
                 self.history.as_mut(),
+                &mut self.clipboard_subgraph,
                 &mut emit,
                 &mut notify,
             );
@@ -152,6 +158,7 @@ impl FlowCanvas {
             &mut self.renderers,
             &mut self.sync_plugin,
             self.history.as_mut(),
+            &mut self.clipboard_subgraph,
             &mut emit,
             &mut notify,
         );
@@ -181,6 +188,7 @@ impl FlowCanvas {
                 &mut self.renderers,
                 &mut self.sync_plugin,
                 self.history.as_mut(),
+                &mut self.clipboard_subgraph,
                 &mut emit,
                 &mut notify,
             );
@@ -307,6 +315,10 @@ impl Render for FlowCanvas {
                 MouseButton::Left,
                 window.listener_for(&entity, Self::on_mouse_down),
             )
+            .on_mouse_down(
+                MouseButton::Right,
+                window.listener_for(&entity, Self::on_mouse_down),
+            )
             .on_mouse_move(window.listener_for(&entity, Self::on_mouse_move))
             .on_hover(window.listener_for(&entity, Self::on_canvas_hover))
             .on_mouse_up(
@@ -366,6 +378,7 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
             history: Box::new(LocalHistory::new()),
             event_queue: vec![],
             port_offset_cache: PortLayoutCache::new(),
+            clipboard_subgraph: None,
         };
 
         if let Some(sync_plugin) = &mut canvas.sync_plugin {

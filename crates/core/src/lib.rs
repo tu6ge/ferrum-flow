@@ -1,4 +1,5 @@
 mod canvas;
+mod copied_subgraph;
 mod edge;
 mod graph;
 mod node;

@@ -1,4 +1,4 @@
-use gpui::{Pixels, Point, px};
+use gpui::{MouseButton, Pixels, Point, px};
 
 use crate::{
     canvas::{Command, Interaction, InteractionResult},
@@ -24,6 +24,7 @@ impl Plugin for ViewportPlugin {
         ctx: &mut crate::plugin::PluginContext,
     ) -> EventResult {
         if let FlowEvent::Input(InputEvent::MouseDown(ev)) = event
+            && ev.button == MouseButton::Left
             && ev.modifiers.shift
         {
             ctx.start_interaction(Panning {

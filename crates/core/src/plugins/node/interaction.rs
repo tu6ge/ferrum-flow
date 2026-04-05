@@ -1,6 +1,6 @@
 use std::time::{Duration, Instant};
 
-use gpui::{Pixels, Point, px};
+use gpui::{MouseButton, Pixels, Point, px};
 
 use crate::{
     NodeId,
@@ -29,6 +29,9 @@ impl Plugin for NodeInteractionPlugin {
 
     fn on_event(&mut self, event: &FlowEvent, ctx: &mut PluginContext) -> EventResult {
         if let FlowEvent::Input(InputEvent::MouseDown(ev)) = event {
+            if ev.button != MouseButton::Left {
+                return EventResult::Continue;
+            }
             let mouse_world = ctx.screen_to_world(ev.position);
 
             if let Some(node_id) = ctx.hit_node(mouse_world) {

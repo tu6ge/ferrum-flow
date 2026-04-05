@@ -49,6 +49,7 @@ fn main() {
                     .plugin(NodePlugin::new())
                     .plugin(MinimapPlugin::new())
                     .plugin(ClipboardPlugin::new())
+                    .plugin(ContextMenuPlugin::new())
                     .plugin(SelectAllViewportPlugin::new())
                     .plugin(AlignPlugin::new())
                     .plugin(FocusSelectionPlugin::new())

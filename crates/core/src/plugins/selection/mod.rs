@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
 use gpui::{
-    AnyElement, Bounds, Element, MouseMoveEvent, MouseUpEvent, Pixels, Point, Size, Styled, div,
-    px, rgb, rgba,
+    AnyElement, Bounds, Element, MouseButton, MouseMoveEvent, MouseUpEvent, Pixels, Point, Size,
+    Styled, div, px, rgb, rgba,
 };
 
 use crate::{
@@ -43,6 +43,9 @@ impl Plugin for SelectionPlugin {
         ctx: &mut crate::plugin::PluginContext,
     ) -> EventResult {
         if let FlowEvent::Input(InputEvent::MouseDown(ev)) = event {
+            if ev.button != MouseButton::Left {
+                return EventResult::Continue;
+            }
             if !ev.modifiers.shift {
                 let start = ctx.viewport.screen_to_world(ev.position);
                 if let Some(Selected { bounds, nodes }) = self.selected.take() {

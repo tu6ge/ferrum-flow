@@ -1,6 +1,6 @@
 //! Overview minimap: full-graph bounds in world space, current viewport indicator, click-to-center.
 
-use gpui::{Bounds, Element, PathBuilder, Pixels, Point, Size, canvas, px, rgb};
+use gpui::{Bounds, Element, MouseButton, PathBuilder, Pixels, Point, Size, canvas, px, rgb};
 
 use crate::{
     Graph, Viewport,
@@ -225,10 +225,15 @@ impl Plugin for MinimapPlugin {
         if let FlowEvent::Input(InputEvent::MouseDown(ev)) = event {
             if let Some(ref layout) = self.last_layout {
                 if layout.contains_chrome(ev.position) {
-                    let world = layout.screen_to_world(ev.position);
-                    center_viewport_on_world(ctx, world);
-                    ctx.notify();
-                    return EventResult::Stop;
+                    if ev.button == MouseButton::Right {
+                        return EventResult::Stop;
+                    }
+                    if ev.button == MouseButton::Left {
+                        let world = layout.screen_to_world(ev.position);
+                        center_viewport_on_world(ctx, world);
+                        ctx.notify();
+                        return EventResult::Stop;
+                    }
                 }
             }
         }

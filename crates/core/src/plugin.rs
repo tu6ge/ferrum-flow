@@ -7,7 +7,7 @@ use gpui::{
 
 use crate::{
     Edge, EdgeBuilder, EdgeId, FlowCanvas, Graph, Node, NodeBuilder, NodeId, NodeRenderer, Port,
-    PortId, RendererRegistry, Viewport,
+    PortId, RendererRegistry, Viewport, copied_subgraph::CopiedSubgraph,
     canvas::{
         Command, CommandContext, HistoryProvider, Interaction, InteractionState, PortLayoutCache,
     },
@@ -198,6 +198,8 @@ pub struct PluginContext<'a> {
     sync_plugin: &'a mut Option<Box<dyn SyncPlugin + 'static>>,
 
     pub history: &'a mut dyn HistoryProvider,
+    /// Shared node subgraph for [`crate::plugins::ClipboardPlugin`] and context menu.
+    pub(crate) clipboard_subgraph: &'a mut Option<CopiedSubgraph>,
     emit: &'a mut dyn FnMut(FlowEvent),
     notify: &'a mut dyn FnMut(),
 }
@@ -216,6 +218,7 @@ impl<'a> PluginContext<'a> {
         renderers: &'a mut RendererRegistry,
         sync_plugin: &'a mut Option<Box<dyn SyncPlugin + 'static>>,
         history: &'a mut dyn HistoryProvider,
+        clipboard_subgraph: &'a mut Option<CopiedSubgraph>,
         emit: &'a mut dyn FnMut(FlowEvent),
         notify: &'a mut dyn FnMut(),
     ) -> Self {
@@ -227,6 +230,7 @@ impl<'a> PluginContext<'a> {
             renderers,
             sync_plugin,
             history,
+            clipboard_subgraph,
             emit,
             notify,
         }

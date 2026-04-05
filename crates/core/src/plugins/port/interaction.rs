@@ -1,4 +1,4 @@
-use gpui::{Element, Pixels, Point, canvas, px, rgb};
+use gpui::{Element, MouseButton, Pixels, Point, canvas, px, rgb};
 
 use crate::{
     PortId, PortKind, PortPosition,
@@ -132,6 +132,9 @@ impl Plugin for PortInteractionPlugin {
         }
 
         if let FlowEvent::Input(InputEvent::MouseDown(ev)) = event {
+            if ev.button != MouseButton::Left {
+                return crate::plugin::EventResult::Continue;
+            }
             if let Some(pend) = self.pending {
                 if Self::pending_dot_contains_screen(ctx, pend.end_world, ev.position) {
                     self.pending = None;

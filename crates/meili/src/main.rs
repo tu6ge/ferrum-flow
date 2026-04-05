@@ -36,6 +36,7 @@ fn main() {
                     .plugin(plugins::MeiliPortInteractionPlugin::new())
                     .plugin(EdgePlugin::new())
                     .plugin(ClipboardPlugin::new())
+                    .plugin(ContextMenuPlugin::new())
                     .plugin(SelectAllViewportPlugin::new())
                     .plugin(AlignPlugin::new())
                     .plugin(FocusSelectionPlugin::new())

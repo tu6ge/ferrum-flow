@@ -40,6 +40,10 @@ fn select_visible(ctx: &mut PluginContext) {
     }
 }
 
+pub(crate) fn select_all_in_viewport(ctx: &mut PluginContext) {
+    select_visible(ctx);
+}
+
 impl Plugin for SelectAllViewportPlugin {
     fn name(&self) -> &'static str {
         "select_all_viewport"

@@ -12,6 +12,10 @@ impl DeletePlugin {
     }
 }
 
+pub(crate) fn delete_selection(ctx: &mut crate::plugin::PluginContext) {
+    ctx.execute_command(DeleteCommand::new(ctx));
+}
+
 impl Plugin for DeletePlugin {
     fn name(&self) -> &'static str {
         "delete"

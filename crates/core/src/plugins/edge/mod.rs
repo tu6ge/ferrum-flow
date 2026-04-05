@@ -1,4 +1,4 @@
-use gpui::{Bounds, Element, PathBuilder, Pixels, Point, canvas, px, rgb};
+use gpui::{Bounds, Element, MouseButton, PathBuilder, Pixels, Point, canvas, px, rgb};
 
 use crate::{
     Edge, EdgeId, PortId, PortPosition, RenderContext, Viewport,
@@ -29,6 +29,9 @@ impl Plugin for EdgePlugin {
         ctx: &mut crate::plugin::PluginContext,
     ) -> crate::plugin::EventResult {
         if let FlowEvent::Input(crate::plugin::InputEvent::MouseDown(ev)) = event {
+            if ev.button != MouseButton::Left {
+                return crate::plugin::EventResult::Continue;
+            }
             let shift = ev.modifiers.shift;
             if let Some(id) = hit_test_get_edge(ev.position, &ctx) {
                 ctx.cache_port_offset_with_edge(&id);
