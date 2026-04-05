@@ -13,12 +13,13 @@ pub(crate) fn start_sync_thread(
     awareness: Arc<Awareness>,
     undo_origin: Origin,
     repaint_tx: UnboundedSender<GraphChange>,
+    ws_url: String,
 ) {
     thread::spawn(move || {
         let rt = Runtime::new().unwrap();
 
         rt.block_on(async move {
-            run_ws(awareness, undo_origin, repaint_tx).await;
+            run_ws(awareness, undo_origin, repaint_tx, ws_url).await;
         });
     });
 }
@@ -27,8 +28,9 @@ async fn run_ws(
     awareness: Arc<Awareness>,
     undo_origin: Origin,
     repaint_tx: UnboundedSender<GraphChange>,
+    ws_url: String,
 ) {
-    let (ws, _) = connect_async("ws://127.0.0.1:9001").await.unwrap();
+    let (ws, _) = connect_async(ws_url).await.unwrap();
 
     let (write, mut read) = ws.split();
 

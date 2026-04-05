@@ -42,6 +42,15 @@ impl Graph {
         serde_json::to_string(self)
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.nodes.is_empty()
+            && self.ports.is_empty()
+            && self.edges.is_empty()
+            && self.node_order.is_empty()
+            && self.selected_edge.is_empty()
+            && self.selected_node.is_empty()
+    }
+
     pub fn apply(&mut self, op: GraphChangeKind) {
         match op {
             GraphChangeKind::NodeAdded(node) => self.add_node(node),

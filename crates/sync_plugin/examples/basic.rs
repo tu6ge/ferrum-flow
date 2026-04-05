@@ -33,6 +33,12 @@ fn main() {
             .output()
             .build(&mut graph);
 
+        graph = if std::env::var("IS_INIT").unwrap_or_default() == "1" {
+            graph
+        } else {
+            Graph::new()
+        };
+
         cx.open_window(WindowOptions::default(), |_, cx| {
             cx.new(|ctx| {
                 FlowCanvas::builder(Graph::new(), ctx)
@@ -45,7 +51,7 @@ fn main() {
                     .plugin(EdgePlugin::new())
                     .plugin(DeletePlugin::new())
                     .plugin(HistoryPlugin::new())
-                    .sync_plugin(YrsSyncPlugin::new(graph))
+                    .sync_plugin(YrsSyncPlugin::new(graph, "ws://127.0.0.1:9001"))
                     .build()
             })
         })
