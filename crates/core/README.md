@@ -7,14 +7,15 @@ Designed for building visual programming tools, workflow editors, and graph-base
 
 ## Features
 
-- 🧩 Plugin-based architecture
-- 🧠 Interaction system (drag, pan, select, etc.)
-- 🔄 Undo / Redo (Command pattern)
-- 🔍 Viewport control (zoom & pan)
-- 🖱️ Box selection & multi-select
-- 🔗 Node / Port / Edge model
-- 🎨 Custom node rendering system
-- ⚡ Built with performance in mind (virtualization-ready)
+- Plugin-based architecture
+- Interaction system (drag, pan, select, etc.)
+- Undo / Redo (Command pattern)
+- Viewport control (zoom & pan)
+- Box selection & multi-select
+- Node / Port / Edge model
+- Custom node rendering system
+- Built with performance in mind
+- Multi-user collaboration support (by [plugin](https://github.com/tu6ge/ferrum-flow/tree/master/crates/sync_plugin))
 
 [![Watch the video](https://img.youtube.com/vi/mimeKsIldog/0.jpg)](https://www.youtube.com/watch?v=mimeKsIldog)
 
