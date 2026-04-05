@@ -27,6 +27,7 @@ fn main() {
                     .plugin(SelectionPlugin::new())
                     .plugin(NodeInteractionPlugin::new())
                     .plugin(ViewportPlugin::new())
+                    .plugin(FocusSelectionPlugin::new())
                     .plugin(BackgroundPlugin::new())
                     .plugin(NodePlugin::new())
                     .plugin(PortInteractionPlugin::new())

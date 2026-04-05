@@ -46,6 +46,7 @@ fn main() {
                     .plugin(ClipboardPlugin::new())
                     .plugin(SelectAllViewportPlugin::new())
                     .plugin(AlignPlugin::new())
+                    .plugin(FocusSelectionPlugin::new())
                     .plugin(DeletePlugin::new())
                     .plugin(HistoryPlugin::new())
                     .build()

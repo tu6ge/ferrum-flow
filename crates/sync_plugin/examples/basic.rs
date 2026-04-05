@@ -51,6 +51,7 @@ fn main() {
                     .plugin(ClipboardPlugin::new())
                     .plugin(SelectAllViewportPlugin::new())
                     .plugin(AlignPlugin::new())
+                    .plugin(FocusSelectionPlugin::new())
                     .plugin(PortInteractionPlugin::new())
                     .plugin(EdgePlugin::new())
                     .plugin(DeletePlugin::new())
