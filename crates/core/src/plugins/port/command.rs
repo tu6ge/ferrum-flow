@@ -1,11 +1,11 @@
 use crate::{Edge, GraphOp, Node, Port, canvas::Command};
 
-pub(super) struct CreateEdge {
+pub struct CreateEdge {
     edge: Edge,
 }
 
 impl CreateEdge {
-    pub(super) fn new(edge: Edge) -> Self {
+    pub fn new(edge: Edge) -> Self {
         Self { edge }
     }
 }
