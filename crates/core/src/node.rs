@@ -40,6 +40,7 @@ impl NodeId {
 pub struct Node {
     pub id: NodeId,
     pub node_type: String,
+    pub execute_type: String,
     pub x: Pixels,
     pub y: Pixels,
     pub size: Size<Pixels>,
@@ -54,6 +55,7 @@ impl Node {
         Self {
             id: NodeId::new(),
             node_type: String::new(),
+            execute_type: String::new(),
             x: x.into(),
             y: y.into(),
             size: Size {
@@ -178,6 +180,7 @@ impl PortPosition {
 
 pub struct NodeBuilder {
     node_type: String,
+    execute_type: String,
     x: Pixels,
     y: Pixels,
     size: Size<Pixels>,
@@ -201,6 +204,7 @@ impl NodeBuilder {
     pub fn new(node_type: impl Into<String>) -> Self {
         Self {
             node_type: node_type.into(),
+            execute_type: String::new(),
             x: px(0.0),
             y: px(0.0),
             size: Size {
@@ -211,6 +215,11 @@ impl NodeBuilder {
             outputs: vec![],
             data: serde_json::Value::Null,
         }
+    }
+
+    pub fn execute_type(mut self, execute_type: impl Into<String>) -> Self {
+        self.execute_type = execute_type.into();
+        self
     }
 
     pub fn position(mut self, x: f32, y: f32) -> Self {
@@ -339,6 +348,7 @@ impl NodeBuilder {
         let node = Node {
             id: node_id,
             node_type: self.node_type,
+            execute_type: self.execute_type,
             x: self.x,
             y: self.y,
             size: self.size,
