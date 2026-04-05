@@ -156,7 +156,6 @@ impl FlowCanvas {
             &mut notify,
         );
 
-        // 否则广播给 plugins
         for plugin in &mut self.plugins_registry.plugins {
             let result = plugin.on_event(&event, &mut ctx);
             match result {
