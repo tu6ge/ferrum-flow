@@ -1622,6 +1622,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "ferrum-flow-executor"
+version = "0.0.1"
+dependencies = [
+ "anyhow",
+ "ferrum-flow",
+ "serde_json",
+]
+
+[[package]]
 name = "ferrum-flow-sync-plugin"
 version = "0.0.1"
 dependencies = [
