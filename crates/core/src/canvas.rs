@@ -264,11 +264,20 @@ impl Render for FlowCanvas {
         let mut layers: Vec<Vec<AnyElement>> =
             (0..RenderLayer::ALL.len()).map(|_| Vec::new()).collect();
 
+        let alignment_guides = self.interaction.alignment_guides.as_ref();
+
         for plugin in self.plugins_registry.plugins.iter_mut() {
             let layer = plugin.render_layer();
 
-            let mut ctx =
-                RenderContext::new(graph, port_offset_cache, viewport, renderder, window, layer);
+            let mut ctx = RenderContext::new(
+                graph,
+                port_offset_cache,
+                viewport,
+                renderder,
+                window,
+                layer,
+                alignment_guides,
+            );
 
             if let Some(el) = plugin.render(&mut ctx) {
                 layers[layer.index()].push(el);
@@ -283,6 +292,7 @@ impl Render for FlowCanvas {
                 renderder,
                 window,
                 RenderLayer::Interaction,
+                alignment_guides,
             );
 
             if let Some(el) = i.render(&mut ctx) {
@@ -298,6 +308,7 @@ impl Render for FlowCanvas {
                 renderder,
                 window,
                 RenderLayer::Overlay,
+                alignment_guides,
             );
             let els = sync_plugin.render(&mut ctx);
             for el in els {

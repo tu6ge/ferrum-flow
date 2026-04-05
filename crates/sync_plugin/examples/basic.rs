@@ -44,6 +44,7 @@ fn main() {
                 FlowCanvas::builder(Graph::new(), ctx)
                     .plugin(SelectionPlugin::new())
                     .plugin(NodeInteractionPlugin::new())
+                    .plugin(SnapGuidesPlugin::new())
                     .plugin(ViewportPlugin::new())
                     .plugin(BackgroundPlugin::new())
                     .plugin(NodePlugin::new())

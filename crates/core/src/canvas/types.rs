@@ -1,14 +1,21 @@
 use gpui::{AnyElement, MouseMoveEvent, MouseUpEvent};
 
-use crate::plugin::{PluginContext, RenderContext};
+use crate::{
+    alignment_guides::AlignmentGuides,
+    plugin::{PluginContext, RenderContext},
+};
 
 pub struct InteractionState {
     pub handler: Option<Box<dyn Interaction>>,
+    pub alignment_guides: Option<AlignmentGuides>,
 }
 
 impl InteractionState {
     pub fn new() -> Self {
-        Self { handler: None }
+        Self {
+            handler: None,
+            alignment_guides: None,
+        }
     }
 
     pub fn add(&mut self, handler: impl Interaction + 'static) {

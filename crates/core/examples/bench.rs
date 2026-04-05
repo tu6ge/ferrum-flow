@@ -31,6 +31,7 @@ fn main() {
                     .plugin(FocusSelectionPlugin::new())
                     .plugin(SelectionPlugin::new())
                     .plugin(NodeInteractionPlugin::new())
+                    .plugin(SnapGuidesPlugin::new())
                     .plugin(ViewportPlugin::new())
                     .plugin(BackgroundPlugin::new())
                     .plugin(NodePlugin::new())

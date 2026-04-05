@@ -242,6 +242,7 @@ fn main() {
                     .plugin(exec_plugin)
                     .plugin(SelectionPlugin::new())
                     .plugin(NodeInteractionPlugin::new())
+                    .plugin(SnapGuidesPlugin::new())
                     .plugin(ViewportPlugin::new())
                     .plugin(FocusSelectionPlugin::new())
                     .plugin(BackgroundPlugin::new())

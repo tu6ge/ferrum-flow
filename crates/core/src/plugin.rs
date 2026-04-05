@@ -7,7 +7,8 @@ use gpui::{
 
 use crate::{
     Edge, EdgeBuilder, EdgeId, FlowCanvas, Graph, Node, NodeBuilder, NodeId, NodeRenderer, Port,
-    PortId, RendererRegistry, Viewport, copied_subgraph::CopiedSubgraph,
+    PortId, RendererRegistry, Viewport, alignment_guides::AlignmentGuides,
+    copied_subgraph::CopiedSubgraph,
     canvas::{
         Command, CommandContext, HistoryProvider, Interaction, InteractionState, PortLayoutCache,
     },
@@ -237,10 +238,12 @@ impl<'a> PluginContext<'a> {
     }
 
     pub fn start_interaction(&mut self, handler: impl Interaction + 'static) {
+        self.interaction.alignment_guides = None;
         self.interaction.handler = Some(Box::new(handler));
     }
 
     pub fn cancel_interaction(&mut self) {
+        self.interaction.alignment_guides = None;
         self.interaction.handler = None;
     }
 
@@ -499,6 +502,8 @@ pub struct RenderContext<'a> {
     pub window: &'a Window,
 
     pub layer: RenderLayer,
+    /// Populated while dragging nodes when alignment matches other nodes.
+    pub alignment_guides: Option<&'a AlignmentGuides>,
 }
 
 impl<'a> RenderContext<'a> {
@@ -509,6 +514,7 @@ impl<'a> RenderContext<'a> {
         renderers: &'a RendererRegistry,
         window: &'a Window,
         layer: RenderLayer,
+        alignment_guides: Option<&'a AlignmentGuides>,
     ) -> Self {
         Self {
             graph,
@@ -517,6 +523,7 @@ impl<'a> RenderContext<'a> {
             renderers,
             window,
             layer,
+            alignment_guides,
         }
     }
 
