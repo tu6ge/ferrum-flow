@@ -49,6 +49,28 @@ pub fn port_screen_big_bounds(
     Some(bounds)
 }
 
+/// Filled circle in screen space (for dangling-connection endpoint marker).
+pub fn filled_disc_path(
+    center: Point<Pixels>,
+    radius: Pixels,
+) -> Result<Path<Pixels>, anyhow::Error> {
+    let r: f32 = radius.into();
+    let cx: f32 = center.x.into();
+    let cy: f32 = center.y.into();
+    const SEGMENTS: usize = 28;
+    let mut pts: Vec<Point<Pixels>> = Vec::with_capacity(SEGMENTS);
+    for i in 0..SEGMENTS {
+        let t = i as f32 / SEGMENTS as f32 * std::f32::consts::TAU;
+        pts.push(Point::new(
+            px(cx + r * t.cos()),
+            px(cy + r * t.sin()),
+        ));
+    }
+    let mut pb = PathBuilder::fill();
+    pb.add_polygon(&pts, true);
+    pb.build()
+}
+
 pub fn edge_bezier(
     start: Point<Pixels>,
     start_position: PortPosition,

@@ -289,7 +289,7 @@ impl NodeBuilder {
         self
     }
 
-    pub fn build(self, graph: &mut Graph) -> NodeId {
+    pub fn only_build(self, graph: &Graph) -> (Node, Vec<Port>) {
         let node_id = graph.next_node_id();
 
         let mut inputs = Vec::new();
@@ -298,6 +298,7 @@ impl NodeBuilder {
         let mut input_counters: HashMap<PortPosition, usize> = HashMap::new();
 
         // Create input ports
+        let mut ports = vec![];
         for spec in self.inputs {
             let port_id = graph.next_port_id();
 
@@ -305,17 +306,14 @@ impl NodeBuilder {
             let current_index = *index;
             *index += 1;
 
-            graph.ports.insert(
-                port_id,
-                Port {
-                    id: port_id,
-                    kind: PortKind::Input,
-                    index: current_index,
-                    node_id,
-                    position: spec.position,
-                    size: spec.size,
-                },
-            );
+            ports.push(Port {
+                id: port_id,
+                kind: PortKind::Input,
+                index: current_index,
+                node_id,
+                position: spec.position,
+                size: spec.size,
+            });
 
             inputs.push(port_id);
         }
@@ -330,36 +328,41 @@ impl NodeBuilder {
             let current_index = *index;
             *index += 1;
 
-            graph.ports.insert(
-                port_id,
-                Port {
-                    id: port_id,
-                    kind: PortKind::Output,
-                    index: current_index,
-                    node_id,
-                    position: spec.position,
-                    size: spec.size,
-                },
-            );
+            ports.push(Port {
+                id: port_id,
+                kind: PortKind::Output,
+                index: current_index,
+                node_id,
+                position: spec.position,
+                size: spec.size,
+            });
 
             outputs.push(port_id);
         }
 
-        let node = Node {
-            id: node_id,
-            node_type: self.node_type,
-            execute_type: self.execute_type,
-            x: self.x,
-            y: self.y,
-            size: self.size,
-            inputs,
-            outputs,
-            data: self.data,
-        };
+        (
+            Node {
+                id: node_id,
+                node_type: self.node_type,
+                execute_type: self.execute_type,
+                x: self.x,
+                y: self.y,
+                size: self.size,
+                inputs,
+                outputs,
+                data: self.data,
+            },
+            ports,
+        )
+    }
 
-        graph.nodes.insert(node_id, node);
-        graph.node_order_mut().push(node_id);
-
-        node_id
+    pub fn build(self, graph: &mut Graph) -> NodeId {
+        let (node, ports) = self.only_build(graph);
+        graph.nodes.insert(node.id, node.clone());
+        graph.node_order_mut().push(node.id);
+        for port in ports {
+            graph.ports.insert(port.id, port);
+        }
+        node.id
     }
 }

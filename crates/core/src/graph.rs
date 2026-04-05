@@ -125,6 +125,10 @@ impl Graph {
         map.insert(port.id, port);
     }
 
+    pub fn remove_point(&mut self, id: &PortId) {
+        self.ports.remove(id);
+    }
+
     pub fn nodes(&self) -> &HashMap<NodeId, Node> {
         &self.nodes
     }
