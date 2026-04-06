@@ -374,6 +374,18 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
         self
     }
 
+    /// Registers several plugins in one call (each item is a `Box<dyn Plugin>`).
+    ///
+    /// Order is only relevant before [`Self::build`], which sorts by [`Plugin::priority`]. Prefer
+    /// [`.plugin`](Self::plugin) for single plugins so the compiler boxes them for you.
+    ///
+    /// When building a list of heterogeneous plugin types, use an explicitly typed
+    /// `Vec<Box<dyn Plugin>>` so each `Box::new(concrete)` coerces to the trait object.
+    pub fn plugins(mut self, plugins: impl IntoIterator<Item = Box<dyn Plugin>>) -> Self {
+        self.plugins.plugins.extend(plugins);
+        self
+    }
+
     /// Registers the **core** plugin set for editing a node graph on the canvas: background,
     /// selection, node drag, pan/zoom, node/edge rendering, port wiring, delete, and undo/redo
     /// ([`BackgroundPlugin`], [`SelectionPlugin`], [`NodeInteractionPlugin`], [`ViewportPlugin`],
@@ -408,6 +420,17 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
         R: node_renderer::NodeRenderer + 'static,
     {
         self.renderers.register(name, renderer);
+        self
+    }
+
+    /// Registers several [`NodeRenderer`](node_renderer::NodeRenderer) entries (each `Box<dyn …>`), same idea as [`Self::plugins`].
+    pub fn node_renderers<S: Into<String>>(
+        mut self,
+        items: impl IntoIterator<Item = (S, Box<dyn node_renderer::NodeRenderer>)>,
+    ) -> Self {
+        for (name, renderer) in items {
+            self.renderers.register_boxed(name, renderer);
+        }
         self
     }
 

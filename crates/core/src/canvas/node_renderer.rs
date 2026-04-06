@@ -83,6 +83,10 @@ impl RendererRegistry {
         self.map.insert(name.into(), Box::new(renderer));
     }
 
+    pub fn register_boxed(&mut self, name: impl Into<String>, renderer: Box<dyn NodeRenderer>) {
+        self.map.insert(name.into(), renderer);
+    }
+
     pub fn get(&self, name: &str) -> &dyn NodeRenderer {
         if name.is_empty() {
             return self.default.as_ref();
