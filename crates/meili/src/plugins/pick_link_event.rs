@@ -5,7 +5,7 @@
 //! 并由 [`super::meili_port_interaction::MeiliPortInteractionPlugin`] 发出，避免与仓库内未升级的 core 冲突。
 
 use ferrum_flow::PortId;
-use gpui::{Pixels, Point};
+use gpui::{Pixels, Point, SharedString};
 
 #[derive(Clone, Copy)]
 pub struct PickNodeTypeForPendingLink {
@@ -17,4 +17,12 @@ pub struct PickNodeTypeForPendingLink {
 #[derive(Clone, Copy)]
 pub struct NodeTypeSelectConfirm {
     pub digit: u8,
+}
+
+/// 由 Shell 在用户确认「添加节点」输入后投递；[`crate::plugins::MeiliAddNodePlugin`] 负责落点与写回图。
+#[derive(Clone)]
+pub struct AddNodeConfirm {
+    pub label: SharedString,
+    pub world_x: f32,
+    pub world_y: f32,
 }

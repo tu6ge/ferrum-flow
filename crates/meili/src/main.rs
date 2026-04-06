@@ -5,6 +5,7 @@
 //! [`plugins::NodeTypePickerPlugin`] + [`shell::MeiliShell`] 的 **gpui-component** [`Select`](gpui_component::select::Select)。
 //! 未使用 core 自带的 `PortInteractionPlugin`，以便在不改 core 的情况下完成交互。
 
+mod add_node_dialog;
 mod demo_graph;
 mod pick_state;
 mod plugins;
@@ -40,7 +41,13 @@ fn main() {
                     .plugin(plugins::MeiliPortInteractionPlugin::new())
                     .plugin(EdgePlugin::new())
                     .plugin(ClipboardPlugin::new())
-                    .plugin(ContextMenuPlugin::new())
+                    .plugin(
+                        ContextMenuPlugin::new().canvas_row("添加节点…", |ctx, world| {
+                            crate::add_node_dialog::open_at(world);
+                            ctx.notify();
+                        }),
+                    )
+                    .plugin(plugins::MeiliAddNodePlugin::new())
                     .plugin(SelectAllViewportPlugin::new())
                     .plugin(AlignPlugin::new())
                     .plugin(FocusSelectionPlugin::new())

@@ -1,20 +1,25 @@
 //! 窗口根视图：在 [`ferrum_flow::FlowCanvas`] 之上叠一层 UI。
 //!
-//! [`gpui_component::select::Select`] 需要在带 [`gpui::Context`] 的 `Render` 里构建，因此放在本模块，而不是
-//! `NodeTypePickerPlugin::render`。用户从下拉框选定后，通过 [`ferrum_flow::FlowCanvas::handle_event`] 投递
-//! [`NodeTypeSelectConfirm`](crate::plugins::pick_link_event::NodeTypeSelectConfirm)，由插件完成建点与连线。
+//! - [`gpui_component::select::Select`]：悬垂连线选类型（见 [`crate::plugins::NodeTypePickerPlugin`]）。
+//! - [`gpui_component::input::Input`]：右键「添加节点」后输入 label（见 [`crate::add_node_dialog`] +
+//!   [`crate::plugins::MeiliAddNodePlugin`]）。
+//!
+//! 用户操作后通过 [`ferrum_flow::FlowCanvas::handle_event`] 投递自定义事件，由插件改图。
 
 use ferrum_flow::FlowCanvas;
 use gpui::prelude::FluentBuilder as _;
 use gpui::{
-    AppContext as _, Context, Entity, IntoElement, ParentElement as _, Render, SharedString,
-    Styled as _, Subscription, Window, div, px,
+    App, AppContext as _, Context, Entity, IntoElement, ParentElement as _, Render, SharedString,
+    Styled as _, Subscription, Window, div, px, rgba,
 };
+use gpui_component::button::{Button, ButtonVariants as _};
+use gpui_component::input::{Input, InputEvent, InputState};
 use gpui_component::select::{SearchableVec, Select, SelectEvent, SelectItem, SelectState};
-use gpui_component::{Root, Sizable as _};
+use gpui_component::{Root, Sizable as _, h_flex, v_flex};
 
+use crate::add_node_dialog;
 use crate::pick_state;
-use crate::plugins::pick_link_event::NodeTypeSelectConfirm;
+use crate::plugins::pick_link_event::{AddNodeConfirm, NodeTypeSelectConfirm};
 
 #[derive(Clone)]
 struct NodePickItem {
@@ -67,16 +72,66 @@ fn node_pick_items() -> SearchableVec<NodePickItem> {
     ])
 }
 
+fn dispatch_add_node_confirmed<C: gpui::AppContext>(
+    canvas: &Entity<FlowCanvas>,
+    label: SharedString,
+    cx: &mut C,
+) {
+    let t = label.trim();
+    if t.is_empty() {
+        return;
+    }
+    let label_confirmed: SharedString = t.to_string().into();
+    let (world_x, world_y) = crate::add_node_dialog::take_pending_world().unwrap_or((240.0, 200.0));
+    canvas.update(cx, |flow, cx| {
+        flow.handle_event(
+            ferrum_flow::FlowEvent::custom(AddNodeConfirm {
+                label: label_confirmed,
+                world_x,
+                world_y,
+            }),
+            cx,
+        );
+    });
+    add_node_dialog::close();
+    canvas.update(cx, |_, cx| cx.notify());
+}
+
+fn flush_add_node_shell_ctx(
+    canvas: &Entity<FlowCanvas>,
+    input: &Entity<InputState>,
+    cx: &mut Context<MeiliShell>,
+) {
+    let label: SharedString = input.read_with(cx, |i, _| i.value());
+    dispatch_add_node_confirmed(canvas, label, cx);
+}
+
+fn flush_add_node_app(canvas: &Entity<FlowCanvas>, input: &Entity<InputState>, cx: &mut App) {
+    let label: SharedString = input.read_with(cx, |i, _| i.value());
+    dispatch_add_node_confirmed(canvas, label, cx);
+}
+
+fn cancel_add_node_app(canvas: &Entity<FlowCanvas>, cx: &mut App) {
+    add_node_dialog::close();
+    canvas.update(cx, |_, cx| cx.notify());
+}
+
 pub struct MeiliShell {
     pub canvas: Entity<FlowCanvas>,
     node_select: Entity<SelectState<SearchableVec<NodePickItem>>>,
+    add_node_label: Entity<InputState>,
     _canvas_obs: Subscription,
     _select_sub: Subscription,
+    _add_node_enter_sub: Subscription,
 }
 
 impl MeiliShell {
     pub fn new(canvas: Entity<FlowCanvas>, window: &mut Window, cx: &mut Context<Self>) -> Self {
         let node_select = cx.new(|cx| SelectState::new(node_pick_items(), None, window, cx));
+
+        let add_node_label = cx.new(|cx| {
+            InputState::new(window, cx).placeholder("输入节点显示名称…")
+        });
 
         let canvas_obs = cx.observe(&canvas, |_shell, _, cx| {
             cx.notify();
@@ -97,18 +152,42 @@ impl MeiliShell {
             },
         );
 
+        let canvas_enter = canvas.clone();
+        let input_enter = add_node_label.clone();
+        let add_node_enter_sub = cx.subscribe(
+            &add_node_label,
+            move |_shell, _, event: &InputEvent, cx| {
+                if matches!(event, InputEvent::PressEnter { .. }) {
+                    flush_add_node_shell_ctx(&canvas_enter, &input_enter, cx);
+                }
+            },
+        );
+
         Self {
             canvas,
             node_select,
+            add_node_label,
             _canvas_obs: canvas_obs,
             _select_sub: select_sub,
+            _add_node_enter_sub: add_node_enter_sub,
         }
     }
 }
 
 impl Render for MeiliShell {
-    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        if add_node_dialog::is_open() && add_node_dialog::take_should_clear_input() {
+            let _ = self.add_node_label.update(cx, |state, cx| {
+                state.set_value("", window, cx);
+            });
+        }
+
         let show_bar = pick_state::pending_peek().is_some();
+        let show_add_node = add_node_dialog::is_open();
+
+        let canvas_ok = self.canvas.clone();
+        let input_ok = self.add_node_label.clone();
+        let canvas_cancel = self.canvas.clone();
 
         div()
             .size_full()
@@ -130,6 +209,79 @@ impl Render for MeiliShell {
                                     .menu_width(px(380.0))
                                     .small(),
                             ),
+                        ),
+                )
+            })
+            .when(show_add_node, |this| {
+                this.child(
+                    div()
+                        .absolute()
+                        .top(px(0.0))
+                        .left(px(0.0))
+                        .size_full()
+                        .flex()
+                        .items_center()
+                        .justify_center()
+                        .bg(rgba(0x000000aa))
+                        .child(
+                            v_flex()
+                                .w(px(400.0))
+                                .p(px(20.0))
+                                .rounded(px(10.0))
+                                .bg(rgba(0x121824f0))
+                                .border_1()
+                                .border_color(rgba(0xffffff18))
+                                .child(
+                                    div()
+                                        .text_sm()
+                                        .text_color(rgba(0xe8ecf1))
+                                        .child("添加节点"),
+                                )
+                                .child(
+                                    div()
+                                        .mt_2()
+                                        .text_xs()
+                                        .text_color(rgba(0x8b98a8))
+                                        .child("节点卡片会大致居中落在右键时的画布位置上"),
+                                )
+                                .child(
+                                    div().mt_3().child(
+                                        Input::new(&self.add_node_label)
+                                            .small()
+                                            .cleanable(true),
+                                    ),
+                                )
+                                .child(
+                                    h_flex()
+                                        .mt_4()
+                                        .justify_end()
+                                        .child(
+                                            Button::new("cancel-add-node")
+                                                .small()
+                                                .ghost()
+                                                .on_click({
+                                                    let c = canvas_cancel.clone();
+                                                    move |_, _, cx: &mut App| {
+                                                        cancel_add_node_app(&c, cx);
+                                                    }
+                                                })
+                                                .child("取消"),
+                                        )
+                                        .child(
+                                            Button::new("ok-add-node")
+                                                .small()
+                                                .primary()
+                                                .ml_2()
+                                                .on_click({
+                                                    let c = canvas_ok.clone();
+                                                    let inp = input_ok.clone();
+                                                    move |_, _, cx: &mut App| {
+                                                        flush_add_node_app(&c, &inp, cx);
+                                                    }
+                                                })
+                                                .child("添加"),
+                                        ),
+                                ),
                         ),
                 )
             })
