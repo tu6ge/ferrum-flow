@@ -21,6 +21,7 @@
 //! - **Esc** 仍可取消（在画布焦点上由本插件处理）。
 
 use crate::pick_state;
+use crate::plugins::node_kind_preset::{NodeKindPreset, preset_for_digit};
 use crate::plugins::pick_link_event::{NodeTypeSelectConfirm, PickNodeTypeForPendingLink};
 use ferrum_flow::{
     CreateEdge, CreateNode, CreatePort, EventResult, FlowEvent, InputEvent, NodeBuilder, Plugin,
@@ -28,7 +29,6 @@ use ferrum_flow::{
     port_screen_position,
 };
 use gpui::{Element as _, ParentElement as _, Styled, canvas, div, px, rgb};
-use serde_json::json;
 
 pub struct NodeTypePickerPlugin;
 
@@ -56,19 +56,6 @@ impl NodeTypePickerPlugin {
                 NodeKindPreset::Tool => b.output_at(PortPosition::Bottom),
                 _ => b.output(),
             },
-        }
-    }
-
-    fn preset_for_digit(d: u8) -> Option<NodeKindPreset> {
-        match d {
-            1 => Some(NodeKindPreset::Agent),
-            2 => Some(NodeKindPreset::Llm),
-            3 => Some(NodeKindPreset::Tool),
-            4 => Some(NodeKindPreset::Router),
-            5 => Some(NodeKindPreset::IoStart),
-            6 => Some(NodeKindPreset::IoEnd),
-            7 => Some(NodeKindPreset::Step),
-            _ => None,
         }
     }
 
@@ -119,87 +106,6 @@ impl NodeTypePickerPlugin {
     }
 }
 
-#[derive(Clone, Copy)]
-enum NodeKindPreset {
-    Agent,
-    Llm,
-    Tool,
-    Router,
-    IoStart,
-    IoEnd,
-    Step,
-}
-
-impl NodeKindPreset {
-    fn describe(&self) -> (&'static str, f32, f32, serde_json::Value) {
-        match self {
-            Self::Agent => (
-                "agent",
-                220.0,
-                104.0,
-                json!({
-                    "title": "Agent",
-                    "subtitle": "Orchestrator"
-                }),
-            ),
-            Self::Llm => (
-                "llm",
-                200.0,
-                96.0,
-                json!({
-                    "title": "LLM",
-                    "subtitle": "Model pass"
-                }),
-            ),
-            Self::Tool => (
-                "tool",
-                200.0,
-                88.0,
-                json!({
-                    "title": "Tool",
-                    "subtitle": "Action"
-                }),
-            ),
-            Self::Router => (
-                "router",
-                180.0,
-                80.0,
-                json!({
-                    "title": "Router",
-                    "subtitle": "Branching"
-                }),
-            ),
-            Self::IoStart => (
-                "io_start",
-                200.0,
-                88.0,
-                json!({
-                    "title": "Start",
-                    "subtitle": "Input"
-                }),
-            ),
-            Self::IoEnd => (
-                "io_end",
-                200.0,
-                88.0,
-                json!({
-                    "title": "End",
-                    "subtitle": "Output"
-                }),
-            ),
-            Self::Step => (
-                "",
-                200.0,
-                88.0,
-                json!({
-                    "title": "Step",
-                    "subtitle": "Generic"
-                }),
-            ),
-        }
-    }
-}
-
 impl Plugin for NodeTypePickerPlugin {
     fn name(&self) -> &'static str {
         "meili_node_type_picker"
@@ -215,7 +121,7 @@ impl Plugin for NodeTypePickerPlugin {
         }
 
         if let Some(c) = event.as_custom::<NodeTypeSelectConfirm>() {
-            if let Some(preset) = Self::preset_for_digit(c.digit) {
+            if let Some(preset) = preset_for_digit(c.digit) {
                 Self::commit_choice(ctx, preset);
             }
             return EventResult::Stop;

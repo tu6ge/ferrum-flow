@@ -25,4 +25,6 @@ pub struct AddNodeConfirm {
     pub label: SharedString,
     pub world_x: f32,
     pub world_y: f32,
+    /// Same encoding as [`NodeTypeSelectConfirm::digit`] / bottom-bar type picker (1–7).
+    pub kind_digit: u8,
 }

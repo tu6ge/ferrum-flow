@@ -1,7 +1,7 @@
 //! 窗口根视图：在 [`ferrum_flow::FlowCanvas`] 之上叠一层 UI。
 //!
 //! - [`gpui_component::select::Select`]：悬垂连线选类型（见 [`crate::plugins::NodeTypePickerPlugin`]）。
-//! - [`gpui_component::input::Input`]：右键「添加节点」后输入 label（见 [`crate::add_node_dialog`] +
+//! - [`gpui_component::input::Input`] + **Select**：右键「添加节点」后选类型并输入标题（见 [`crate::add_node_dialog`] +
 //!   [`crate::plugins::MeiliAddNodePlugin`]）。
 //!
 //! 用户操作后通过 [`ferrum_flow::FlowCanvas::handle_event`] 投递自定义事件，由插件改图。
@@ -72,9 +72,28 @@ fn node_pick_items() -> SearchableVec<NodePickItem> {
     ])
 }
 
+fn read_add_node_kind_digit_ctx(
+    kind_select: &Entity<SelectState<SearchableVec<NodePickItem>>>,
+    cx: &mut Context<MeiliShell>,
+) -> u8 {
+    kind_select
+        .read_with(cx, |s, _| s.selected_value().copied())
+        .unwrap_or(7)
+}
+
+fn read_add_node_kind_digit_app(
+    kind_select: &Entity<SelectState<SearchableVec<NodePickItem>>>,
+    cx: &mut App,
+) -> u8 {
+    kind_select
+        .read_with(cx, |s, _| s.selected_value().copied())
+        .unwrap_or(7)
+}
+
 fn dispatch_add_node_confirmed<C: gpui::AppContext>(
     canvas: &Entity<FlowCanvas>,
     label: SharedString,
+    kind_digit: u8,
     cx: &mut C,
 ) {
     let t = label.trim();
@@ -89,6 +108,7 @@ fn dispatch_add_node_confirmed<C: gpui::AppContext>(
                 label: label_confirmed,
                 world_x,
                 world_y,
+                kind_digit,
             }),
             cx,
         );
@@ -100,15 +120,23 @@ fn dispatch_add_node_confirmed<C: gpui::AppContext>(
 fn flush_add_node_shell_ctx(
     canvas: &Entity<FlowCanvas>,
     input: &Entity<InputState>,
+    kind_select: &Entity<SelectState<SearchableVec<NodePickItem>>>,
     cx: &mut Context<MeiliShell>,
 ) {
     let label: SharedString = input.read_with(cx, |i, _| i.value());
-    dispatch_add_node_confirmed(canvas, label, cx);
+    let kind_digit = read_add_node_kind_digit_ctx(kind_select, cx);
+    dispatch_add_node_confirmed(canvas, label, kind_digit, cx);
 }
 
-fn flush_add_node_app(canvas: &Entity<FlowCanvas>, input: &Entity<InputState>, cx: &mut App) {
+fn flush_add_node_app(
+    canvas: &Entity<FlowCanvas>,
+    input: &Entity<InputState>,
+    kind_select: &Entity<SelectState<SearchableVec<NodePickItem>>>,
+    cx: &mut App,
+) {
     let label: SharedString = input.read_with(cx, |i, _| i.value());
-    dispatch_add_node_confirmed(canvas, label, cx);
+    let kind_digit = read_add_node_kind_digit_app(kind_select, cx);
+    dispatch_add_node_confirmed(canvas, label, kind_digit, cx);
 }
 
 fn cancel_add_node_app(canvas: &Entity<FlowCanvas>, cx: &mut App) {
@@ -119,6 +147,8 @@ fn cancel_add_node_app(canvas: &Entity<FlowCanvas>, cx: &mut App) {
 pub struct MeiliShell {
     pub canvas: Entity<FlowCanvas>,
     node_select: Entity<SelectState<SearchableVec<NodePickItem>>>,
+    /// Type picker inside the add-node dialog (same item set as [`Self::node_select`]).
+    add_node_kind: Entity<SelectState<SearchableVec<NodePickItem>>>,
     add_node_label: Entity<InputState>,
     _canvas_obs: Subscription,
     _select_sub: Subscription,
@@ -131,6 +161,12 @@ impl MeiliShell {
 
         let add_node_label = cx.new(|cx| {
             InputState::new(window, cx).placeholder("输入节点显示名称…")
+        });
+
+        let add_node_kind = cx.new(|cx| {
+            let mut state = SelectState::new(node_pick_items(), None, window, cx).searchable(true);
+            state.set_selected_value(&7u8, window, cx);
+            state
         });
 
         let canvas_obs = cx.observe(&canvas, |_shell, _, cx| {
@@ -154,11 +190,12 @@ impl MeiliShell {
 
         let canvas_enter = canvas.clone();
         let input_enter = add_node_label.clone();
+        let kind_enter = add_node_kind.clone();
         let add_node_enter_sub = cx.subscribe(
             &add_node_label,
             move |_shell, _, event: &InputEvent, cx| {
                 if matches!(event, InputEvent::PressEnter { .. }) {
-                    flush_add_node_shell_ctx(&canvas_enter, &input_enter, cx);
+                    flush_add_node_shell_ctx(&canvas_enter, &input_enter, &kind_enter, cx);
                 }
             },
         );
@@ -166,6 +203,7 @@ impl MeiliShell {
         Self {
             canvas,
             node_select,
+            add_node_kind,
             add_node_label,
             _canvas_obs: canvas_obs,
             _select_sub: select_sub,
@@ -180,6 +218,9 @@ impl Render for MeiliShell {
             let _ = self.add_node_label.update(cx, |state, cx| {
                 state.set_value("", window, cx);
             });
+            let _ = self.add_node_kind.update(cx, |state, cx| {
+                state.set_selected_value(&7u8, window, cx);
+            });
         }
 
         let show_bar = pick_state::pending_peek().is_some();
@@ -187,6 +228,7 @@ impl Render for MeiliShell {
 
         let canvas_ok = self.canvas.clone();
         let input_ok = self.add_node_label.clone();
+        let kind_ok = self.add_node_kind.clone();
         let canvas_cancel = self.canvas.clone();
 
         div()
@@ -242,10 +284,32 @@ impl Render for MeiliShell {
                                         .mt_2()
                                         .text_xs()
                                         .text_color(rgba(0x8b98a8))
-                                        .child("节点卡片会大致居中落在右键时的画布位置上"),
+                                        .child("节点卡片会大致居中落在右键时的画布位置上；标题可自定义"),
                                 )
                                 .child(
-                                    div().mt_3().child(
+                                    div()
+                                        .mt_3()
+                                        .text_xs()
+                                        .text_color(rgba(0x8b98a8))
+                                        .child("节点类型"),
+                                )
+                                .child(
+                                    div().mt_1().child(
+                                        Select::new(&self.add_node_kind)
+                                            .placeholder("选择类型")
+                                            .menu_width(px(360.0))
+                                            .small(),
+                                    ),
+                                )
+                                .child(
+                                    div()
+                                        .mt_3()
+                                        .text_xs()
+                                        .text_color(rgba(0x8b98a8))
+                                        .child("显示名称"),
+                                )
+                                .child(
+                                    div().mt_1().child(
                                         Input::new(&self.add_node_label)
                                             .small()
                                             .cleanable(true),
@@ -275,8 +339,9 @@ impl Render for MeiliShell {
                                                 .on_click({
                                                     let c = canvas_ok.clone();
                                                     let inp = input_ok.clone();
+                                                    let k = kind_ok.clone();
                                                     move |_, _, cx: &mut App| {
-                                                        flush_add_node_app(&c, &inp, cx);
+                                                        flush_add_node_app(&c, &inp, &k, cx);
                                                     }
                                                 })
                                                 .child("添加"),

@@ -1,11 +1,11 @@
-//! 画布菜单「添加节点」：接收 Shell 投递的 [`AddNodeConfirm`](super::pick_link_event::AddNodeConfirm)，在右键世界坐标处创建通用步骤节点。
+//! 画布菜单「添加节点」：接收 Shell 投递的 [`AddNodeConfirm`](super::pick_link_event::AddNodeConfirm)，在右键世界坐标处按所选类型创建节点。
 
 use crate::add_node_dialog;
+use crate::plugins::node_kind_preset::preset_for_digit;
 use crate::plugins::pick_link_event::AddNodeConfirm;
 use ferrum_flow::{
     CreateNode, CreatePort, EventResult, FlowEvent, InputEvent, Plugin, PluginContext, RenderLayer,
 };
-use serde_json::json;
 
 pub struct MeiliAddNodePlugin;
 
@@ -14,22 +14,20 @@ impl MeiliAddNodePlugin {
         Self
     }
 
-    fn commit(ctx: &mut PluginContext, label: &str, world_x: f32, world_y: f32) {
-        // Center the default 200×96 card on the right-click world point.
-        let x = world_x - 100.0;
-        let y = world_y - 48.0;
-        let data = json!({
-            "title": label,
-            "subtitle": "步骤"
-        });
+    fn commit(ctx: &mut PluginContext, label: &str, world_x: f32, world_y: f32, kind_digit: u8) {
+        let Some(preset) = preset_for_digit(kind_digit).or_else(|| preset_for_digit(7)) else {
+            return;
+        };
+        let (node_type, w, h, data) = preset.describe_with_title(label);
+        let x = world_x - w * 0.5;
+        let y = world_y - h * 0.5;
         let builder = ctx
-            .create_node("")
+            .create_node(node_type)
             .position(x, y)
-            .size(200.0, 96.0)
+            .size(w, h)
             .data(data)
-            .execute_type("")
-            .input()
-            .output();
+            .execute_type(node_type);
+        let builder = preset.apply_standalone_ports(builder);
         let (new_node, new_ports) = builder.only_build(ctx.graph);
         ctx.execute_command(CreateNode::new(new_node));
         for port in new_ports {
@@ -56,7 +54,7 @@ impl Plugin for MeiliAddNodePlugin {
         if let Some(c) = event.as_custom::<AddNodeConfirm>() {
             let s = c.label.trim();
             if !s.is_empty() {
-                Self::commit(ctx, s, c.world_x, c.world_y);
+                Self::commit(ctx, s, c.world_x, c.world_y, c.kind_digit);
             }
             return EventResult::Stop;
         }

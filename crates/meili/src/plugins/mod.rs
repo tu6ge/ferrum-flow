@@ -3,6 +3,7 @@ mod agent_background;
 mod agent_hud;
 mod meili_port_interaction;
 mod meili_theme;
+mod node_kind_preset;
 mod node_type_picker;
 pub mod pick_link_event;
 
