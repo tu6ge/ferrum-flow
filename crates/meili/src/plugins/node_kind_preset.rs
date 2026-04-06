@@ -1,4 +1,4 @@
-//! 与 [`super::node_type_picker::NodeTypePickerPlugin`]、[`super::add_node::MeiliAddNodePlugin`] 共用的节点类型预设。
+//! Shared node-kind presets for [`super::node_type_picker::NodeTypePickerPlugin`] and [`super::add_node::MeiliAddNodePlugin`].
 
 use ferrum_flow::NodeBuilder;
 use serde_json::{Value, json};

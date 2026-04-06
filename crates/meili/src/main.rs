@@ -1,9 +1,9 @@
 //! Meili — AI agent workflow canvas (FerrumFlow + [`FlowTheme`](ferrum_flow::FlowTheme) via
 //! [`plugins::MeiliThemePlugin`] and [`theme::apply_flow_chrome`](crate::theme::apply_flow_chrome)).
 //!
-//! 悬垂连线后选节点类型：使用 [`plugins::MeiliPortInteractionPlugin`]（Meili fork，点击蓝点发事件）+
-//! [`plugins::NodeTypePickerPlugin`] + [`shell::MeiliShell`] 的 **gpui-component** [`Select`](gpui_component::select::Select)。
-//! 未使用 core 自带的 `PortInteractionPlugin`，以便在不改 core 的情况下完成交互。
+//! After a dangling link, node type is chosen with [`plugins::MeiliPortInteractionPlugin`] (Meili fork: blue-dot click),
+//! [`plugins::NodeTypePickerPlugin`], and the **gpui-component** [`Select`](gpui_component::select::Select) in [`shell::MeiliShell`].
+//! Core `PortInteractionPlugin` is not registered so this works without changing `ferrum-flow`.
 
 mod add_node_dialog;
 mod demo_graph;
@@ -42,7 +42,7 @@ fn main() {
                     .plugin(EdgePlugin::new())
                     .plugin(ClipboardPlugin::new())
                     .plugin(
-                        ContextMenuPlugin::new().canvas_row("添加节点…", |ctx, world| {
+                        ContextMenuPlugin::new().canvas_row("Add node…", |ctx, world| {
                             crate::add_node_dialog::open_at(world);
                             ctx.notify();
                         }),

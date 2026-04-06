@@ -1,10 +1,10 @@
-//! 窗口根视图：在 [`ferrum_flow::FlowCanvas`] 之上叠一层 UI。
+//! Window root: layers UI above [`ferrum_flow::FlowCanvas`].
 //!
-//! - [`gpui_component::select::Select`]：悬垂连线选类型（见 [`crate::plugins::NodeTypePickerPlugin`]）。
-//! - [`gpui_component::input::Input`] + **Select**：右键「添加节点」后选类型并输入标题（见 [`crate::add_node_dialog`] +
-//!   [`crate::plugins::MeiliAddNodePlugin`]）。
+//! - [`gpui_component::select::Select`] for node type after a dangling link (see [`crate::plugins::NodeTypePickerPlugin`]).
+//! - [`gpui_component::input::Input`] plus **Select** for “Add node” from the context menu: pick type and title
+//!   (see [`crate::add_node_dialog`] and [`crate::plugins::MeiliAddNodePlugin`]).
 //!
-//! 用户操作后通过 [`ferrum_flow::FlowCanvas::handle_event`] 投递自定义事件，由插件改图。
+//! User actions forward custom events through [`ferrum_flow::FlowCanvas::handle_event`]; plugins update the graph.
 
 use ferrum_flow::FlowCanvas;
 use gpui::prelude::FluentBuilder as _;
@@ -42,31 +42,31 @@ impl SelectItem for NodePickItem {
 fn node_pick_items() -> SearchableVec<NodePickItem> {
     SearchableVec::new([
         NodePickItem {
-            title: "Agent — 编排 · 工具 · 记忆".into(),
+            title: "Agent — orchestration · tools · memory".into(),
             value: 1,
         },
         NodePickItem {
-            title: "LLM — 模型推理".into(),
+            title: "LLM — model inference".into(),
             value: 2,
         },
         NodePickItem {
-            title: "Tool — 搜索 / 代码 / RAG".into(),
+            title: "Tool — search / code / RAG".into(),
             value: 3,
         },
         NodePickItem {
-            title: "Router — 分支 / 重试".into(),
+            title: "Router — branching · retry".into(),
             value: 4,
         },
         NodePickItem {
-            title: "起点 — io_start".into(),
+            title: "Start — io_start".into(),
             value: 5,
         },
         NodePickItem {
-            title: "终点 — io_end".into(),
+            title: "End — io_end".into(),
             value: 6,
         },
         NodePickItem {
-            title: "步骤 — 通用".into(),
+            title: "Step — generic".into(),
             value: 7,
         },
     ])
@@ -160,7 +160,7 @@ impl MeiliShell {
         let node_select = cx.new(|cx| SelectState::new(node_pick_items(), None, window, cx));
 
         let add_node_label = cx.new(|cx| {
-            InputState::new(window, cx).placeholder("输入节点显示名称…")
+            InputState::new(window, cx).placeholder("Node display name…")
         });
 
         let add_node_kind = cx.new(|cx| {
@@ -247,7 +247,7 @@ impl Render for MeiliShell {
                         .child(
                             div().w(px(380.0)).child(
                                 Select::new(&self.node_select)
-                                    .placeholder("选择节点类型 / Choose node type")
+                                    .placeholder("Choose node type")
                                     .menu_width(px(380.0))
                                     .small(),
                             ),
@@ -277,26 +277,26 @@ impl Render for MeiliShell {
                                     div()
                                         .text_sm()
                                         .text_color(rgba(0xe8ecf1))
-                                        .child("添加节点"),
+                                        .child("Add node"),
                                 )
                                 .child(
                                     div()
                                         .mt_2()
                                         .text_xs()
                                         .text_color(rgba(0x8b98a8))
-                                        .child("节点卡片会大致居中落在右键时的画布位置上；标题可自定义"),
+                                        .child("The card is centered on the canvas point where you right-clicked; the title is yours to set."),
                                 )
                                 .child(
                                     div()
                                         .mt_3()
                                         .text_xs()
                                         .text_color(rgba(0x8b98a8))
-                                        .child("节点类型"),
+                                        .child("Node type"),
                                 )
                                 .child(
                                     div().mt_1().child(
                                         Select::new(&self.add_node_kind)
-                                            .placeholder("选择类型")
+                                            .placeholder("Choose type")
                                             .menu_width(px(360.0))
                                             .small(),
                                     ),
@@ -306,7 +306,7 @@ impl Render for MeiliShell {
                                         .mt_3()
                                         .text_xs()
                                         .text_color(rgba(0x8b98a8))
-                                        .child("显示名称"),
+                                        .child("Display name"),
                                 )
                                 .child(
                                     div().mt_1().child(
@@ -329,7 +329,7 @@ impl Render for MeiliShell {
                                                         cancel_add_node_app(&c, cx);
                                                     }
                                                 })
-                                                .child("取消"),
+                                                .child("Cancel"),
                                         )
                                         .child(
                                             Button::new("ok-add-node")
@@ -344,7 +344,7 @@ impl Render for MeiliShell {
                                                         flush_add_node_app(&c, &inp, &k, cx);
                                                     }
                                                 })
-                                                .child("添加"),
+                                                .child("Add"),
                                         ),
                                 ),
                         ),
@@ -353,7 +353,7 @@ impl Render for MeiliShell {
     }
 }
 
-/// 由 [`crate::main`] 构造：`Root` 作为窗口第一层（`gpui-component` 要求），内层为 [`MeiliShell`]。
+/// Built from [`crate::main`]: `Root` is the window root (required by gpui-component); [`MeiliShell`] is inside.
 pub fn window_root(
     canvas: Entity<FlowCanvas>,
     window: &mut Window,

@@ -1,4 +1,5 @@
-//! 右键「添加节点」与 Shell 里输入框之间的开关状态（`gpui-component` 的 [`Input`](gpui_component::input::Input) 只能画在 Shell）。
+//! State for “Add node” from the context menu and the Shell-hosted [`Input`](gpui_component::input::Input)
+//! (gpui-component widgets must render in the Shell, not in Ferrum `Plugin::render`).
 
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};

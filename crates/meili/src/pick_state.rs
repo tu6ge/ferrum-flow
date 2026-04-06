@@ -1,5 +1,6 @@
-//! 悬垂选节点：在 `FlowCanvas` 插件与外层 [`crate::shell::MeiliShell`] 之间共享「当前是否在选类型」状态。
-//! `gpui-component` 的 [`Select`](gpui_component::select::Select) 只能画在带 [`gpui::Context`] 的视图里，不能画在 Ferrum 的 `Plugin::render` 中。
+//! Dangling type picker: shared “are we picking a node type?” state between `FlowCanvas` plugins and
+//! [`crate::shell::MeiliShell`]. gpui-component [`Select`](gpui_component::select::Select) must live in a view
+//! with [`gpui::Context`], not in Ferrum `Plugin::render`.
 
 use std::sync::Mutex;
 

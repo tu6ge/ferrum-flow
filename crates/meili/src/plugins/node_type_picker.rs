@@ -1,24 +1,24 @@
-//! # 悬垂连线后的节点类型选择（Meili）
+//! # Node type picker after a dangling link (Meili)
 //!
-//! ## 流程说明
+//! ## Flow
 //!
-//! 1. 从某个端口拖出一条连线，在**空白画布**上松开鼠标 → 进入「悬垂连线」状态（灰线 + 蓝色端点）。
-//! 2. 点击**蓝色端点** → [`MeiliPortInteractionPlugin`](super::meili_port_interaction::MeiliPortInteractionPlugin)
-//!    发出 [`PickNodeTypeForPendingLink`](super::pick_link_event::PickNodeTypeForPendingLink)；
-//!    本插件把该请求写入 [`crate::pick_state`]，并 `notify` 画布。
-//! 3. 外层 [`crate::shell::MeiliShell`] 发现 `pick_state` 有值时，渲染 **gpui-component** 的
-//!    [`Select`](gpui_component::select::Select)；用户选定后 Shell 调用 [`ferrum_flow::FlowCanvas::handle_event`]
-//!    投递 [`NodeTypeSelectConfirm`](super::pick_link_event::NodeTypeSelectConfirm)，由本插件 `commit_choice`。
+//! 1. Drag a wire from a port and release on empty canvas → "dangling link" state (gray wire + blue endpoint).
+//! 2. Click the **blue endpoint** → [`MeiliPortInteractionPlugin`](super::meili_port_interaction::MeiliPortInteractionPlugin)
+//!    emits [`PickNodeTypeForPendingLink`](super::pick_link_event::PickNodeTypeForPendingLink); this plugin stores it
+//!    in [`crate::pick_state`] and notifies the canvas.
+//! 3. [`crate::shell::MeiliShell`] sees `pick_state` and renders the **gpui-component**
+//!    [`Select`](gpui_component::select::Select); after the user picks, the Shell calls [`ferrum_flow::FlowCanvas::handle_event`]
+//!    with [`NodeTypeSelectConfirm`](super::pick_link_event::NodeTypeSelectConfirm), and this plugin runs `commit_choice`.
 //!
-//! ## 为何不用 `Select` 画在插件里
+//! ## Why `Select` is not in the plugin
 //!
-//! `Select` 依赖 `gpui::Context` 与组件内部实体；Ferrum 的 `Plugin::render` 只有 [`ferrum_flow::RenderContext`]，
-//! 因此下拉控件必须放在窗口子视图（本仓库的 `MeiliShell`）中。
+//! `Select` needs `gpui::Context` and component entities; Ferrum `Plugin::render` only gets [`ferrum_flow::RenderContext`],
+//! so the dropdown lives in the window shell (`MeiliShell` in this repo).
 //!
-//! ## 操作方式
+//! ## Interaction
 //!
-//! - 使用底部 **下拉框**（gpui-component Select）选择类型；支持组件自带搜索/键盘导航。
-//! - **Esc** 仍可取消（在画布焦点上由本插件处理）。
+//! - Bottom **dropdown** (gpui-component Select) to choose the type; supports built-in search / keyboard navigation.
+//! - **Esc** still cancels (handled on canvas focus by this plugin).
 
 use crate::pick_state;
 use crate::plugins::node_kind_preset::{NodeKindPreset, preset_for_digit};
@@ -150,7 +150,7 @@ impl Plugin for NodeTypePickerPlugin {
         RenderLayer::Overlay
     }
 
-    /// 只画悬垂线 + 蓝点；类型选择 UI 由 [`crate::shell::MeiliShell`] 中的 `gpui-component` Select 负责。
+    /// Renders only the dangling wire and blue dot; type UI is the gpui-component `Select` in [`crate::shell::MeiliShell`].
     fn render(&mut self, ctx: &mut RenderContext) -> Option<gpui::AnyElement> {
         let p = pick_state::pending_peek()?;
         let port = ctx.graph.ports.get(&p.source_port)?;

@@ -1,4 +1,5 @@
-//! 画布菜单「添加节点」：接收 Shell 投递的 [`AddNodeConfirm`](super::pick_link_event::AddNodeConfirm)，在右键世界坐标处按所选类型创建节点。
+//! Canvas “Add node” context menu: handles [`AddNodeConfirm`](super::pick_link_event::AddNodeConfirm) from the
+//! Shell and creates a node at the right-click world position with the chosen type.
 
 use crate::add_node_dialog;
 use crate::plugins::node_kind_preset::preset_for_digit;

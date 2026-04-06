@@ -1,9 +1,9 @@
-//! Meili 版端口拖拽交互：与 `ferrum_flow::PortInteractionPlugin` 行为一致，但点击悬垂蓝点时改为发出
-//! [`PickNodeTypeForPendingLink`](super::pick_link_event::PickNodeTypeForPendingLink)，由
-//! [`super::node_type_picker::NodeTypePickerPlugin`] 处理。
+//! Meili port drag interaction: matches `ferrum_flow::PortInteractionPlugin`, but clicking the dangling blue
+//! endpoint emits [`PickNodeTypeForPendingLink`](super::pick_link_event::PickNodeTypeForPendingLink) for
+//! [`super::node_type_picker::NodeTypePickerPlugin`].
 //!
-//! **维护说明**：本文件自 core `plugins/port/interaction.rs` 复制而来；core 升级后请 diff 合并。
-//! 若将来 core 官方支持「选类型再建节点」，可改回注册 `PortInteractionPlugin` 并删除本模块。
+//! **Maintenance**: forked from core `plugins/port/interaction.rs`; re-diff when upgrading core. If core later
+//! supports “pick type then create node”, switch back to `PortInteractionPlugin` and remove this module.
 
 use ferrum_flow::{
     CreateEdge, FlowEvent, InputEvent, Interaction, Plugin, PortId, PortKind, PortPosition,
