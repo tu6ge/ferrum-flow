@@ -11,7 +11,7 @@ mod viewport;
 pub use canvas::{
     Command, CommandContext, CompositeCommand, FlowCanvas, HistoryProvider, Interaction,
     InteractionResult, InteractionState, LocalHistory, NodeRenderer, RendererRegistry,
-    port_screen_position,
+    default_node_caption, port_screen_position,
 };
 pub use edge::*;
 pub use graph::*;

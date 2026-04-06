@@ -3,6 +3,7 @@ use gpui::{
     AnyElement, AppContext as _, Application, Element as _, ParentElement as _, Styled,
     WindowOptions, div, rgb, white,
 };
+use serde_json::json;
 
 fn main() {
     Application::new().run(|cx| {
@@ -13,12 +14,20 @@ fn main() {
             .position(100.0, 100.0)
             .size(300.0, 150.0)
             .output()
+            .data(json!({ "label": "Number Node" }))
             .build(&mut graph);
 
         graph
             .create_node("")
             .position(300.0, 400.0)
             .input()
+            .build(&mut graph);
+
+        graph
+            .create_node("undefined")
+            .position(500.0, 500.0)
+            .input()
+            .output()
             .build(&mut graph);
 
         cx.open_window(WindowOptions::default(), |window, cx| {

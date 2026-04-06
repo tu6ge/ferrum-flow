@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use crate::node::Node;
 use crate::plugin::RenderContext;
-use crate::{Graph, NodeId, Port, PortId, PortPosition};
+use crate::{Graph, Port, PortId, PortPosition};
 
 pub trait NodeRenderer: Send + Sync {
     /// render node inner UI
@@ -128,7 +128,7 @@ impl NodeRenderer for DefaultNodeRenderer {
                     .justify_center()
                     .text_center()
                     .px_2()
-                    .child(format!("Node {}", short_name(&node_id)))
+                    .child(default_node_caption(node))
                     .text_color(rgb(0x1A192B)),
             )
             .into_any()
@@ -161,7 +161,7 @@ impl NodeRenderer for UndefinedNodeRenderer {
                     .justify_center()
                     .text_center()
                     .px_2()
-                    .child(format!("Undefined Node Type"))
+                    .child(undefined_node_caption(node))
                     .text_color(rgb(0x5F6368)),
             )
             .into_any()
@@ -180,8 +180,31 @@ pub fn port_screen_position(
     Some(ctx.viewport.world_to_screen(node_pos + offset))
 }
 
-fn short_name(node_id: &NodeId) -> String {
-    let str = node_id.as_uuid().to_string();
+fn data_title(data: &serde_json::Value) -> Option<String> {
+    if let Some(s) = data.get("label").and_then(|v| v.as_str()) {
+        let t = s.trim();
+        if !t.is_empty() {
+            return Some(t.to_string());
+        }
+    }
+    None
+}
 
-    str[..6].to_string()
+/// Label for [`DefaultNodeRenderer`]: user-facing title from `data`, else `node_type`, else a generic word.
+/// UUID stays off-canvas; use debug/inspector/tooltip if operators need the id.
+pub fn default_node_caption(node: &Node) -> String {
+    if let Some(s) = data_title(&node.data) {
+        return s;
+    }
+    if !node.node_type.is_empty() {
+        return node.node_type.clone();
+    }
+    "Node".to_string()
+}
+
+fn undefined_node_caption(node: &Node) -> String {
+    if !node.node_type.is_empty() {
+        return format!("Unknown type: {}", node.node_type);
+    }
+    "Unknown node type".to_string()
 }

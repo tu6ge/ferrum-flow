@@ -1,5 +1,6 @@
 use ferrum_flow::*;
 use gpui::{AppContext as _, Application, WindowOptions};
+use serde_json::json;
 
 fn main() {
     Application::new().run(|cx| {
@@ -12,6 +13,7 @@ fn main() {
                     .position(200.0 * i as f32, 200.0 * j as f32)
                     .input()
                     .output()
+                    .data(json!({ "label": format!("Node {}", i * 100 + j) }))
                     .build(&mut graph);
             }
         }

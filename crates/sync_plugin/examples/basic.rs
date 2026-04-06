@@ -1,13 +1,67 @@
 use ferrum_flow::*;
 use ferrum_flow_sync_plugin::{Assets, YrsSyncPlugin};
-use gpui::{AppContext as _, Application, Size, WindowOptions, px};
+use gpui::{
+    AnyElement, AppContext as _, Application, Element as _, ParentElement as _, Size, Styled as _,
+    WindowOptions, div, px, rgb, white,
+};
+
+/// Renders like the built-in default card, plus a second line with the full node UUID for sync demos.
+struct SyncBasicNodeRenderer;
+
+impl NodeRenderer for SyncBasicNodeRenderer {
+    fn render(&self, node: &Node, ctx: &mut RenderContext) -> AnyElement {
+        let node_id = node.id;
+        let screen = ctx.world_to_screen(node.point());
+        let selected = ctx.graph.selected_node.contains(&node_id);
+
+        div()
+            .absolute()
+            .left(screen.x)
+            .top(screen.y)
+            .w(node.size.width * ctx.viewport.zoom)
+            .h(node.size.height * ctx.viewport.zoom)
+            .bg(white())
+            .rounded(px(6.0))
+            .border(px(1.5))
+            .border_color(rgb(if selected { 0xFF7800 } else { 0x1A192B }))
+            .child(
+                div()
+                    .size_full()
+                    .flex()
+                    .flex_col()
+                    .items_center()
+                    .justify_center()
+                    .text_center()
+                    .px_2()
+                    .gap(px(2.0))
+                    .min_h(px(0.0))
+                    .child(
+                        div()
+                            .text_sm()
+                            .text_color(rgb(0x1A192B))
+                            .child(default_node_caption(node)),
+                    )
+                    .child(
+                        div()
+                            .w_full()
+                            .min_w(px(0.0))
+                            .text_xs()
+                            .text_color(rgb(0x7a7a88))
+                            .overflow_hidden()
+                            .text_ellipsis()
+                            .child(node.id.to_string()),
+                    ),
+            )
+            .into_any()
+    }
+}
 
 fn main() {
     Application::new().with_assets(Assets).run(|cx| {
         let mut graph = Graph::new();
 
         graph
-            .create_node("")
+            .create_node("sync")
             .position(100.0, 100.0)
             .output()
             .output()
@@ -16,7 +70,7 @@ fn main() {
             .build(&mut graph);
 
         graph
-            .create_node("")
+            .create_node("sync")
             .position(300.0, 400.0)
             .input()
             .input_at(PortPosition::Top)
@@ -27,7 +81,7 @@ fn main() {
             .build(&mut graph);
 
         graph
-            .create_node("")
+            .create_node("sync")
             .position(500.0, 500.0)
             .input()
             .output()
@@ -60,6 +114,7 @@ fn main() {
                     .plugin(EdgePlugin::new())
                     .plugin(DeletePlugin::new())
                     .plugin(HistoryPlugin::new())
+                    .node_renderer("sync", SyncBasicNodeRenderer)
                     .sync_plugin(YrsSyncPlugin::new(graph, "ws://127.0.0.1:9001"))
                     .build()
             })
