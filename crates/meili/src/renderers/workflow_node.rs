@@ -5,8 +5,8 @@ use gpui::{AnyElement, Element as _, ParentElement as _, Styled, div, px, rgb, r
 use serde_json::Value;
 
 use crate::theme::{
-    PORT_IN, PORT_OUT, PORT_RING, SELECTION_BORDER, TEXT_MUTED, TEXT_PRIMARY, accent_agent,
-    accent_io_in, accent_io_out, accent_llm, accent_router, accent_tool,
+    PORT_IN, PORT_OUT, PORT_RING, accent_agent, accent_io_in, accent_io_out, accent_llm,
+    accent_router, accent_tool,
 };
 
 #[derive(Clone, Copy)]
@@ -111,7 +111,7 @@ impl NodeRenderer for WorkflowNodeRenderer {
         let subtitle = self.read_subtitle(node);
 
         let border = if selected {
-            rgb(SELECTION_BORDER)
+            rgb(ctx.theme.selection_rect_border)
         } else {
             // 0xRRGGBBAA — soft accent rim
             rgba((accent << 8) | 0x55)
@@ -130,7 +130,7 @@ impl NodeRenderer for WorkflowNodeRenderer {
             .child(
                 div()
                     .child(title)
-                    .text_color(rgb(TEXT_PRIMARY))
+                    .text_color(rgb(ctx.theme.node_caption_text))
                     .text_size(px(13.0)),
             );
 
@@ -139,7 +139,7 @@ impl NodeRenderer for WorkflowNodeRenderer {
                 body = body.child(
                     div()
                         .child(sub)
-                        .text_color(rgb(TEXT_MUTED))
+                        .text_color(rgb(ctx.theme.undefined_node_caption_text))
                         .text_size(px(11.0)),
                 );
             }

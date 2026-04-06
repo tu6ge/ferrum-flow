@@ -254,6 +254,8 @@ impl Plugin for NodeTypePickerPlugin {
         let start_position = port.position;
         let target_position = Self::facing_position(start_position);
         let viewport = ctx.viewport.clone();
+        let line_rgb = ctx.theme.port_preview_line;
+        let dot_rgb = ctx.theme.port_preview_dot;
 
         let wire = canvas(
             move |_, _, _| (),
@@ -261,10 +263,10 @@ impl Plugin for NodeTypePickerPlugin {
                 if let Ok(line) =
                     edge_bezier(start, start_position, target_position, end, &viewport)
                 {
-                    win.paint_path(line, rgb(0xb1b1b8));
+                    win.paint_path(line, rgb(line_rgb));
                 }
                 if let Ok(dot) = filled_disc_path(end, px(6.0)) {
-                    win.paint_path(dot, rgb(0x6B9EFF));
+                    win.paint_path(dot, rgb(dot_rgb));
                 }
             },
         );

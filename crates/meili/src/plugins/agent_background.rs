@@ -3,7 +3,6 @@
 use ferrum_flow::{FlowEvent, InitPluginContext, Plugin, PluginContext, RenderContext, RenderLayer};
 use gpui::{Element, ParentElement, Styled, div, px, rgb};
 
-use crate::theme::{CANVAS_BG, GRID_DOT};
 
 pub struct AgentBackgroundPlugin;
 
@@ -62,7 +61,7 @@ impl Plugin for AgentBackgroundPlugin {
                         .w(px(1.5))
                         .h(px(1.5))
                         .rounded_full()
-                        .bg(rgb(GRID_DOT)),
+                        .bg(rgb(ctx.theme.background_grid_dot)),
                 );
                 y += grid;
             }
@@ -74,7 +73,7 @@ impl Plugin for AgentBackgroundPlugin {
                 .absolute()
                 .w(px(width))
                 .h(px(height))
-                .bg(rgb(CANVAS_BG))
+                .bg(rgb(ctx.theme.background))
                 .children(dots)
                 .into_any(),
         )

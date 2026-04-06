@@ -5,6 +5,8 @@ use ferrum_flow::{
 };
 use gpui::{Element as _, ParentElement as _, Styled, div, px, rgb, rgba};
 
+use crate::theme::{HUD_BAR_BG_RGBA, HUD_BAR_BORDER_RGBA, TEXT_MUTED, TEXT_PRIMARY};
+
 pub struct AgentHudPlugin;
 
 impl AgentHudPlugin {
@@ -51,8 +53,8 @@ impl Plugin for AgentHudPlugin {
                 .items_center()
                 .px(px(16.0))
                 .border_b(px(1.0))
-                .border_color(rgba(0xffffff12))
-                .bg(rgba(0x0a0e14cc))
+                .border_color(rgba(HUD_BAR_BORDER_RGBA))
+                .bg(rgba(HUD_BAR_BG_RGBA))
                 .child(
                     div()
                         .flex()
@@ -60,13 +62,13 @@ impl Plugin for AgentHudPlugin {
                         .child(
                             div()
                                 .child("Meili")
-                                .text_color(rgb(0xe8ecf1))
+                                .text_color(rgb(TEXT_PRIMARY))
                                 .text_size(px(14.0)),
                         )
                         .child(
                             div()
                                 .child("Agent workflow studio")
-                                .text_color(rgb(0x8b98a8))
+                                .text_color(rgb(TEXT_MUTED))
                                 .text_size(px(11.0)),
                         ),
                 )

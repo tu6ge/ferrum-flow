@@ -63,12 +63,14 @@ impl MeiliPortInteractionPlugin {
         start_position: PortPosition,
         target_position: PortPosition,
         viewport: &Viewport,
+        line_rgb: u32,
+        dot_rgb: u32,
     ) {
-        if let Ok(line) = edge_bezier(start, start_position, target_position, end, viewport) {
-            win.paint_path(line, rgb(0xb1b1b8));
+        if let Ok(path) = edge_bezier(start, start_position, target_position, end, viewport) {
+            win.paint_path(path, rgb(line_rgb));
         }
         if let Ok(dot) = filled_disc_path(end, px(6.0)) {
-            win.paint_path(dot, rgb(0x6B9EFF));
+            win.paint_path(dot, rgb(dot_rgb));
         }
     }
 }
@@ -150,12 +152,14 @@ impl Plugin for MeiliPortInteractionPlugin {
         let start_position = source_port.position;
         let target_position = Self::facing_position(start_position);
         let viewport = ctx.viewport.clone();
+        let line_rgb = ctx.theme.port_preview_line;
+        let dot_rgb = ctx.theme.port_preview_dot;
 
         Some(
             canvas(
-                move |_, _, _| (start_position, target_position, viewport),
-                move |_, (sp, tp, vp), win, _| {
-                    Self::paint_wire_and_dot(win, start, end, sp, tp, &vp);
+                move |_, _, _| (start_position, target_position, viewport, line_rgb, dot_rgb),
+                move |_, (sp, tp, vp, lr, dr), win, _| {
+                    Self::paint_wire_and_dot(win, start, end, sp, tp, &vp, lr, dr);
                 },
             )
             .into_any(),
@@ -264,11 +268,13 @@ impl Interaction for PortConnecting {
         let position = self.position;
         let target_position = self.target_position;
         let viewport = ctx.viewport.clone();
+        let line_rgb = ctx.theme.port_preview_line;
+        let dot_rgb = ctx.theme.port_preview_dot;
 
         Some(
             canvas(
-                move |_, _, _| (position, target_position, viewport),
-                move |_, (position, target_position, viewport), win, _| {
+                move |_, _, _| (position, target_position, viewport, line_rgb, dot_rgb),
+                move |_, (position, target_position, viewport, lr, dr), win, _| {
                     MeiliPortInteractionPlugin::paint_wire_and_dot(
                         win,
                         start,
@@ -276,6 +282,8 @@ impl Interaction for PortConnecting {
                         position,
                         target_position,
                         &viewport,
+                        lr,
+                        dr,
                     );
                 },
             )

@@ -1,4 +1,5 @@
-//! Meili — AI agent workflow canvas (FerrumFlow + custom theme).
+//! Meili — AI agent workflow canvas (FerrumFlow + [`FlowTheme`](ferrum_flow::FlowTheme) via
+//! [`plugins::MeiliThemePlugin`] and [`theme::apply_flow_chrome`](crate::theme::apply_flow_chrome)).
 //!
 //! 悬垂连线后选节点类型：使用 [`plugins::MeiliPortInteractionPlugin`]（Meili fork，点击蓝点发事件）+
 //! [`plugins::NodeTypePickerPlugin`] + [`shell::MeiliShell`] 的 **gpui-component** [`Select`](gpui_component::select::Select)。
@@ -25,6 +26,7 @@ fn main() {
         cx.open_window(WindowOptions::default(), |window, cx| {
             let canvas = cx.new(|ctx| {
                 FlowCanvas::builder(graph, ctx, window)
+                    .plugin(plugins::MeiliThemePlugin::new())
                     .plugin(plugins::AgentBackgroundPlugin::new())
                     .plugin(plugins::AgentHudPlugin::new())
                     .plugin(MinimapPlugin::new())
