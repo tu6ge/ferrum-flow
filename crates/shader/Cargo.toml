@@ -1,0 +1,17 @@
+[package]
+name = "shader"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bytemuck = { version = "1.14", features = ["derive"] }
+ferrum-flow.workspace = true
+gpui.workspace = true
+image = "0.25"
+pollster = "0.4"
+serde_json.workspace = true
+smallvec = "1"
+wgpu = "23"
+
+[dev-dependencies]
+naga = { version = "25.0.1", default-features = false, features = ["wgsl-in"] }

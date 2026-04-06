@@ -3,7 +3,7 @@
 members = [
   "crates/core",
   "crates/executor",
-  "crates/meili",
+  "crates/meili", "crates/shader",
   "crates/sync_plugin",
 ]
 resolver = "2"
