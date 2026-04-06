@@ -24,7 +24,7 @@ fn main() {
 
         cx.open_window(WindowOptions::default(), |window, cx| {
             let canvas = cx.new(|ctx| {
-                FlowCanvas::builder(graph, ctx)
+                FlowCanvas::builder(graph, ctx, window)
                     .plugin(plugins::AgentBackgroundPlugin::new())
                     .plugin(plugins::AgentHudPlugin::new())
                     .plugin(MinimapPlugin::new())

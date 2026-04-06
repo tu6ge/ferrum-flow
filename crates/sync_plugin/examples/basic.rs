@@ -39,9 +39,9 @@ fn main() {
             Graph::new()
         };
 
-        cx.open_window(WindowOptions::default(), |_, cx| {
+        cx.open_window(WindowOptions::default(), |window, cx| {
             cx.new(|ctx| {
-                FlowCanvas::builder(Graph::new(), ctx)
+                FlowCanvas::builder(Graph::new(), ctx, window)
                     .plugin(SelectionPlugin::new())
                     .plugin(NodeInteractionPlugin::new())
                     .plugin(SnapGuidesPlugin::new())

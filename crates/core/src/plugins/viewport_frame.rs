@@ -1,6 +1,7 @@
 use gpui::{Pixels, Point, px};
 
 use crate::{
+    Viewport,
     canvas::{Command, CommandContext},
     plugin::PluginContext,
 };
@@ -10,6 +11,36 @@ pub(crate) const ZOOM_MIN: f32 = 0.7;
 pub(crate) const ZOOM_MAX: f32 = 3.0;
 /// Inset from window edges (ratio per side).
 pub(crate) const MARGIN_RATIO: f32 = 0.08;
+
+fn frame_params(
+    win_w: f32,
+    win_h: f32,
+    bx: f32,
+    by: f32,
+    bw: f32,
+    bh: f32,
+) -> Option<(f32, Point<Pixels>)> {
+    if win_w <= 0.0 || win_h <= 0.0 {
+        return None;
+    }
+
+    let bw_safe = bw.max(1.0);
+    let bh_safe = bh.max(1.0);
+
+    let avail_w = win_w * (1.0 - 2.0 * MARGIN_RATIO);
+    let avail_h = win_h * (1.0 - 2.0 * MARGIN_RATIO);
+    let z = (avail_w / bw_safe)
+        .min(avail_h / bh_safe)
+        .clamp(ZOOM_MIN, ZOOM_MAX);
+
+    let cx = bx + bw / 2.0;
+    let cy = by + bh / 2.0;
+    let center_x = win_w / 2.0;
+    let center_y = win_h / 2.0;
+    let new_offset = Point::new(px(center_x - cx * z), px(center_y - cy * z));
+
+    Some((z, new_offset))
+}
 
 pub(crate) struct ViewportFrameCommand {
     pub from_zoom: f32,
@@ -48,24 +79,9 @@ pub(crate) fn frame_world_rect(ctx: &mut PluginContext, bx: f32, by: f32, bw: f3
 
     let win_w: f32 = wb.size.width.into();
     let win_h: f32 = wb.size.height.into();
-    if win_w <= 0.0 || win_h <= 0.0 {
+    let Some((z, new_offset)) = frame_params(win_w, win_h, bx, by, bw, bh) else {
         return;
-    }
-
-    let bw_safe = bw.max(1.0);
-    let bh_safe = bh.max(1.0);
-
-    let avail_w = win_w * (1.0 - 2.0 * MARGIN_RATIO);
-    let avail_h = win_h * (1.0 - 2.0 * MARGIN_RATIO);
-    let z = (avail_w / bw_safe)
-        .min(avail_h / bh_safe)
-        .clamp(ZOOM_MIN, ZOOM_MAX);
-
-    let cx = bx + bw / 2.0;
-    let cy = by + bh / 2.0;
-    let center_x = win_w / 2.0;
-    let center_y = win_h / 2.0;
-    let new_offset = Point::new(px(center_x - cx * z), px(center_y - cy * z));
+    };
 
     let from_zoom = ctx.viewport.zoom;
     let from_offset = ctx.viewport.offset;
@@ -85,4 +101,33 @@ pub(crate) fn frame_world_rect(ctx: &mut PluginContext, bx: f32, by: f32, bw: f3
         to_zoom: z,
         to_offset: new_offset,
     });
+}
+
+/// Same geometry as [`frame_world_rect`], but writes [`Viewport`] directly (no undo stack).
+/// For [`crate::plugin::InitPluginContext`] / plugin [`Plugin::setup`].
+pub(crate) fn apply_frame_world_rect_direct(
+    viewport: &mut Viewport,
+    win_w: f32,
+    win_h: f32,
+    bx: f32,
+    by: f32,
+    bw: f32,
+    bh: f32,
+) {
+    let Some((z, new_offset)) = frame_params(win_w, win_h, bx, by, bw, bh) else {
+        return;
+    };
+
+    let zoom_changed = (viewport.zoom - z).abs() > 1e-4;
+    let ox: f32 = viewport.offset.x.into();
+    let oy: f32 = viewport.offset.y.into();
+    let nx: f32 = new_offset.x.into();
+    let ny: f32 = new_offset.y.into();
+    let offset_changed = (ox - nx).abs() > 0.5 || (oy - ny).abs() > 0.5;
+    if !zoom_changed && !offset_changed {
+        return;
+    }
+
+    viewport.zoom = z;
+    viewport.offset = new_offset;
 }

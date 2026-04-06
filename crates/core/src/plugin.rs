@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use gpui::{
     AnyElement, Bounds, Context, KeyDownEvent, KeyUpEvent, MouseDownEvent, MouseMoveEvent,
-    MouseUpEvent, Pixels, Point, ScrollWheelEvent, Window,
+    MouseUpEvent, Pixels, Point, ScrollWheelEvent, Size, Window,
 };
 
 use crate::{
@@ -53,6 +53,8 @@ pub struct InitPluginContext<'a, 'b> {
     pub viewport: &'a mut Viewport,
     pub renderers: &'a mut RendererRegistry,
     pub gpui_ctx: &'a Context<'b, FlowCanvas>,
+    /// Drawable size from the `window` passed to [`FlowCanvas::builder`] (`Window::viewport_size` when `build()` runs).
+    pub drawable_size: Size<Pixels>,
     // pub notify: &'a mut dyn FnMut(),
 }
 

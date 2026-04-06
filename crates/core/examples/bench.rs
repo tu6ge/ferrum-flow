@@ -20,9 +20,9 @@ fn main() {
 
         generate_chain_edges(&mut graph, node_ids);
 
-        cx.open_window(WindowOptions::default(), |_, cx| {
+        cx.open_window(WindowOptions::default(), |window, cx| {
             cx.new(|ctx| {
-                FlowCanvas::builder(graph, ctx)
+                FlowCanvas::builder(graph, ctx, window)
                     .plugin(MinimapPlugin::new())
                     .plugin(ClipboardPlugin::new())
                     .plugin(ContextMenuPlugin::new())

@@ -1,9 +1,15 @@
+use gpui::{Bounds, Point, px};
+
 use crate::{
-    plugin::{FlowEvent, Plugin, PluginContext, primary_platform_modifier},
-    plugins::viewport_frame::frame_world_rect,
+    Graph,
+    plugin::{FlowEvent, InitPluginContext, Plugin, PluginContext, primary_platform_modifier},
+    plugins::viewport_frame::{apply_frame_world_rect_direct, frame_world_rect},
 };
 
 /// Zoom and pan so **all** nodes fit in the window (⌘0 / Ctrl+0). Undo restores the previous view.
+///
+/// On [`Plugin::setup`], fits once using [`InitPluginContext::drawable_size`] (does not push an undo
+/// entry; the initial view is not recorded as a command).
 pub struct FitAllGraphPlugin;
 
 impl FitAllGraphPlugin {
@@ -12,14 +18,14 @@ impl FitAllGraphPlugin {
     }
 }
 
-fn graph_world_bounds(ctx: &PluginContext) -> Option<(f32, f32, f32, f32)> {
+fn graph_world_bounds_graph(graph: &Graph) -> Option<(f32, f32, f32, f32)> {
     let mut min_x = f32::MAX;
     let mut min_y = f32::MAX;
     let mut max_x = f32::MIN;
     let mut max_y = f32::MIN;
     let mut any = false;
 
-    for n in ctx.graph.nodes().values() {
+    for n in graph.nodes().values() {
         let x: f32 = n.x.into();
         let y: f32 = n.y.into();
         let w: f32 = n.size.width.into();
@@ -35,7 +41,16 @@ fn graph_world_bounds(ctx: &PluginContext) -> Option<(f32, f32, f32, f32)> {
         return None;
     }
 
-    Some((min_x, min_y, (max_x - min_x).max(1.0), (max_y - min_y).max(1.0)))
+    Some((
+        min_x,
+        min_y,
+        (max_x - min_x).max(1.0),
+        (max_y - min_y).max(1.0),
+    ))
+}
+
+fn graph_world_bounds(ctx: &PluginContext) -> Option<(f32, f32, f32, f32)> {
+    graph_world_bounds_graph(ctx.graph)
 }
 
 fn fit_all(ctx: &mut PluginContext) {
@@ -54,7 +69,18 @@ impl Plugin for FitAllGraphPlugin {
         "fit_all_graph"
     }
 
-    fn setup(&mut self, _ctx: &mut crate::plugin::InitPluginContext) {}
+    fn setup(&mut self, ctx: &mut InitPluginContext) {
+        let Some((bx, by, bw, bh)) = graph_world_bounds_graph(ctx.graph) else {
+            return;
+        };
+        let win_w: f32 = ctx.drawable_size.width.into();
+        let win_h: f32 = ctx.drawable_size.height.into();
+        apply_frame_world_rect_direct(ctx.viewport, win_w, win_h, bx, by, bw, bh);
+        ctx.viewport.window_bounds = Some(Bounds::new(
+            Point::new(px(0.0), px(0.0)),
+            ctx.drawable_size,
+        ));
+    }
 
     fn priority(&self) -> i32 {
         88

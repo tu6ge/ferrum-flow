@@ -32,9 +32,9 @@ fn main() {
             .output()
             .build(&mut graph);
 
-        cx.open_window(WindowOptions::default(), |_, cx| {
+        cx.open_window(WindowOptions::default(), |window, cx| {
             cx.new(|ctx| {
-                FlowCanvas::builder(graph, ctx)
+                FlowCanvas::builder(graph, ctx, window)
                     .plugin(MinimapPlugin::new())
                     .plugin(SelectionPlugin::new())
                     .plugin(NodeInteractionPlugin::new())
