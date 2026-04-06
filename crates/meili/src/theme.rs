@@ -62,7 +62,8 @@ pub fn apply_flow_chrome(t: &mut FlowTheme) {
     t.selection_rect_fill_rgba = 0xc4b5fd33;
 
     t.port_preview_line = 0x004a5568;
-    t.port_preview_dot = accent_llm();
+    // Softer than `accent_llm()` so the pending-link endpoint is visible but not neon on dark bg.
+    t.port_preview_dot = 0x005f7a94;
 
     t.minimap_background = 0x000d1218;
     t.minimap_border = 0x003d4f66;

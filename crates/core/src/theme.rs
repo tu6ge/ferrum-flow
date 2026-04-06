@@ -44,7 +44,7 @@ pub struct FlowTheme {
 
     /// Temporary line while dragging a link from a port.
     pub port_preview_line: u32,
-    /// Endpoint disc while dragging a link from a port.
+    /// Endpoint disc while dragging a link from a port (muted so it does not overpower the canvas).
     pub port_preview_dot: u32,
 
     /// Minimap inner panel fill ([`crate::MinimapPlugin`]).
@@ -97,7 +97,7 @@ impl Default for FlowTheme {
             selection_rect_border: 0x0078A0FF,
             selection_rect_fill_rgba: 0x78A0FF4c,
             port_preview_line: 0x00b1b1b8,
-            port_preview_dot: 0x006B9EFF,
+            port_preview_dot: 0x007189a3,
             minimap_background: 0x00f8f9fb,
             minimap_border: 0x00b1b1b8,
             minimap_edge: 0x00b1b1b8,
