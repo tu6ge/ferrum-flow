@@ -32,6 +32,7 @@ fn main() {
                     .plugin(NodeInteractionPlugin::new())
                     .plugin(SnapGuidesPlugin::new())
                     .plugin(ViewportPlugin::new())
+                    .plugin(ZoomControlsPlugin::new())
                     .plugin(NodePlugin::new())
                     .plugin(plugins::NodeTypePickerPlugin::new())
                     .plugin(plugins::MeiliPortInteractionPlugin::new())

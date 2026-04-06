@@ -46,6 +46,7 @@ fn main() {
                     .plugin(NodeInteractionPlugin::new())
                     .plugin(SnapGuidesPlugin::new())
                     .plugin(ViewportPlugin::new())
+                    .plugin(ZoomControlsPlugin::new())
                     .plugin(BackgroundPlugin::new())
                     .plugin(NodePlugin::new())
                     .plugin(MinimapPlugin::new())

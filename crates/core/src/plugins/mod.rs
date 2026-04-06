@@ -16,6 +16,7 @@ mod select_all_viewport;
 mod snap_guides;
 mod viewport;
 mod viewport_frame;
+mod zoom_controls;
 
 pub use align::AlignPlugin;
 pub use background::BackgroundPlugin;
@@ -36,3 +37,4 @@ pub use select_all_viewport::SelectAllViewportPlugin;
 pub use snap_guides::SnapGuidesPlugin;
 pub use selection::SelectionPlugin;
 pub use viewport::ViewportPlugin;
+pub use zoom_controls::ZoomControlsPlugin;
