@@ -2,12 +2,12 @@ use std::collections::HashMap;
 
 use gpui::{
     AnyElement, Bounds, Context, Div, KeyDownEvent, KeyUpEvent, MouseDownEvent, MouseMoveEvent,
-    MouseUpEvent, Pixels, Point, ScrollWheelEvent, Size, Styled, Window, div, px, rgb, white,
+    MouseUpEvent, Pixels, Point, ScrollWheelEvent, Size, Styled, Window, div, px, rgb,
 };
 
 use crate::{
-    Edge, EdgeBuilder, EdgeId, FlowCanvas, Graph, Node, NodeBuilder, NodeId, NodeRenderer, Port,
-    PortId, RendererRegistry, Viewport,
+    Edge, EdgeBuilder, EdgeId, FlowCanvas, FlowTheme, Graph, Node, NodeBuilder, NodeId, NodeRenderer,
+    Port, PortId, RendererRegistry, Viewport,
     alignment_guides::AlignmentGuides,
     canvas::{
         Command, CommandContext, HistoryProvider, Interaction, InteractionState, PortLayoutCache,
@@ -26,14 +26,19 @@ pub use utils::{
     primary_platform_modifier,
 };
 
-/// Chrome for [`RenderContext::node_card_shell`] (matches built-in [`crate::canvas::node_renderer`] styles).
+/// Chrome for [`RenderContext::node_card_shell`]. [`NodeCardVariant::Default`] and
+/// [`NodeCardVariant::UndefinedType`] read colors from [`RenderContext::theme`]; plugins may change
+/// them via [`InitPluginContext::theme`] / [`PluginContext::theme`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NodeCardVariant {
-    /// White card, navy border — orange when `selected` ([`DefaultNodeRenderer`]).
+    /// Card from [`FlowTheme::node_card_background`] and border from [`FlowTheme::node_card_border`]
+    /// / [`FlowTheme::node_card_border_selected`] when `selected`.
     Default,
-    /// Gray card, orange border ([`UndefinedNodeRenderer`]); border does not depend on selection.
+    /// Card from [`FlowTheme::undefined_node_background`] and [`FlowTheme::undefined_node_border`]
+    /// (no selection styling).
     UndefinedType,
 
+    /// Geometry and border width only; set `.bg` / `.border_color` yourself.
     Custom,
 }
 
@@ -67,6 +72,8 @@ pub struct InitPluginContext<'a, 'b> {
     pub gpui_ctx: &'a Context<'b, FlowCanvas>,
     /// Drawable size from the `window` passed to [`FlowCanvas::builder`] (`Window::viewport_size` when `build()` runs).
     pub drawable_size: Size<Pixels>,
+    /// Canvas colors and strokes; mutate in [`Plugin::setup`](Plugin::setup) to customize chrome.
+    pub theme: &'a mut FlowTheme,
     // pub notify: &'a mut dyn FnMut(),
 }
 
@@ -215,6 +222,8 @@ pub struct PluginContext<'a> {
     pub history: &'a mut dyn HistoryProvider,
     /// Shared node subgraph for [`crate::plugins::ClipboardPlugin`] and context menu.
     pub(crate) clipboard_subgraph: &'a mut Option<CopiedSubgraph>,
+    /// Canvas theme; change during event handling and call [`PluginContext::notify`] to redraw.
+    pub theme: &'a mut FlowTheme,
     emit: &'a mut dyn FnMut(FlowEvent),
     notify: &'a mut dyn FnMut(),
 }
@@ -234,6 +243,7 @@ impl<'a> PluginContext<'a> {
         sync_plugin: &'a mut Option<Box<dyn SyncPlugin + 'static>>,
         history: &'a mut dyn HistoryProvider,
         clipboard_subgraph: &'a mut Option<CopiedSubgraph>,
+        theme: &'a mut FlowTheme,
         emit: &'a mut dyn FnMut(FlowEvent),
         notify: &'a mut dyn FnMut(),
     ) -> Self {
@@ -246,6 +256,7 @@ impl<'a> PluginContext<'a> {
             sync_plugin,
             history,
             clipboard_subgraph,
+            theme,
             emit,
             notify,
         }
@@ -518,6 +529,8 @@ pub struct RenderContext<'a> {
     pub layer: RenderLayer,
     /// Populated while dragging nodes when alignment matches other nodes.
     pub alignment_guides: Option<&'a AlignmentGuides>,
+    /// Active canvas theme (from [`FlowCanvas::theme`](crate::canvas::FlowCanvas::theme)).
+    pub theme: &'a FlowTheme,
 }
 
 impl<'a> RenderContext<'a> {
@@ -529,6 +542,7 @@ impl<'a> RenderContext<'a> {
         window: &'a Window,
         layer: RenderLayer,
         alignment_guides: Option<&'a AlignmentGuides>,
+        theme: &'a FlowTheme,
     ) -> Self {
         Self {
             graph,
@@ -538,6 +552,7 @@ impl<'a> RenderContext<'a> {
             window,
             layer,
             alignment_guides,
+            theme,
         }
     }
 
@@ -612,12 +627,18 @@ impl<'a> RenderContext<'a> {
             .h(node.size.height * z)
             .rounded(px(6.0))
             .border(px(1.5));
+        let t = self.theme;
         match variant {
-            NodeCardVariant::Default => {
-                base.bg(white())
-                    .border_color(rgb(if selected { 0xFF7800 } else { 0x1A192B }))
-            }
-            NodeCardVariant::UndefinedType => base.bg(rgb(0xF5F5F5)).border_color(rgb(0xFF9800)),
+            NodeCardVariant::Default => base.bg(rgb(t.node_card_background)).border_color(rgb(
+                if selected {
+                    t.node_card_border_selected
+                } else {
+                    t.node_card_border
+                },
+            )),
+            NodeCardVariant::UndefinedType => base
+                .bg(rgb(t.undefined_node_background))
+                .border_color(rgb(t.undefined_node_border)),
             NodeCardVariant::Custom => base,
         }
     }

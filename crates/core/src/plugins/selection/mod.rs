@@ -7,7 +7,7 @@ use gpui::{
 };
 
 use crate::{
-    Graph, Node, NodeId,
+    FlowTheme, Graph, Node, NodeId,
     canvas::{Interaction, InteractionResult},
     plugin::{
         EventResult, FlowEvent, InputEvent, Plugin, PluginContext, RenderContext, RenderLayer,
@@ -85,7 +85,7 @@ impl Plugin for SelectionPlugin {
                 bounds.size.width * ctx.viewport.zoom,
                 bounds.size.height * ctx.viewport.zoom,
             );
-            render_rect(Bounds::new(top_left, size))
+            render_rect(Bounds::new(top_left, size), ctx.theme)
         })
     }
 }
@@ -277,7 +277,7 @@ impl Interaction for SelectionInteraction {
                     rect.size.height * ctx.viewport.zoom,
                 );
 
-                Some(render_rect(Bounds::new(top_left, size)))
+                Some(render_rect(Bounds::new(top_left, size), ctx.theme))
             }
 
             SelectionState::Moving { bounds, .. } => {
@@ -287,7 +287,7 @@ impl Interaction for SelectionInteraction {
                     bounds.size.width * ctx.viewport.zoom,
                     bounds.size.height * ctx.viewport.zoom,
                 );
-                Some(render_rect(Bounds::new(top_left, size)))
+                Some(render_rect(Bounds::new(top_left, size), ctx.theme))
             }
 
             _ => None,
@@ -305,7 +305,7 @@ fn normalize_rect(start: Point<Pixels>, end: Point<Pixels>) -> Bounds<Pixels> {
     Bounds::new(Point::new(x, y), Size::new(w, h))
 }
 
-fn render_rect(bounds: Bounds<Pixels>) -> AnyElement {
+fn render_rect(bounds: Bounds<Pixels>, theme: &FlowTheme) -> AnyElement {
     div()
         .absolute()
         .left(bounds.origin.x)
@@ -313,8 +313,8 @@ fn render_rect(bounds: Bounds<Pixels>) -> AnyElement {
         .w(bounds.size.width)
         .h(bounds.size.height)
         .border(px(1.0))
-        .border_color(rgb(0x78A0FF))
-        .bg(rgba(0x78A0FF4c))
+        .border_color(rgb(theme.selection_rect_border))
+        .bg(rgba(theme.selection_rect_fill_rgba))
         .into_any()
 }
 

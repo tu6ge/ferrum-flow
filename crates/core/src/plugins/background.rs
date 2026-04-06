@@ -59,7 +59,7 @@ impl Plugin for BackgroundPlugin {
                         .w(px(2.0))
                         .h(px(2.0))
                         .rounded_full()
-                        .bg(rgb(0x9F9FA7)),
+                        .bg(rgb(ctx.theme.background_grid_dot)),
                 );
 
                 y += grid;
@@ -72,7 +72,7 @@ impl Plugin for BackgroundPlugin {
                 .absolute()
                 .w(px(width))
                 .h(px(height))
-                .bg(gpui::rgb(0xf8f9fb))
+                .bg(gpui::rgb(ctx.theme.background))
                 .children(dots)
                 .into_any(),
         )

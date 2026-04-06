@@ -16,15 +16,6 @@ const OUTER_MARGIN: f32 = 16.0;
 const INNER_INSET: f32 = 3.0;
 const WORLD_PAD: f32 = 96.0;
 
-// Colors aligned with other core plugins: `BackgroundPlugin`, `EdgePlugin`,
-// `DefaultNodeRenderer` / `node_renderer`, `SelectionPlugin`.
-const MINIMAP_INNER_BG: u32 = 0xf8f9fb; // canvas bg (`BackgroundPlugin`)
-const MINIMAP_INNER_BORDER: u32 = 0xb1b1b8; // default edge stroke (`EdgePlugin`)
-const MINIMAP_EDGE: u32 = 0xb1b1b8;
-const MINIMAP_NODE_FILL: u32 = 0xffffff; // default node card (`DefaultNodeRenderer`)
-const MINIMAP_NODE_STROKE: u32 = 0x1a192b; // default node border
-const MINIMAP_VIEWPORT_STROKE: u32 = 0x78a0ff; // selection accent (`SelectionPlugin`)
-
 /// Last-computed layout for hit-testing (updated each [`MinimapPlugin::render`]).
 #[derive(Clone)]
 struct MinimapLayout {
@@ -291,16 +282,23 @@ impl Plugin for MinimapPlugin {
         let v_tl = world_to_inner_pt(vx0, vy0, &layout);
         let v_br = world_to_inner_pt(vx0 + vw, vy0 + vh, &layout);
 
+        let minimap_background = ctx.theme.minimap_background;
+        let minimap_border = ctx.theme.minimap_border;
+        let minimap_edge = ctx.theme.minimap_edge;
+        let minimap_node_fill = ctx.theme.minimap_node_fill;
+        let minimap_node_stroke = ctx.theme.minimap_node_stroke;
+        let minimap_viewport_stroke = ctx.theme.minimap_viewport_stroke;
+
         Some(
             canvas(
                 move |_, _, _| (),
                 move |_, _, win, _| {
                     // Inner background
                     if let Ok(p) = rect_fill_path(inner) {
-                        win.paint_path(p, rgb(MINIMAP_INNER_BG));
+                        win.paint_path(p, rgb(minimap_background));
                     }
                     if let Ok(p) = rect_stroke_path(inner, px(1.0)) {
-                        win.paint_path(p, rgb(MINIMAP_INNER_BORDER));
+                        win.paint_path(p, rgb(minimap_border));
                     }
 
                     // Edges (straight segments between node centers)
@@ -311,7 +309,7 @@ impl Plugin for MinimapPlugin {
                         line.move_to(a);
                         line.line_to(b);
                         if let Ok(p) = line.build() {
-                            win.paint_path(p, rgb(MINIMAP_EDGE));
+                            win.paint_path(p, rgb(minimap_edge));
                         }
                     }
 
@@ -327,10 +325,10 @@ impl Plugin for MinimapPlugin {
                         let o = Point::new(px(min_x), px(min_y));
                         let s = Size::new(px(rw), px(rh));
                         if let Ok(p) = rect_fill_bounds(o, s) {
-                            win.paint_path(p, rgb(MINIMAP_NODE_FILL));
+                            win.paint_path(p, rgb(minimap_node_fill));
                         }
                         if let Ok(p) = rect_stroke_bounds(o, s, px(1.0)) {
-                            win.paint_path(p, rgb(MINIMAP_NODE_STROKE));
+                            win.paint_path(p, rgb(minimap_node_stroke));
                         }
                     }
 
@@ -342,7 +340,7 @@ impl Plugin for MinimapPlugin {
                     let vo = Point::new(px(min_x), px(min_y));
                     let vs = Size::new(px((max_x - min_x).max(2.0)), px((max_y - min_y).max(2.0)));
                     if let Ok(p) = rect_stroke_bounds(vo, vs, px(1.5)) {
-                        win.paint_path(p, rgb(MINIMAP_VIEWPORT_STROKE));
+                        win.paint_path(p, rgb(minimap_viewport_stroke));
                     }
                 },
             )

@@ -234,7 +234,11 @@ impl Plugin for ZoomControlsPlugin {
 
         let bar_w_px = px(bar_w);
 
-        let mk_btn = |label: &'static str| {
+        let btn_bg = ctx.theme.zoom_controls_background;
+        let btn_border = ctx.theme.zoom_controls_border;
+        let btn_text = ctx.theme.zoom_controls_text;
+
+        let mk_btn = move |label: &'static str| {
             div()
                 .w(px(BTN))
                 .h(px(BTN))
@@ -242,12 +246,12 @@ impl Plugin for ZoomControlsPlugin {
                 .items_center()
                 .justify_center()
                 .rounded(px(6.0))
-                .bg(rgb(0xfcfcfc))
+                .bg(rgb(btn_bg))
                 .border_1()
-                .border_color(rgb(0xc8c8d0))
+                .border_color(rgb(btn_border))
                 .text_sm()
                 .font_weight(gpui::FontWeight::MEDIUM)
-                .text_color(rgb(0x1a192b))
+                .text_color(rgb(btn_text))
                 .child(label)
         };
 

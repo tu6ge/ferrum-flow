@@ -2,7 +2,7 @@ use futures::{StreamExt, channel::mpsc};
 use gpui::*;
 
 use crate::{
-    GraphChange, SyncPlugin,
+    FlowTheme, GraphChange, SyncPlugin,
     copied_subgraph::CopiedSubgraph,
     graph::Graph,
     plugin::{
@@ -47,6 +47,9 @@ pub struct FlowCanvas {
 
     /// Shared with [`crate::plugins::ClipboardPlugin`] and context menu.
     pub(crate) clipboard_subgraph: Option<CopiedSubgraph>,
+
+    /// Visual tokens for canvas chrome; plugins adjust via [`InitPluginContext::theme`](crate::plugin::InitPluginContext::theme).
+    pub theme: FlowTheme,
 }
 
 // // TODO
@@ -78,6 +81,7 @@ impl FlowCanvas {
             event_queue: vec![],
             port_offset_cache: PortLayoutCache::new(),
             clipboard_subgraph: None,
+            theme: FlowTheme::default(),
         }
     }
 
@@ -93,6 +97,7 @@ impl FlowCanvas {
             plugins: PluginRegistry::new(),
             sync_plugin: None,
             renderers: RendererRegistry::new(),
+            theme: FlowTheme::default(),
         }
     }
 
@@ -118,6 +123,7 @@ impl FlowCanvas {
                 &mut self.sync_plugin,
                 self.history.as_mut(),
                 &mut self.clipboard_subgraph,
+                &mut self.theme,
                 &mut emit,
                 &mut notify,
             );
@@ -161,6 +167,7 @@ impl FlowCanvas {
             &mut self.sync_plugin,
             self.history.as_mut(),
             &mut self.clipboard_subgraph,
+            &mut self.theme,
             &mut emit,
             &mut notify,
         );
@@ -191,6 +198,7 @@ impl FlowCanvas {
                 &mut self.sync_plugin,
                 self.history.as_mut(),
                 &mut self.clipboard_subgraph,
+                &mut self.theme,
                 &mut emit,
                 &mut notify,
             );
@@ -259,6 +267,7 @@ impl Render for FlowCanvas {
         let viewport = &self.viewport;
         let renderder = &self.renderers;
         let port_offset_cache = &mut self.port_offset_cache;
+        let theme = &self.theme;
 
         let mut layers: Vec<Vec<AnyElement>> =
             (0..RenderLayer::ALL.len()).map(|_| Vec::new()).collect();
@@ -276,6 +285,7 @@ impl Render for FlowCanvas {
                 window,
                 layer,
                 alignment_guides,
+                theme,
             );
 
             if let Some(el) = plugin.render(&mut ctx) {
@@ -292,6 +302,7 @@ impl Render for FlowCanvas {
                 window,
                 RenderLayer::Interaction,
                 alignment_guides,
+                theme,
             );
 
             if let Some(el) = i.render(&mut ctx) {
@@ -308,6 +319,7 @@ impl Render for FlowCanvas {
                 window,
                 RenderLayer::Overlay,
                 alignment_guides,
+                theme,
             );
             let els = sync_plugin.render(&mut ctx);
             for el in els {
@@ -353,6 +365,7 @@ pub struct FlowCanvasBuilder<'a, 'b> {
     plugins: PluginRegistry,
     renderers: RendererRegistry,
     sync_plugin: Option<Box<dyn SyncPlugin + 'static>>,
+    theme: FlowTheme,
 }
 
 impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
@@ -376,6 +389,12 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
         self
     }
 
+    /// Replace the default [`FlowTheme`] before plugins run [`Plugin::setup`](crate::plugin::Plugin::setup).
+    pub fn theme(mut self, theme: FlowTheme) -> Self {
+        self.theme = theme;
+        self
+    }
+
     pub fn build(self) -> FlowCanvas {
         let focus_handle = self.ctx.focus_handle();
         let drawable_size = self.window.viewport_size();
@@ -392,6 +411,7 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
             event_queue: vec![],
             port_offset_cache: PortLayoutCache::new(),
             clipboard_subgraph: None,
+            theme: self.theme,
         };
 
         if let Some(sync_plugin) = &mut canvas.sync_plugin {
@@ -423,6 +443,7 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
                 renderers: &mut canvas.renderers,
                 gpui_ctx: &self.ctx,
                 drawable_size,
+                theme: &mut canvas.theme,
                 //notify: &mut notify,
             };
 

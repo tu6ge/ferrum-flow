@@ -22,7 +22,7 @@ pub trait NodeRenderer: Send + Sync {
                 .w(size.width * ctx.viewport.zoom)
                 .h(size.height * ctx.viewport.zoom)
                 .rounded_full()
-                .bg(rgb(0x1A192B))
+                .bg(rgb(ctx.theme.default_port_fill))
                 .into_any(),
         )
     }
@@ -117,7 +117,7 @@ impl NodeRenderer for DefaultNodeRenderer {
                     .text_center()
                     .px_2()
                     .child(default_node_caption(node))
-                    .text_color(rgb(0x1A192B)),
+                    .text_color(rgb(ctx.theme.node_caption_text)),
             )
             .into_any()
     }
@@ -137,7 +137,7 @@ impl NodeRenderer for UndefinedNodeRenderer {
                     .text_center()
                     .px_2()
                     .child(undefined_node_caption(node))
-                    .text_color(rgb(0x5F6368)),
+                    .text_color(rgb(ctx.theme.undefined_node_caption_text)),
             )
             .into_any()
     }

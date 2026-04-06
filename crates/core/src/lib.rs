@@ -6,6 +6,7 @@ mod graph;
 mod node;
 mod plugin;
 mod plugins;
+mod theme;
 mod viewport;
 
 pub use canvas::{
@@ -22,4 +23,5 @@ pub use plugin::{
     RenderContext, RenderLayer, SyncPlugin, primary_platform_modifier,
 };
 pub use plugins::*;
+pub use theme::FlowTheme;
 pub use viewport::Viewport;

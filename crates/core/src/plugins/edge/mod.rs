@@ -66,11 +66,13 @@ impl Plugin for EdgePlugin {
         }
 
         let selected_edges = ctx.graph.selected_edge.clone();
+        let stroke = ctx.theme.edge_stroke;
+        let stroke_sel = ctx.theme.edge_stroke_selected;
 
         Some(
             canvas(
-                |_, _, _| (edges, selected_edges),
-                move |_, (edges, selected_edges), win, _| {
+                move |_, _, _| (edges, selected_edges, stroke, stroke_sel),
+                move |_, (edges, selected_edges, stroke, stroke_sel), win, _| {
                     for (id, geometry) in edges.iter() {
                         let Some(EdgeGeometry { start, c1, c2, end }) = geometry else {
                             return;
@@ -82,7 +84,10 @@ impl Plugin for EdgePlugin {
                         let selected = selected_edges.iter().find(|i| **i == *id).is_some();
 
                         if let Ok(line) = line.build() {
-                            win.paint_path(line, rgb(if selected { 0xFF7800 } else { 0xb1b1b8 }));
+                            win.paint_path(
+                                line,
+                                rgb(if selected { stroke_sel } else { stroke }),
+                            );
                         }
                     }
                 },

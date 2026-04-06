@@ -188,8 +188,14 @@ impl Plugin for ContextMenuPlugin {
         RenderLayer::Overlay
     }
 
-    fn render(&mut self, _ctx: &mut RenderContext) -> Option<gpui::AnyElement> {
+    fn render(&mut self, ctx: &mut RenderContext) -> Option<gpui::AnyElement> {
         let open = self.open.as_ref()?;
+        let panel_bg = ctx.theme.context_menu_background;
+        let panel_border = ctx.theme.context_menu_border;
+        let row_text = ctx.theme.context_menu_text;
+        let shortcut_text = ctx.theme.context_menu_shortcut_text;
+        let separator = ctx.theme.context_menu_separator;
+
         let rows: Vec<_> = open
             .actions
             .iter()
@@ -204,7 +210,7 @@ impl Plugin for ContextMenuPlugin {
                         div()
                             .w_full()
                             .h(px(1.0))
-                            .bg(rgb(0xe0e0e8)),
+                            .bg(rgb(separator)),
                     )
                     .into_any_element(),
                 _ => {
@@ -219,7 +225,7 @@ impl Plugin for ContextMenuPlugin {
                             .flex_shrink_0()
                             .ml_2()
                             .text_xs()
-                            .text_color(rgb(0x7a7a88))
+                            .text_color(rgb(shortcut_text))
                             .child(h)
                     });
                     div()
@@ -230,7 +236,7 @@ impl Plugin for ContextMenuPlugin {
                         .items_center()
                         .px_2()
                         .text_sm()
-                        .text_color(rgb(0x1a192b))
+                        .text_color(rgb(row_text))
                         .child(label)
                         .children(shortcut)
                         .into_any_element()
@@ -245,9 +251,9 @@ impl Plugin for ContextMenuPlugin {
                 .top(open.anchor.y)
                 .w(px(MENU_W))
                 .p_1()
-                .bg(rgb(0xfcfcfc))
+                .bg(rgb(panel_bg))
                 .border_1()
-                .border_color(rgb(0xc8c8d0))
+                .border_color(rgb(panel_border))
                 .rounded(px(6.0))
                 .shadow_sm()
                 .children(rows)
