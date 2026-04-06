@@ -2,7 +2,9 @@ use futures::{StreamExt, channel::mpsc};
 use gpui::*;
 
 use crate::{
-    FlowTheme, GraphChange, SyncPlugin,
+    BackgroundPlugin, DeletePlugin, EdgePlugin, FlowTheme, GraphChange, HistoryPlugin,
+    NodeInteractionPlugin, NodePlugin, PortInteractionPlugin, SelectionPlugin, SyncPlugin,
+    ViewportPlugin,
     copied_subgraph::CopiedSubgraph,
     graph::Graph,
     plugin::{
@@ -372,6 +374,29 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
     /// register plugin
     pub fn plugin(mut self, plugin: impl Plugin + 'static) -> Self {
         self.plugins = self.plugins.add(plugin);
+        self
+    }
+
+    /// Registers the **core** plugin set for editing a node graph on the canvas: background,
+    /// selection, node drag, pan/zoom, node/edge rendering, port wiring, delete, and undo/redo
+    /// ([`BackgroundPlugin`], [`SelectionPlugin`], [`NodeInteractionPlugin`], [`ViewportPlugin`],
+    /// [`NodePlugin`], [`PortInteractionPlugin`], [`EdgePlugin`], [`DeletePlugin`], [`HistoryPlugin`]).
+    ///
+    /// Event order is determined by each plugin’s [`Plugin::priority`] when [`FlowCanvas::build`]
+    /// runs (not by the order of calls to [`.plugin`](Self::plugin)). Add minimap, clipboard,
+    /// context menu, etc. with [`.plugin`](Self::plugin) before or after this call.
+    pub fn plugins_core(mut self) -> Self {
+        self.plugins = self
+            .plugins
+            .add(BackgroundPlugin::new())
+            .add(SelectionPlugin::new())
+            .add(NodeInteractionPlugin::new())
+            .add(ViewportPlugin::new())
+            .add(NodePlugin::new())
+            .add(PortInteractionPlugin::new())
+            .add(EdgePlugin::new())
+            .add(DeletePlugin::new())
+            .add(HistoryPlugin::new());
         self
     }
 
