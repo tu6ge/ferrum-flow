@@ -1,8 +1,8 @@
 //! Bottom-left zoom controls (left to right: **+ − ↺ ⛶**): zoom in, zoom out, reset scale, fit entire graph.
 
 use gpui::{
-    Bounds, IntoElement as _, MouseButton, ParentElement as _, Point, Pixels, Size, Styled as _, div,
-    px, rgb,
+    Bounds, IntoElement as _, MouseButton, ParentElement as _, Pixels, Point, Size, Styled as _,
+    div, px, rgb,
 };
 
 /// Unicode minus sign (not ASCII hyphen).
@@ -121,7 +121,10 @@ impl Command for ViewportZoomCommand {
         ctx.viewport.offset.y = self.from_offset.y;
     }
 
-    fn to_ops(&self, _ctx: &mut crate::CommandContext) -> Vec<crate::GraphOp> {
+    fn to_ops(&self, ctx: &mut crate::CommandContext) -> Vec<crate::GraphOp> {
+        ctx.viewport.zoom = self.to_zoom;
+        ctx.viewport.offset.x = self.to_offset.x;
+        ctx.viewport.offset.y = self.to_offset.y;
         vec![]
     }
 }
@@ -217,10 +220,7 @@ impl Plugin for ZoomControlsPlugin {
     fn render(&mut self, ctx: &mut RenderContext) -> Option<gpui::AnyElement> {
         let win = ctx.viewport.window_bounds.unwrap_or_else(|| {
             let vs = ctx.window.viewport_size();
-            Bounds::new(
-                Point::new(px(0.0), px(0.0)),
-                Size::new(vs.width, vs.height),
-            )
+            Bounds::new(Point::new(px(0.0), px(0.0)), Size::new(vs.width, vs.height))
         });
         let wh: f32 = win.size.height.into();
         let (bar_w, bar_h) = bar_outer_size();

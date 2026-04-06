@@ -66,7 +66,10 @@ impl Command for ViewportFrameCommand {
         ctx.viewport.offset.y = self.from_offset.y;
     }
 
-    fn to_ops(&self, _ctx: &mut CommandContext) -> Vec<crate::GraphOp> {
+    fn to_ops(&self, ctx: &mut CommandContext) -> Vec<crate::GraphOp> {
+        ctx.viewport.zoom = self.to_zoom;
+        ctx.viewport.offset.x = self.to_offset.x;
+        ctx.viewport.offset.y = self.to_offset.y;
         vec![]
     }
 }
