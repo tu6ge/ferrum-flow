@@ -180,7 +180,7 @@ pub struct Node {
 }
 ```
 
-🏗️ Creating Nodes (Builder API)
+Creating Nodes (Builder API)
 
 ```rust
 graph.create_node("math.add")
