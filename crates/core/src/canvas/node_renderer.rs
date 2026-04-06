@@ -122,6 +122,12 @@ impl NodeRenderer for DefaultNodeRenderer {
             .border_color(rgb(if selected { 0xFF7800 } else { 0x1A192B }))
             .child(
                 div()
+                    .size_full()
+                    .flex()
+                    .items_center()
+                    .justify_center()
+                    .text_center()
+                    .px_2()
                     .child(format!("Node {}", short_name(&node_id)))
                     .text_color(rgb(0x1A192B)),
             )
@@ -149,6 +155,12 @@ impl NodeRenderer for UndefinedNodeRenderer {
             .border_color(rgb(0xFF9800))
             .child(
                 div()
+                    .size_full()
+                    .flex()
+                    .items_center()
+                    .justify_center()
+                    .text_center()
+                    .px_2()
                     .child(format!("Undefined Node Type"))
                     .text_color(rgb(0x5F6368)),
             )
