@@ -21,7 +21,7 @@ mod zoom_controls;
 pub use align::AlignPlugin;
 pub use background::BackgroundPlugin;
 pub use clipboard::ClipboardPlugin;
-pub use context_menu::ContextMenuPlugin;
+pub use context_menu::{ContextMenuCanvasExtra, ContextMenuCustomAction, ContextMenuPlugin};
 pub use delete::DeletePlugin;
 pub use edge::EdgePlugin;
 pub use fit_all::FitAllGraphPlugin;

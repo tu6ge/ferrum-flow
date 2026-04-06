@@ -1,5 +1,8 @@
+use std::sync::Arc;
+
 use gpui::{
-    IntoElement as _, MouseButton, ParentElement as _, Point, Pixels, Styled as _, div, px, rgb,
+    IntoElement as _, MouseButton, ParentElement as _, Point, Pixels, SharedString, Styled as _,
+    div, px, rgb,
 };
 
 use crate::{
@@ -22,19 +25,69 @@ const ROW_H: f32 = 26.0;
 const SEP_H: f32 = 9.0;
 const MENU_PAD: f32 = 4.0;
 
-/// Right-click menu on the canvas (empty area) or on a node. Thin wrapper over existing graph actions.
+/// Callback invoked when the user picks a custom canvas menu row (e.g. open an input dialog in the app).
+///
+/// The second argument is the **world-space** point under the initial right-click that opened this menu
+/// (same as [`PluginContext::screen_to_world`] applied to that click).
+#[derive(Clone)]
+pub struct ContextMenuCustomAction(
+    Arc<dyn for<'a> Fn(&mut PluginContext<'a>, Point<Pixels>) + Send + Sync>,
+);
+
+impl ContextMenuCustomAction {
+    pub fn new(
+        f: impl for<'a> Fn(&mut PluginContext<'a>, Point<Pixels>) + Send + Sync + 'static,
+    ) -> Self {
+        Self(Arc::new(f))
+    }
+
+    fn call(&self, ctx: &mut PluginContext<'_>, menu_world: Point<Pixels>) {
+        (self.0)(ctx, menu_world);
+    }
+}
+
+/// One extra row on the **canvas background** context menu (after built-in items).
+#[derive(Clone)]
+pub struct ContextMenuCanvasExtra {
+    pub label: SharedString,
+    pub shortcut: Option<SharedString>,
+    pub on_select: ContextMenuCustomAction,
+}
+
+impl ContextMenuCanvasExtra {
+    pub fn new(
+        label: impl Into<SharedString>,
+        on_select: impl for<'a> Fn(&mut PluginContext<'a>, Point<Pixels>) + Send + Sync + 'static,
+    ) -> Self {
+        Self {
+            label: label.into(),
+            shortcut: None,
+            on_select: ContextMenuCustomAction::new(on_select),
+        }
+    }
+
+    pub fn with_shortcut(
+        label: impl Into<SharedString>,
+        shortcut: impl Into<SharedString>,
+        on_select: impl for<'a> Fn(&mut PluginContext<'a>, Point<Pixels>) + Send + Sync + 'static,
+    ) -> Self {
+        Self {
+            label: label.into(),
+            shortcut: Some(shortcut.into()),
+            on_select: ContextMenuCustomAction::new(on_select),
+        }
+    }
+}
+
+/// Right-click menu on the canvas (empty area) or on a node. Optional [`ContextMenuCanvasExtra`] rows
+/// are appended after built-in canvas actions.
 pub struct ContextMenuPlugin {
     open: Option<OpenMenu>,
+    canvas_extras: Vec<ContextMenuCanvasExtra>,
 }
 
-#[derive(Clone)]
-struct OpenMenu {
-    anchor: Point<Pixels>,
-    actions: Vec<MenuAction>,
-}
-
-#[derive(Clone)]
-enum MenuAction {
+#[derive(Clone, Copy)]
+enum MenuBuiltin {
     FitAllGraph,
     Paste,
     SelectAllViewport,
@@ -42,122 +95,179 @@ enum MenuAction {
     Copy,
     Delete,
     BringToFront(NodeId),
+}
+
+#[derive(Clone)]
+enum MenuItem {
     Separator,
+    Builtin(MenuBuiltin),
+    Custom {
+        label: SharedString,
+        shortcut: Option<SharedString>,
+        action: ContextMenuCustomAction,
+    },
+}
+
+#[derive(Clone)]
+struct OpenMenu {
+    anchor: Point<Pixels>,
+    /// World position of the right-click that opened this menu.
+    anchor_world: Point<Pixels>,
+    actions: Vec<MenuItem>,
 }
 
 impl ContextMenuPlugin {
     pub fn new() -> Self {
-        Self { open: None }
+        Self {
+            open: None,
+            canvas_extras: Vec::new(),
+        }
     }
 
-    fn row_height(action: &MenuAction) -> f32 {
+    pub fn with_canvas_extras(canvas_extras: Vec<ContextMenuCanvasExtra>) -> Self {
+        Self {
+            open: None,
+            canvas_extras,
+        }
+    }
+
+    /// Append a canvas-background row with a custom label (e.g. “Add node…” → show input in meili).
+    pub fn canvas_row(
+        mut self,
+        label: impl Into<SharedString>,
+        on_select: impl for<'a> Fn(&mut PluginContext<'a>, Point<Pixels>) + Send + Sync + 'static,
+    ) -> Self {
+        self.canvas_extras
+            .push(ContextMenuCanvasExtra::new(label, on_select));
+        self
+    }
+
+    /// Same as [`Self::canvas_row`] but with a shortcut hint string shown on the right.
+    pub fn canvas_row_with_shortcut(
+        mut self,
+        label: impl Into<SharedString>,
+        shortcut: impl Into<SharedString>,
+        on_select: impl for<'a> Fn(&mut PluginContext<'a>, Point<Pixels>) + Send + Sync + 'static,
+    ) -> Self {
+        self.canvas_extras
+            .push(ContextMenuCanvasExtra::with_shortcut(label, shortcut, on_select));
+        self
+    }
+
+    fn row_height(action: &MenuItem) -> f32 {
         match action {
-            MenuAction::Separator => SEP_H,
+            MenuItem::Separator => SEP_H,
             _ => ROW_H,
         }
     }
 
-    fn content_height(actions: &[MenuAction]) -> f32 {
+    fn content_height(actions: &[MenuItem]) -> f32 {
         actions.iter().map(Self::row_height).sum()
     }
 
-    fn menu_bounds(anchor: Point<Pixels>, actions: &[MenuAction]) -> gpui::Bounds<Pixels> {
+    fn menu_bounds(anchor: Point<Pixels>, actions: &[MenuItem]) -> gpui::Bounds<Pixels> {
         let h = Self::content_height(actions) + MENU_PAD * 2.0;
         gpui::Bounds::new(anchor, gpui::Size::new(px(MENU_W), px(h)))
     }
 
-    fn label(action: &MenuAction) -> &'static str {
-        match action {
-            MenuAction::FitAllGraph => "Fit entire graph",
-            MenuAction::Paste => "Paste",
-            MenuAction::SelectAllViewport => "Select all in view",
-            MenuAction::FocusSelection => "Focus selection",
-            MenuAction::Copy => "Copy",
-            MenuAction::Delete => "Delete",
-            MenuAction::BringToFront(_) => "Bring to front",
-            MenuAction::Separator => "",
+    fn label_builtin(b: MenuBuiltin) -> &'static str {
+        match b {
+            MenuBuiltin::FitAllGraph => "Fit entire graph",
+            MenuBuiltin::Paste => "Paste",
+            MenuBuiltin::SelectAllViewport => "Select all in view",
+            MenuBuiltin::FocusSelection => "Focus selection",
+            MenuBuiltin::Copy => "Copy",
+            MenuBuiltin::Delete => "Delete",
+            MenuBuiltin::BringToFront(_) => "Bring to front",
         }
     }
 
-    /// Matches [`FitAllGraphPlugin`], [`ClipboardPlugin`], [`SelectAllViewportPlugin`], [`FocusSelectionPlugin`], [`DeletePlugin`].
-    fn shortcut_hint(action: &MenuAction) -> Option<&'static str> {
+    fn shortcut_hint_builtin(b: MenuBuiltin) -> Option<&'static str> {
         #[cfg(target_os = "macos")]
         {
-            match action {
-                MenuAction::FitAllGraph => Some("⌘0"),
-                MenuAction::Paste => Some("⌘V"),
-                MenuAction::SelectAllViewport => Some("⌘A"),
-                MenuAction::FocusSelection => Some("⌘⇧F"),
-                MenuAction::Copy => Some("⌘C"),
-                MenuAction::Delete => Some("⌫"),
-                MenuAction::BringToFront(_) => None,
-                MenuAction::Separator => None,
+            match b {
+                MenuBuiltin::FitAllGraph => Some("⌘0"),
+                MenuBuiltin::Paste => Some("⌘V"),
+                MenuBuiltin::SelectAllViewport => Some("⌘A"),
+                MenuBuiltin::FocusSelection => Some("⌘⇧F"),
+                MenuBuiltin::Copy => Some("⌘C"),
+                MenuBuiltin::Delete => Some("⌫"),
+                MenuBuiltin::BringToFront(_) => None,
             }
         }
         #[cfg(not(target_os = "macos"))]
         {
-            match action {
-                MenuAction::FitAllGraph => Some("Ctrl+0"),
-                MenuAction::Paste => Some("Ctrl+V"),
-                MenuAction::SelectAllViewport => Some("Ctrl+A"),
-                MenuAction::FocusSelection => Some("Ctrl+Shift+F"),
-                MenuAction::Copy => Some("Ctrl+C"),
-                MenuAction::Delete => Some("Del"),
-                MenuAction::BringToFront(_) => None,
-                MenuAction::Separator => None,
+            match b {
+                MenuBuiltin::FitAllGraph => Some("Ctrl+0"),
+                MenuBuiltin::Paste => Some("Ctrl+V"),
+                MenuBuiltin::SelectAllViewport => Some("Ctrl+A"),
+                MenuBuiltin::FocusSelection => Some("Ctrl+Shift+F"),
+                MenuBuiltin::Copy => Some("Ctrl+C"),
+                MenuBuiltin::Delete => Some("Del"),
+                MenuBuiltin::BringToFront(_) => None,
             }
         }
     }
 
-    fn canvas_actions(ctx: &PluginContext) -> Vec<MenuAction> {
+    fn canvas_actions(&self, ctx: &PluginContext) -> Vec<MenuItem> {
         let mut v = Vec::new();
-        v.push(MenuAction::FitAllGraph);
-        v.push(MenuAction::Separator);
+        v.push(MenuItem::Builtin(MenuBuiltin::FitAllGraph));
+        v.push(MenuItem::Separator);
         if ctx.clipboard_subgraph.is_some() {
-            v.push(MenuAction::Paste);
-            v.push(MenuAction::Separator);
+            v.push(MenuItem::Builtin(MenuBuiltin::Paste));
+            v.push(MenuItem::Separator);
         }
-        v.push(MenuAction::SelectAllViewport);
-        v.push(MenuAction::Separator);
-        v.push(MenuAction::FocusSelection);
+        v.push(MenuItem::Builtin(MenuBuiltin::SelectAllViewport));
+        v.push(MenuItem::Separator);
+        v.push(MenuItem::Builtin(MenuBuiltin::FocusSelection));
+        for e in &self.canvas_extras {
+            v.push(MenuItem::Separator);
+            v.push(MenuItem::Custom {
+                label: e.label.clone(),
+                shortcut: e.shortcut.clone(),
+                action: e.on_select.clone(),
+            });
+        }
         v
     }
 
-    fn node_actions(nid: NodeId) -> Vec<MenuAction> {
+    fn node_actions(nid: NodeId) -> Vec<MenuItem> {
         vec![
-            MenuAction::Copy,
-            MenuAction::Separator,
-            MenuAction::Delete,
-            MenuAction::BringToFront(nid),
-            MenuAction::Separator,
-            MenuAction::FocusSelection,
+            MenuItem::Builtin(MenuBuiltin::Copy),
+            MenuItem::Separator,
+            MenuItem::Builtin(MenuBuiltin::Delete),
+            MenuItem::Builtin(MenuBuiltin::BringToFront(nid)),
+            MenuItem::Separator,
+            MenuItem::Builtin(MenuBuiltin::FocusSelection),
         ]
     }
 
-    fn run_action(ctx: &mut PluginContext, action: &MenuAction) {
+    fn run_action(ctx: &mut PluginContext, action: &MenuItem, menu_world: Point<Pixels>) {
         match action {
-            MenuAction::Separator => {}
-            MenuAction::FitAllGraph => fit_entire_graph(ctx),
-            MenuAction::Paste => {
-                if let Some(sub) = ctx.clipboard_subgraph.clone() {
-                    paste_subgraph(ctx, &sub);
+            MenuItem::Separator => {}
+            MenuItem::Builtin(b) => match b {
+                MenuBuiltin::FitAllGraph => fit_entire_graph(ctx),
+                MenuBuiltin::Paste => {
+                    if let Some(sub) = ctx.clipboard_subgraph.clone() {
+                        paste_subgraph(ctx, &sub);
+                    }
                 }
-            }
-            MenuAction::SelectAllViewport => select_all_in_viewport(ctx),
-            MenuAction::FocusSelection => focus_viewport_on_selection(ctx),
-            MenuAction::Copy => {
-                if let Some(s) = extract_subgraph(ctx.graph) {
-                    *ctx.clipboard_subgraph = Some(s);
+                MenuBuiltin::SelectAllViewport => select_all_in_viewport(ctx),
+                MenuBuiltin::FocusSelection => focus_viewport_on_selection(ctx),
+                MenuBuiltin::Copy => {
+                    if let Some(s) = extract_subgraph(ctx.graph) {
+                        *ctx.clipboard_subgraph = Some(s);
+                    }
                 }
-            }
-            MenuAction::Delete => delete_selection(ctx),
-            MenuAction::BringToFront(id) => ctx.bring_node_to_front(*id),
+                MenuBuiltin::Delete => delete_selection(ctx),
+                MenuBuiltin::BringToFront(id) => ctx.bring_node_to_front(*id),
+            },
+            MenuItem::Custom { action, .. } => action.call(ctx, menu_world),
         }
         ctx.notify();
     }
 
-    /// Row index under `dy` (pixels from top of inner content, below top padding).
-    fn row_at_dy(actions: &[MenuAction], dy: f32) -> Option<usize> {
+    fn row_at_dy(actions: &[MenuItem], dy: f32) -> Option<usize> {
         if dy < 0.0 {
             return None;
         }
@@ -200,7 +310,7 @@ impl Plugin for ContextMenuPlugin {
             .actions
             .iter()
             .map(|a| match a {
-                MenuAction::Separator => div()
+                MenuItem::Separator => div()
                     .w_full()
                     .h(px(SEP_H))
                     .flex()
@@ -213,14 +323,14 @@ impl Plugin for ContextMenuPlugin {
                             .bg(rgb(separator)),
                     )
                     .into_any_element(),
-                _ => {
+                MenuItem::Builtin(b) => {
                     let label = div()
                         .flex_1()
                         .min_w(px(0.))
                         .overflow_hidden()
                         .text_ellipsis()
-                        .child(Self::label(a));
-                    let shortcut = Self::shortcut_hint(a).map(|h| {
+                        .child(ContextMenuPlugin::label_builtin(*b));
+                    let shortcut = ContextMenuPlugin::shortcut_hint_builtin(*b).map(|h| {
                         div()
                             .flex_shrink_0()
                             .ml_2()
@@ -239,6 +349,38 @@ impl Plugin for ContextMenuPlugin {
                         .text_color(rgb(row_text))
                         .child(label)
                         .children(shortcut)
+                        .into_any_element()
+                }
+                MenuItem::Custom {
+                    label,
+                    shortcut,
+                    ..
+                } => {
+                    let label_el = div()
+                        .flex_1()
+                        .min_w(px(0.))
+                        .overflow_hidden()
+                        .text_ellipsis()
+                        .child(label.clone());
+                    let shortcut_el = shortcut.as_ref().map(|h| {
+                        div()
+                            .flex_shrink_0()
+                            .ml_2()
+                            .text_xs()
+                            .text_color(rgb(shortcut_text))
+                            .child(h.clone())
+                    });
+                    div()
+                        .w_full()
+                        .h(px(ROW_H))
+                        .flex()
+                        .flex_row()
+                        .items_center()
+                        .px_2()
+                        .text_sm()
+                        .text_color(rgb(row_text))
+                        .child(label_el)
+                        .children(shortcut_el)
                         .into_any_element()
                 }
             })
@@ -269,14 +411,15 @@ impl Plugin for ContextMenuPlugin {
         if let FlowEvent::Input(InputEvent::MouseDown(ev)) = event {
             if ev.button == MouseButton::Left {
                 if let Some(open) = self.open.take() {
+                    let menu_world = open.anchor_world;
                     let b = Self::menu_bounds(open.anchor, &open.actions);
                     if b.contains(&ev.position) {
                         let dy: f32 = (ev.position.y - open.anchor.y).into();
                         let inner_y = dy - MENU_PAD;
                         if let Some(row) = Self::row_at_dy(&open.actions, inner_y) {
                             let a = &open.actions[row];
-                            if !matches!(a, MenuAction::Separator) {
-                                Self::run_action(ctx, a);
+                            if !matches!(a, MenuItem::Separator) {
+                                Self::run_action(ctx, a, menu_world);
                             } else {
                                 ctx.notify();
                             }
@@ -301,10 +444,11 @@ impl Plugin for ContextMenuPlugin {
                     }
                     Self::node_actions(nid)
                 } else {
-                    Self::canvas_actions(ctx)
+                    self.canvas_actions(ctx)
                 };
                 self.open = Some(OpenMenu {
                     anchor: ev.position,
+                    anchor_world: world,
                     actions,
                 });
                 ctx.notify();

@@ -25,7 +25,9 @@ pub use undo::{Command, CommandContext, CompositeCommand, HistoryProvider, Local
 
 pub use types::{Interaction, InteractionResult, InteractionState};
 
-pub use node_renderer::{NodeRenderer, RendererRegistry, default_node_caption, port_screen_position};
+pub use node_renderer::{
+    NodeRenderer, RendererRegistry, default_node_caption, port_screen_position,
+};
 
 pub struct FlowCanvas {
     pub graph: Graph,
