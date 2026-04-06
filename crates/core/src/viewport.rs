@@ -1,4 +1,4 @@
-use gpui::{Bounds, Pixels, Point, px};
+use gpui::{Bounds, Pixels, Point, Size, Window, px};
 
 use crate::Node;
 
@@ -15,6 +15,24 @@ impl Viewport {
             zoom: 1.0,
             offset: Point::new(px(0.0), px(0.0)),
             window_bounds: None,
+        }
+    }
+
+    /// Sets [`Self::window_bounds`] to the window’s drawable area (`Window::viewport_size`),
+    /// origin `(0, 0)`. Skips assignment when width/height are unchanged.
+    ///
+    /// Prefer this over `Window::bounds()` for hit-testing and overlay layout: the latter is in
+    /// global space and can be larger than the content viewport.
+    pub fn sync_drawable_bounds(&mut self, window: &Window) {
+        let vs = window.viewport_size();
+        let unchanged = self.window_bounds.is_some_and(|b| {
+            b.size.width == vs.width && b.size.height == vs.height
+        });
+        if !unchanged {
+            self.window_bounds = Some(Bounds::new(
+                Point::new(px(0.0), px(0.0)),
+                Size::new(vs.width, vs.height),
+            ));
         }
     }
 

@@ -249,10 +249,7 @@ impl FlowCanvas {
 
 impl Render for FlowCanvas {
     fn render(&mut self, window: &mut Window, this_cx: &mut Context<Self>) -> impl IntoElement {
-        // only run once
-        if self.viewport.window_bounds.is_none() {
-            self.viewport.window_bounds = Some(window.bounds());
-        }
+        self.viewport.sync_drawable_bounds(window);
 
         let entity = this_cx.entity();
 
@@ -337,11 +334,12 @@ impl Render for FlowCanvas {
                 window.listener_for(&entity, Self::on_mouse_up),
             )
             .on_scroll_wheel(window.listener_for(&entity, Self::on_scroll_wheel))
-            .children(
-                RenderLayer::ALL
-                    .iter()
-                    .map(|layer| div().absolute().children(layers[layer.index()].drain(..))),
-            )
+            .children(RenderLayer::ALL.iter().map(|layer| {
+                div()
+                    .absolute()
+                    .size_full()
+                    .children(layers[layer.index()].drain(..))
+            }))
     }
 }
 
