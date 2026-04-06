@@ -8,7 +8,7 @@ repository = "https://github.com/tu6ge/ferrum-flow"
 description = "A high-performance node-based editor framework built with Rust and GPUI."
 
 [dependencies]
-ferrum-flow = { workspace = true }
+ferrum-flow = { version = "0.2.0" }
 tokio = { version = "1.50.0", features = [
     "rt-multi-thread",
     "macros",
