@@ -6,8 +6,8 @@ use gpui::{
 };
 
 use crate::{
-    Edge, EdgeBuilder, EdgeId, FlowCanvas, FlowTheme, Graph, Node, NodeBuilder, NodeId, NodeRenderer,
-    Port, PortId, RendererRegistry, Viewport,
+    Edge, EdgeBuilder, EdgeId, FlowCanvas, FlowTheme, Graph, Node, NodeBuilder, NodeId,
+    NodeRenderer, Port, PortId, RendererRegistry, Viewport,
     alignment_guides::AlignmentGuides,
     canvas::{
         Command, CommandContext, HistoryProvider, Interaction, InteractionState, PortLayoutCache,
@@ -102,8 +102,8 @@ impl<'a, 'b> InitPluginContext<'a, 'b> {
         self.graph.add_node(node);
     }
 
-    pub fn add_point(&mut self, port: Port) {
-        self.graph.add_point(port);
+    pub fn add_port(&mut self, port: Port) {
+        self.graph.add_port(port);
     }
 
     pub fn get_node(&self, id: &NodeId) -> Option<&Node> {
@@ -371,8 +371,8 @@ impl<'a> PluginContext<'a> {
         self.graph.add_node(node);
     }
 
-    pub fn add_point(&mut self, port: Port) {
-        self.graph.add_point(port);
+    pub fn add_port(&mut self, port: Port) {
+        self.graph.add_port(port);
     }
 
     pub fn get_node(&self, id: &NodeId) -> Option<&Node> {
@@ -629,13 +629,14 @@ impl<'a> RenderContext<'a> {
             .border(px(1.5));
         let t = self.theme;
         match variant {
-            NodeCardVariant::Default => base.bg(rgb(t.node_card_background)).border_color(rgb(
-                if selected {
-                    t.node_card_border_selected
-                } else {
-                    t.node_card_border
-                },
-            )),
+            NodeCardVariant::Default => {
+                base.bg(rgb(t.node_card_background))
+                    .border_color(rgb(if selected {
+                        t.node_card_border_selected
+                    } else {
+                        t.node_card_border
+                    }))
+            }
             NodeCardVariant::UndefinedType => base
                 .bg(rgb(t.undefined_node_background))
                 .border_color(rgb(t.undefined_node_border)),

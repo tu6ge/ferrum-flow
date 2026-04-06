@@ -151,12 +151,12 @@ impl<'a> CommandContext<'a> {
         self.graph.add_node(node);
     }
 
-    pub fn add_point(&mut self, port: Port) {
-        self.graph.add_point(port);
+    pub fn add_port(&mut self, port: Port) {
+        self.graph.add_port(port);
     }
 
-    pub fn remove_point(&mut self, id: &PortId) {
-        self.graph.remove_point(id);
+    pub fn remove_port(&mut self, id: &PortId) {
+        self.graph.remove_port(id);
     }
 
     pub fn get_node(&self, id: &NodeId) -> Option<&Node> {

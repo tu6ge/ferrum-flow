@@ -69,12 +69,12 @@ impl Command for CreatePort {
         "create_port"
     }
     fn execute(&mut self, ctx: &mut crate::canvas::CommandContext) {
-        ctx.add_point(self.port.clone());
+        ctx.add_port(self.port.clone());
     }
     fn to_ops(&self, _ctx: &mut crate::CommandContext) -> Vec<GraphOp> {
         vec![GraphOp::AddPort(self.port.clone())]
     }
     fn undo(&mut self, ctx: &mut crate::canvas::CommandContext) {
-        ctx.remove_point(&self.port.id);
+        ctx.remove_port(&self.port.id);
     }
 }

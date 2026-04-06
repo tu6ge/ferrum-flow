@@ -79,9 +79,9 @@ impl Graph {
             GraphChangeKind::NodeOrderUpdate(vec) => {
                 self.node_order = vec;
             }
-            GraphChangeKind::PortAdded(port) => self.add_point(port),
+            GraphChangeKind::PortAdded(port) => self.add_port(port),
             GraphChangeKind::PortRemoved { id } => {
-                self.ports.remove(&id);
+                self.remove_port(&id);
             }
             GraphChangeKind::EdgeAdded(edge) => self.add_edge(edge),
             GraphChangeKind::EdgeRemoved { id } => self.remove_edge(id),
@@ -120,12 +120,12 @@ impl Graph {
         self.node_order.push(node_id);
     }
 
-    pub fn add_point(&mut self, port: Port) {
+    pub fn add_port(&mut self, port: Port) {
         let ref mut map = self.ports;
         map.insert(port.id, port);
     }
 
-    pub fn remove_point(&mut self, id: &PortId) {
+    pub fn remove_port(&mut self, id: &PortId) {
         self.ports.remove(id);
     }
 
