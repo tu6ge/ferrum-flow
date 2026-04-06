@@ -2,7 +2,7 @@ use gpui::*;
 use std::collections::HashMap;
 
 use crate::node::Node;
-use crate::plugin::RenderContext;
+use crate::plugin::{NodeCardVariant, RenderContext};
 use crate::{Graph, Port, PortId, PortPosition};
 
 pub trait NodeRenderer: Send + Sync {
@@ -100,9 +100,6 @@ struct DefaultNodeRenderer;
 impl NodeRenderer for DefaultNodeRenderer {
     fn render(&self, node: &Node, ctx: &mut RenderContext) -> AnyElement {
         let node_id = node.id;
-        let screen = ctx.world_to_screen(node.point());
-        let node_x = screen.x;
-        let node_y = screen.y;
         let selected = ctx
             .graph
             .selected_node
@@ -110,16 +107,7 @@ impl NodeRenderer for DefaultNodeRenderer {
             .find(|id| **id == node_id)
             .is_some();
 
-        div()
-            .absolute()
-            .left(node_x)
-            .top(node_y)
-            .w(node.size.width * ctx.viewport.zoom)
-            .h(node.size.height * ctx.viewport.zoom)
-            .bg(white())
-            .rounded(px(6.0))
-            .border(px(1.5))
-            .border_color(rgb(if selected { 0xFF7800 } else { 0x1A192B }))
+        ctx.node_card_shell(node, selected, NodeCardVariant::Default)
             .child(
                 div()
                     .size_full()
@@ -139,20 +127,7 @@ struct UndefinedNodeRenderer;
 
 impl NodeRenderer for UndefinedNodeRenderer {
     fn render(&self, node: &Node, ctx: &mut RenderContext) -> AnyElement {
-        let screen = ctx.world_to_screen(node.point());
-        let node_x = screen.x;
-        let node_y = screen.y;
-
-        div()
-            .absolute()
-            .left(node_x)
-            .top(node_y)
-            .w(node.size.width * ctx.viewport.zoom)
-            .h(node.size.height * ctx.viewport.zoom)
-            .bg(rgb(0xF5F5F5))
-            .rounded(px(6.0))
-            .border(px(1.5))
-            .border_color(rgb(0xFF9800))
+        ctx.node_card_shell(node, false, NodeCardVariant::UndefinedType)
             .child(
                 div()
                     .size_full()

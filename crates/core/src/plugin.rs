@@ -1,17 +1,18 @@
 use std::collections::HashMap;
 
 use gpui::{
-    AnyElement, Bounds, Context, KeyDownEvent, KeyUpEvent, MouseDownEvent, MouseMoveEvent,
-    MouseUpEvent, Pixels, Point, ScrollWheelEvent, Size, Window,
+    AnyElement, Bounds, Context, Div, KeyDownEvent, KeyUpEvent, MouseDownEvent, MouseMoveEvent,
+    MouseUpEvent, Pixels, Point, ScrollWheelEvent, Size, Styled, Window, div, px, rgb, white,
 };
 
 use crate::{
     Edge, EdgeBuilder, EdgeId, FlowCanvas, Graph, Node, NodeBuilder, NodeId, NodeRenderer, Port,
-    PortId, RendererRegistry, Viewport, alignment_guides::AlignmentGuides,
-    copied_subgraph::CopiedSubgraph,
+    PortId, RendererRegistry, Viewport,
+    alignment_guides::AlignmentGuides,
     canvas::{
         Command, CommandContext, HistoryProvider, Interaction, InteractionState, PortLayoutCache,
     },
+    copied_subgraph::CopiedSubgraph,
 };
 
 mod sync;
@@ -24,6 +25,17 @@ pub use utils::{
     cache_port_offset_with_port, is_edge_visible, is_node_visible, port_offset_cached,
     primary_platform_modifier,
 };
+
+/// Chrome for [`RenderContext::node_card_shell`] (matches built-in [`crate::canvas::node_renderer`] styles).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NodeCardVariant {
+    /// White card, navy border — orange when `selected` ([`DefaultNodeRenderer`]).
+    Default,
+    /// Gray card, orange border ([`UndefinedNodeRenderer`]); border does not depend on selection.
+    UndefinedType,
+
+    Custom,
+}
 
 pub trait Plugin {
     fn name(&self) -> &'static str;
@@ -584,6 +596,30 @@ impl<'a> RenderContext<'a> {
 
     pub fn world_to_screen(&self, p: Point<Pixels>) -> Point<Pixels> {
         self.viewport.world_to_screen(p)
+    }
+
+    /// Absolute-positioned node card shell: screen origin, zoom-scaled size, rounded rect and border.
+    ///
+    /// Chain `.child(...)` for the inner body, then `.into_any()` (see [`gpui::Element`]).
+    pub fn node_card_shell(&self, node: &Node, selected: bool, variant: NodeCardVariant) -> Div {
+        let screen = self.world_to_screen(node.point());
+        let z = self.viewport.zoom;
+        let base = div()
+            .absolute()
+            .left(screen.x)
+            .top(screen.y)
+            .w(node.size.width * z)
+            .h(node.size.height * z)
+            .rounded(px(6.0))
+            .border(px(1.5));
+        match variant {
+            NodeCardVariant::Default => {
+                base.bg(white())
+                    .border_color(rgb(if selected { 0xFF7800 } else { 0x1A192B }))
+            }
+            NodeCardVariant::UndefinedType => base.bg(rgb(0xF5F5F5)).border_color(rgb(0xFF9800)),
+            NodeCardVariant::Custom => base,
+        }
     }
 
     pub fn screen_to_world(&self, p: Point<Pixels>) -> Point<Pixels> {

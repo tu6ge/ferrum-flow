@@ -18,8 +18,8 @@ pub use graph::*;
 pub use node::*;
 pub use alignment_guides::AlignmentGuides;
 pub use plugin::{
-    EventResult, FlowEvent, InitPluginContext, InputEvent, Plugin, PluginContext, RenderContext,
-    RenderLayer, SyncPlugin, primary_platform_modifier,
+    EventResult, FlowEvent, InitPluginContext, InputEvent, NodeCardVariant, Plugin, PluginContext,
+    RenderContext, RenderLayer, SyncPlugin, primary_platform_modifier,
 };
 pub use plugins::*;
 pub use viewport::Viewport;

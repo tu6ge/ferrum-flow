@@ -2,7 +2,7 @@ use ferrum_flow::*;
 use ferrum_flow_sync_plugin::{Assets, YrsSyncPlugin};
 use gpui::{
     AnyElement, AppContext as _, Application, Element as _, ParentElement as _, Size, Styled as _,
-    WindowOptions, div, px, rgb, white,
+    WindowOptions, div, px, rgb,
 };
 
 /// Renders like the built-in default card, plus a second line with the full node UUID for sync demos.
@@ -11,19 +11,9 @@ struct SyncBasicNodeRenderer;
 impl NodeRenderer for SyncBasicNodeRenderer {
     fn render(&self, node: &Node, ctx: &mut RenderContext) -> AnyElement {
         let node_id = node.id;
-        let screen = ctx.world_to_screen(node.point());
         let selected = ctx.graph.selected_node.contains(&node_id);
 
-        div()
-            .absolute()
-            .left(screen.x)
-            .top(screen.y)
-            .w(node.size.width * ctx.viewport.zoom)
-            .h(node.size.height * ctx.viewport.zoom)
-            .bg(white())
-            .rounded(px(6.0))
-            .border(px(1.5))
-            .border_color(rgb(if selected { 0xFF7800 } else { 0x1A192B }))
+        ctx.node_card_shell(node, selected, NodeCardVariant::Default)
             .child(
                 div()
                     .size_full()
