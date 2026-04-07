@@ -26,7 +26,6 @@ use crate::plugins::pick_link_event::{NodeTypeSelectConfirm, PickNodeTypeForPend
 use ferrum_flow::{
     CreateEdge, CreateNode, CreatePort, EventResult, FlowEvent, InputEvent, NodeBuilder, Plugin,
     PluginContext, PortKind, PortPosition, RenderContext, RenderLayer, edge_bezier, filled_disc_path,
-    port_screen_position,
 };
 use gpui::{Element as _, ParentElement as _, Styled, canvas, div, px, rgb};
 
@@ -155,7 +154,7 @@ impl Plugin for NodeTypePickerPlugin {
         let p = pick_state::pending_peek()?;
         let port = ctx.graph.ports.get(&p.source_port)?;
         let node = ctx.nodes().get(&port.node_id)?;
-        let start = port_screen_position(node, p.source_port, ctx)?;
+        let start = ctx.port_screen_center(node, p.source_port)?;
         let end = ctx.world_to_screen(p.end_world);
         let start_position = port.position;
         let target_position = Self::facing_position(start_position);

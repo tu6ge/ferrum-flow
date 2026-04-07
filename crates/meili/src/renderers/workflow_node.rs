@@ -1,6 +1,6 @@
 //! Custom cards for AI agent workflows — reads optional `node.data.title` / `subtitle`.
 
-use ferrum_flow::{Node, NodeRenderer, Port, PortKind, RenderContext, port_screen_position};
+use ferrum_flow::{Node, NodeRenderer, Port, PortKind, RenderContext};
 use gpui::{AnyElement, Element as _, ParentElement as _, Styled, div, px, rgb, rgba};
 use serde_json::Value;
 
@@ -163,9 +163,10 @@ impl NodeRenderer for WorkflowNodeRenderer {
     }
 
     fn port_render(&self, node: &Node, port: &Port, ctx: &mut RenderContext) -> Option<AnyElement> {
-        let size = port.size;
-        let position = port_screen_position(node, port.id, ctx)?;
-        let z = ctx.viewport.zoom;
+        let frame = ctx.port_screen_frame(node, port)?;
+        let z = frame.zoom;
+        let size = frame.size;
+        let o = frame.origin();
 
         let (ring, core) = match port.kind {
             PortKind::Input => (rgb(PORT_IN), rgb(PORT_RING)),
@@ -175,8 +176,8 @@ impl NodeRenderer for WorkflowNodeRenderer {
         Some(
             div()
                 .absolute()
-                .left(position.x - size.width / 2.0 * z)
-                .top(position.y - size.height / 2.0 * z)
+                .left(o.x)
+                .top(o.y)
                 .w(size.width * z + px(4.0))
                 .h(size.height * z + px(4.0))
                 .flex()

@@ -8,7 +8,7 @@
 use ferrum_flow::{
     CreateEdge, FlowEvent, InputEvent, Interaction, Plugin, PortId, PortKind, PortPosition,
     RenderContext, Viewport, edge_bezier, filled_disc_path, port_screen_big_bounds,
-    port_screen_bounds, port_screen_position,
+    port_screen_bounds,
 };
 use gpui::{Element, Pixels, Point, canvas, px, rgb};
 
@@ -146,7 +146,7 @@ impl Plugin for MeiliPortInteractionPlugin {
         let p = self.pending.as_ref()?;
         let port_meta = ctx.graph.ports.get(&p.source_port)?;
         let node = ctx.nodes().get(&port_meta.node_id)?;
-        let start = port_screen_position(node, p.source_port, ctx)?;
+        let start = ctx.port_screen_center(node, p.source_port)?;
         let end = ctx.world_to_screen(p.end_world);
         let source_port = ctx.graph.ports.get(&p.source_port)?;
         let start_position = source_port.position;
@@ -264,7 +264,7 @@ impl Interaction for PortConnecting {
         let mouse = self.mouse?;
         let port_meta = ctx.graph.ports.get(&self.port_id)?;
         let node = ctx.nodes().get(&port_meta.node_id)?;
-        let start = port_screen_position(node, self.port_id, ctx)?;
+        let start = ctx.port_screen_center(node, self.port_id)?;
         let position = self.position;
         let target_position = self.target_position;
         let viewport = ctx.viewport.clone();

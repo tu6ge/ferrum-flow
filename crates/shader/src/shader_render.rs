@@ -1,6 +1,5 @@
 use ferrum_flow::{
     Node, NodeCardVariant, NodeRenderer, Port, RenderContext, default_node_caption,
-    port_screen_position,
 };
 use gpui::{
     AnyElement, Element, FontWeight, ParentElement, Styled, div, prelude::FluentBuilder, px, rgb,
@@ -117,16 +116,11 @@ impl NodeRenderer for ShaderNodeRenderer {
 
     fn port_render(&self, node: &Node, port: &Port, ctx: &mut RenderContext) -> Option<AnyElement> {
         let (_, accent) = card_colors(node.node_type.as_str());
-        let size = port.size;
-        let position = port_screen_position(node, port.id, ctx)?;
+        let frame = ctx.port_screen_frame(node, port)?;
 
         Some(
-            div()
-                .absolute()
-                .left(position.x - size.width / 2.0 * ctx.viewport.zoom)
-                .top(position.y - size.height / 2.0 * ctx.viewport.zoom)
-                .w(size.width * ctx.viewport.zoom)
-                .h(size.height * ctx.viewport.zoom)
+            frame
+                .anchor_div()
                 .rounded_full()
                 .border_1()
                 .border_color(rgb(accent))
