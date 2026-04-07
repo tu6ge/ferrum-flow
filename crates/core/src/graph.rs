@@ -98,8 +98,13 @@ impl Graph {
         NodeBuilder::new(node_type)
     }
 
-    pub fn create_dege(&self) -> EdgeBuilder {
+    pub fn create_edge(&self) -> EdgeBuilder {
         EdgeBuilder::new()
+    }
+
+    #[deprecated(note = "use `Graph::create_edge`")]
+    pub fn create_dege(&self) -> EdgeBuilder {
+        self.create_edge()
     }
 
     pub fn next_node_id(&self) -> NodeId {

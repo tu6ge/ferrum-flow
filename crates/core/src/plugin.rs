@@ -83,7 +83,7 @@ impl<'a, 'b> InitPluginContext<'a, 'b> {
     }
 
     pub fn create_edge(&self) -> EdgeBuilder {
-        self.graph.create_dege()
+        self.graph.create_edge()
     }
 
     pub fn next_node_id(&self) -> NodeId {
@@ -376,7 +376,7 @@ impl<'a> PluginContext<'a> {
     }
 
     pub fn create_edge(&self) -> EdgeBuilder {
-        self.graph.create_dege()
+        self.graph.create_edge()
     }
 
     pub fn next_node_id(&self) -> NodeId {
@@ -608,7 +608,7 @@ impl<'a> RenderContext<'a> {
     }
 
     pub fn create_edge(&self) -> EdgeBuilder {
-        self.graph.create_dege()
+        self.graph.create_edge()
     }
 
     pub fn next_node_id(&self) -> NodeId {

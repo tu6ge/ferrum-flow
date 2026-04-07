@@ -133,7 +133,7 @@ impl<'a> CommandContext<'a> {
     }
 
     pub fn create_edge(&self) -> EdgeBuilder {
-        self.graph.create_dege()
+        self.graph.create_edge()
     }
 
     pub fn next_node_id(&self) -> NodeId {
