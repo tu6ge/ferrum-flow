@@ -9,7 +9,7 @@ use crate::{
     graph::Graph,
     plugin::{
         EventResult, FlowEvent, InitPluginContext, InputEvent, Plugin, PluginContext,
-        PluginRegistry, RenderContext, RenderLayer,
+        PluginRegistry, RenderContext, RenderLayer, invalidate_port_layout_cache_for_graph_change,
     },
     viewport::Viewport,
 };
@@ -466,6 +466,11 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
                 .spawn(async move |this, ctx| {
                     while let Some(change) = change_receiver.next().await {
                         let _ = this.update(ctx, |this, cx| {
+                            invalidate_port_layout_cache_for_graph_change(
+                                &mut this.port_offset_cache,
+                                &this.graph,
+                                &change.kind,
+                            );
                             this.graph.apply(change.kind);
                             cx.notify();
                         });

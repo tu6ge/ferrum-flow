@@ -3,8 +3,41 @@ use std::collections::HashMap;
 use gpui::{KeyDownEvent, Pixels, Point};
 
 use crate::{
-    Edge, EdgeId, Graph, NodeId, Port, PortId, RendererRegistry, Viewport, canvas::PortLayoutCache,
+    Edge, EdgeId, Graph, GraphChangeKind, NodeId, Port, PortId, RendererRegistry, Viewport,
+    canvas::PortLayoutCache,
 };
+
+/// Clears [`PortLayoutCache`] entries affected by an incoming graph change. Call **before**
+/// [`Graph::apply`](crate::graph::Graph::apply) so `PortRemoved` can still resolve `node_id`.
+pub fn invalidate_port_layout_cache_for_graph_change(
+    cache: &mut PortLayoutCache,
+    graph: &Graph,
+    kind: &GraphChangeKind,
+) {
+    match kind {
+        GraphChangeKind::NodeRemoved { id } => cache.clear_node(id),
+        GraphChangeKind::NodeAdded(node) => cache.clear_node(&node.id),
+        GraphChangeKind::NodeSetWidthed { id, .. }
+        | GraphChangeKind::NodeSetHeighted { id, .. }
+        | GraphChangeKind::NodeDataUpdated { id, .. } => cache.clear_node(id),
+        GraphChangeKind::PortAdded(port) => cache.clear_node(&port.node_id),
+        GraphChangeKind::PortRemoved { id } => {
+            if let Some(p) = graph.ports.get(id) {
+                cache.clear_node(&p.node_id);
+            }
+        }
+        GraphChangeKind::NodeMoved { .. }
+        | GraphChangeKind::NodeOrderUpdate(_)
+        | GraphChangeKind::EdgeAdded(_)
+        | GraphChangeKind::EdgeRemoved { .. }
+        | GraphChangeKind::RedrawRequested => {}
+        GraphChangeKind::Batch(changes) => {
+            for c in changes {
+                invalidate_port_layout_cache_for_graph_change(cache, graph, c);
+            }
+        }
+    }
+}
 
 /// Primary shortcut modifier: ⌘ on macOS, Ctrl on other platforms.
 pub fn primary_platform_modifier(ev: &KeyDownEvent) -> bool {

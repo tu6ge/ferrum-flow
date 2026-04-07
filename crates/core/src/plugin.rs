@@ -22,8 +22,8 @@ pub use sync::SyncPlugin;
 
 pub use utils::{
     cache_all_node_port_offset, cache_node_port_offset, cache_port_offset_with_edge,
-    cache_port_offset_with_port, is_edge_visible, is_node_visible, port_offset_cached,
-    primary_platform_modifier,
+    cache_port_offset_with_port, invalidate_port_layout_cache_for_graph_change, is_edge_visible,
+    is_node_visible, port_offset_cached, primary_platform_modifier,
 };
 
 /// Chrome for [`RenderContext::node_card_shell`]. [`NodeCardVariant::Default`] and

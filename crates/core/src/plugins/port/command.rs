@@ -70,11 +70,14 @@ impl Command for CreatePort {
     }
     fn execute(&mut self, ctx: &mut crate::canvas::CommandContext) {
         ctx.add_port(self.port.clone());
+        ctx.port_offset_cache.clear_node(&self.port.node_id);
     }
     fn to_ops(&self, _ctx: &mut crate::CommandContext) -> Vec<GraphOp> {
         vec![GraphOp::AddPort(self.port.clone())]
     }
     fn undo(&mut self, ctx: &mut crate::canvas::CommandContext) {
+        let node_id = self.port.node_id;
         ctx.remove_port(&self.port.id);
+        ctx.port_offset_cache.clear_node(&node_id);
     }
 }
