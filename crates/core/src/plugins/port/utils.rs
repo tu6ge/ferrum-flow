@@ -2,15 +2,10 @@ use gpui::{Bounds, Path, PathBuilder, Pixels, Point, Size, px};
 
 use crate::{PortId, PortPosition, RenderContext, Viewport, plugins::edge::get_control_point};
 
+#[deprecated(note = "use `ctx.port_screen_center_by_port_id(port_id)`")]
+#[allow(dead_code)] // kept for re-export; callers should migrate to `RenderContext` methods
 pub fn port_screen_position(port_id: PortId, ctx: &RenderContext) -> Option<Point<Pixels>> {
-    let port = &ctx.graph.ports.get(&port_id)?;
-    let node = &ctx.nodes().get(&port.node_id)?;
-
-    let node_pos = node.point();
-
-    let offset = ctx.port_offset_cached(&port.node_id, &port_id)?;
-
-    Some(ctx.viewport.world_to_screen(node_pos + offset))
+    ctx.port_screen_center_by_port_id(port_id)
 }
 
 pub fn port_screen_bounds(

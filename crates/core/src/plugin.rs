@@ -12,6 +12,7 @@ use crate::{
         Command, CommandContext, HistoryProvider, Interaction, InteractionState, PortLayoutCache,
     },
     copied_subgraph::CopiedSubgraph,
+    port_screen::PortScreenFrame,
 };
 
 mod sync;
@@ -188,6 +189,32 @@ impl<'a, 'b> InitPluginContext<'a, 'b> {
 
     pub fn port_offset_cached(&self, node_id: &NodeId, port_id: &PortId) -> Option<Point<Pixels>> {
         port_offset_cached(self.port_offset_cache, node_id, port_id)
+    }
+
+    /// Port center in screen pixels when you already have the owning [`Node`].
+    /// *warning*: this is using port offset cache, so it will not be accurate if the port offset is not cached.
+    pub fn port_screen_center(&self, node: &Node, port_id: PortId) -> Option<Point<Pixels>> {
+        let node_pos = node.point();
+        let offset = self.port_offset_cached(&node.id, &port_id)?;
+        Some(self.viewport.world_to_screen(node_pos + offset))
+    }
+
+    /// Like [`Self::port_screen_center`], resolving the port from [`Graph::ports`].
+    /// *warning*: this is using port offset cache, so it will not be accurate if the port offset is not cached.
+    pub fn port_screen_center_by_port_id(&self, port_id: PortId) -> Option<Point<Pixels>> {
+        let port = self.graph.ports.get(&port_id)?;
+        let node = self.get_node(&port.node_id)?;
+        self.port_screen_center(node, port_id)
+    }
+
+    /// Full port layout for custom [`NodeRenderer::port_render`].
+    /// *warning*: this is using port offset cache, so it will not be accurate if the port offset is not cached.
+    pub fn port_screen_frame(&self, node: &Node, port: &Port) -> Option<PortScreenFrame> {
+        Some(PortScreenFrame {
+            center: self.port_screen_center(node, port.id)?,
+            size: port.size,
+            zoom: self.viewport.zoom,
+        })
     }
 
     pub fn cache_port_offset_with_node(&mut self, node_ids: &Vec<NodeId>) {
@@ -464,6 +491,32 @@ impl<'a> PluginContext<'a> {
         port_offset_cached(self.port_offset_cache, node_id, port_id)
     }
 
+    /// Port center in screen pixels when you already have the owning [`Node`].
+    /// *warning*: this is using port offset cache, so it will not be accurate if the port offset is not cached.
+    pub fn port_screen_center(&self, node: &Node, port_id: PortId) -> Option<Point<Pixels>> {
+        let node_pos = node.point();
+        let offset = self.port_offset_cached(&node.id, &port_id)?;
+        Some(self.viewport.world_to_screen(node_pos + offset))
+    }
+
+    /// Like [`Self::port_screen_center`], resolving the port from [`Graph::ports`].
+    /// *warning*: this is using port offset cache, so it will not be accurate if the port offset is not cached.
+    pub fn port_screen_center_by_port_id(&self, port_id: PortId) -> Option<Point<Pixels>> {
+        let port = self.graph.ports.get(&port_id)?;
+        let node = self.get_node(&port.node_id)?;
+        self.port_screen_center(node, port_id)
+    }
+
+    /// Full port layout for custom [`NodeRenderer::port_render`].
+    /// *warning*: this is using port offset cache, so it will not be accurate if the port offset is not cached.
+    pub fn port_screen_frame(&self, node: &Node, port: &Port) -> Option<PortScreenFrame> {
+        Some(PortScreenFrame {
+            center: self.port_screen_center(node, port.id)?,
+            size: port.size,
+            zoom: self.viewport.zoom,
+        })
+    }
+
     pub fn cache_all_node_port_offset(&mut self) {
         cache_all_node_port_offset(self.graph, self.renderers, self.port_offset_cache);
     }
@@ -652,6 +705,32 @@ impl<'a> RenderContext<'a> {
 
     pub fn port_offset_cached(&self, node_id: &NodeId, port_id: &PortId) -> Option<Point<Pixels>> {
         port_offset_cached(self.port_offset_cache, node_id, port_id)
+    }
+
+    /// Port center in screen pixels when you already have the owning [`Node`].
+    /// *warning*: this is using port offset cache, so it will not be accurate if the port offset is not cached.
+    pub fn port_screen_center(&self, node: &Node, port_id: PortId) -> Option<Point<Pixels>> {
+        let node_pos = node.point();
+        let offset = self.port_offset_cached(&node.id, &port_id)?;
+        Some(self.viewport.world_to_screen(node_pos + offset))
+    }
+
+    /// Like [`Self::port_screen_center`], resolving the port from [`Graph::ports`].
+    /// *warning*: this is using port offset cache, so it will not be accurate if the port offset is not cached.
+    pub fn port_screen_center_by_port_id(&self, port_id: PortId) -> Option<Point<Pixels>> {
+        let port = self.graph.ports.get(&port_id)?;
+        let node = self.get_node(&port.node_id)?;
+        self.port_screen_center(node, port_id)
+    }
+
+    /// Full port layout for custom [`NodeRenderer::port_render`].
+    /// *warning*: this is using port offset cache, so it will not be accurate if the port offset is not cached.
+    pub fn port_screen_frame(&self, node: &Node, port: &Port) -> Option<PortScreenFrame> {
+        Some(PortScreenFrame {
+            center: self.port_screen_center(node, port.id)?,
+            size: port.size,
+            zoom: self.viewport.zoom,
+        })
     }
 
     pub fn cache_all_node_port_offset(&mut self) {

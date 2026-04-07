@@ -24,7 +24,8 @@ pub struct FlowTheme {
     /// Label on undefined-type node cards.
     pub undefined_node_caption_text: u32,
 
-    /// Default circular port fill ([`NodeRenderer::port_render`](crate::NodeRenderer::port_render)).
+    /// Default circular port fill ([`NodeRenderer::port_render`](crate::NodeRenderer::port_render);
+    /// layout via [`crate::plugin::RenderContext::port_screen_frame`]).
     pub default_port_fill: u32,
 
     /// Main surface color behind the dot grid.

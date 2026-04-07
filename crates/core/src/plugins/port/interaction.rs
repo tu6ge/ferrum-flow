@@ -6,7 +6,6 @@ use crate::{
     plugin::{FlowEvent, InputEvent, Plugin, RenderContext},
     plugins::port::{
         edge_bezier, filled_disc_path, port_screen_big_bounds, port_screen_bounds,
-        port_screen_position,
     },
 };
 
@@ -180,7 +179,7 @@ impl Plugin for PortInteractionPlugin {
     }
     fn render(&mut self, ctx: &mut RenderContext) -> Option<gpui::AnyElement> {
         let p = self.pending.as_ref()?;
-        let start = port_screen_position(p.source_port, ctx)?;
+        let start = ctx.port_screen_center_by_port_id(p.source_port)?;
         let end = ctx.world_to_screen(p.end_world);
         let source_port = ctx.graph.ports.get(&p.source_port)?;
         let start_position = source_port.position;
@@ -208,7 +207,7 @@ struct PortConnecting {
     port_id: PortId,
     position: PortPosition,
     target_position: PortPosition,
-    /// Cursor in **screen** space (matches port_screen_position / bezier end).
+    /// Cursor in **screen** space (matches port screen center / bezier end).
     mouse: Option<Point<Pixels>>,
 }
 
@@ -294,7 +293,7 @@ impl Interaction for PortConnecting {
     }
     fn render(&self, ctx: &mut RenderContext) -> Option<gpui::AnyElement> {
         let mouse = self.mouse?;
-        let start = port_screen_position(self.port_id, ctx)?;
+        let start = ctx.port_screen_center_by_port_id(self.port_id)?;
         let position = self.position;
         let target_position = self.target_position;
         let viewport = ctx.viewport.clone();

@@ -11,16 +11,10 @@ pub trait NodeRenderer: Send + Sync {
 
     // custom render port UI
     fn port_render(&self, node: &Node, port: &Port, ctx: &mut RenderContext) -> Option<AnyElement> {
-        let size = port.size;
-        let position = port_screen_position(node, port.id, &ctx)?;
-
+        let frame = ctx.port_screen_frame(node, port)?;
         Some(
-            div()
-                .absolute()
-                .left(position.x - size.width / 2.0 * ctx.viewport.zoom)
-                .top(position.y - size.height / 2.0 * ctx.viewport.zoom)
-                .w(size.width * ctx.viewport.zoom)
-                .h(size.height * ctx.viewport.zoom)
+            frame
+                .anchor_div()
                 .rounded_full()
                 .bg(rgb(ctx.theme.default_port_fill))
                 .into_any(),
@@ -147,16 +141,13 @@ impl NodeRenderer for UndefinedNodeRenderer {
     }
 }
 
+#[deprecated(note = "use `ctx.port_screen_center(node, port_id)`")]
 pub fn port_screen_position(
     node: &Node,
     port_id: PortId,
     ctx: &RenderContext,
 ) -> Option<Point<Pixels>> {
-    let node_pos = node.point();
-
-    let offset = ctx.port_offset_cached(&node.id, &port_id)?;
-
-    Some(ctx.viewport.world_to_screen(node_pos + offset))
+    ctx.port_screen_center(node, port_id)
 }
 
 fn data_title(data: &serde_json::Value) -> Option<String> {

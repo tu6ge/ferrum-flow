@@ -1,7 +1,7 @@
 use gpui::{Bounds, Element, MouseButton, PathBuilder, Pixels, Point, canvas, px, rgb};
 
 use crate::{
-    Edge, EdgeId, PortId, PortPosition, RenderContext, Viewport,
+    Edge, EdgeId, PortPosition, RenderContext, Viewport,
     plugin::{FlowEvent, Plugin, PluginContext},
     plugins::edge::command::ClearEdgeCommand,
 };
@@ -111,8 +111,8 @@ fn edge_geometry(edge: &Edge, ctx: &PluginContext) -> Option<EdgeGeometry> {
         ..
     } = edge;
 
-    let start = port_screen_position(*source_id, &ctx)?;
-    let end = port_screen_position(*target_id, &ctx)?;
+    let start = ctx.port_screen_center_by_port_id(*source_id)?;
+    let end = ctx.port_screen_center_by_port_id(*target_id)?;
 
     let source_port = ctx.graph.ports.get(source_id)?;
     let target_port = ctx.graph.ports.get(target_id)?;
@@ -130,8 +130,8 @@ fn edge_geometry2(edge: &Edge, ctx: &RenderContext) -> Option<EdgeGeometry> {
         ..
     } = edge;
 
-    let start = port_screen_position2(*source_id, &ctx)?;
-    let end = port_screen_position2(*target_id, &ctx)?;
+    let start = ctx.port_screen_center_by_port_id(*source_id)?;
+    let end = ctx.port_screen_center_by_port_id(*target_id)?;
 
     let source_port = ctx.graph.ports.get(source_id)?;
     let target_port = ctx.graph.ports.get(target_id)?;
@@ -140,27 +140,6 @@ fn edge_geometry2(edge: &Edge, ctx: &RenderContext) -> Option<EdgeGeometry> {
     let c2 = get_control_point(end, target_port.position, ctx.viewport);
 
     Some(EdgeGeometry { start, c1, c2, end })
-}
-
-fn port_screen_position(port_id: PortId, ctx: &PluginContext) -> Option<Point<Pixels>> {
-    let port = &ctx.graph.ports.get(&port_id)?;
-    let node = &ctx.nodes().get(&port.node_id)?;
-
-    let node_pos = node.point();
-
-    let offset = ctx.port_offset_cached(&port.node_id, &port_id)?;
-
-    Some(ctx.world_to_screen(node_pos + offset))
-}
-fn port_screen_position2(port_id: PortId, ctx: &RenderContext) -> Option<Point<Pixels>> {
-    let port = &ctx.graph.ports.get(&port_id)?;
-    let node = &ctx.nodes().get(&port.node_id)?;
-
-    let node_pos = node.point();
-
-    let offset = ctx.port_offset_cached(&port.node_id, &port_id)?;
-
-    Some(ctx.world_to_screen(node_pos + offset))
 }
 
 fn hit_test_get_edge(mouse: Point<Pixels>, ctx: &PluginContext) -> Option<EdgeId> {
