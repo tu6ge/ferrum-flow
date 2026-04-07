@@ -62,24 +62,4 @@ impl Viewport {
             && screen.y + node.size.height * self.zoom > px(0.0)
             && screen.y < window_bounds.size.height
     }
-
-    /// Fingerprint of fields that affect [`Self::is_node_visible`] / culling. Used to skip
-    /// rebuilding per-frame visible node lists when the viewport is unchanged.
-    pub fn visibility_layout_fingerprint(&self) -> u64 {
-        let z = self.zoom.to_bits() as u64;
-        let ox: f32 = self.offset.x.into();
-        let oy: f32 = self.offset.y.into();
-        let (wb_w, wb_h) = match &self.window_bounds {
-            Some(b) => {
-                let w: f32 = b.size.width.into();
-                let h: f32 = b.size.height.into();
-                (w.to_bits() as u64, h.to_bits() as u64)
-            }
-            None => (0u64, 0u64),
-        };
-        z ^ (ox.to_bits() as u64).rotate_left(7)
-            ^ (oy.to_bits() as u64).rotate_left(19)
-            ^ wb_w.rotate_left(31)
-            ^ wb_h.rotate_left(43)
-    }
 }

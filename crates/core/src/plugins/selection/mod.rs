@@ -175,7 +175,6 @@ impl Interaction for SelectionInteraction {
                         node.y = start_pos.y + delta.y;
                     }
                 }
-                ctx.graph.bump_node_layout_generation();
                 *bounds = Bounds::new(start_bounds.origin + delta, start_bounds.size);
 
                 if ctx.has_sync_plugin() {

@@ -243,9 +243,6 @@ pub struct PluginContext<'a> {
     pub(crate) interaction: &'a mut InteractionState,
     pub renderers: &'a mut RendererRegistry,
 
-    /// Same list as [`crate::canvas::FlowCanvas`] uses for culling; refreshed before input dispatch.
-    pub visible_node_ids: &'a [NodeId],
-
     sync_plugin: &'a mut Option<Box<dyn SyncPlugin + 'static>>,
 
     pub history: &'a mut dyn HistoryProvider,
@@ -269,7 +266,6 @@ impl<'a> PluginContext<'a> {
         viewport: &'a mut Viewport,
         interaction: &'a mut InteractionState,
         renderers: &'a mut RendererRegistry,
-        visible_node_ids: &'a [NodeId],
         sync_plugin: &'a mut Option<Box<dyn SyncPlugin + 'static>>,
         history: &'a mut dyn HistoryProvider,
         clipboard_subgraph: &'a mut Option<CopiedSubgraph>,
@@ -283,7 +279,6 @@ impl<'a> PluginContext<'a> {
             viewport,
             interaction,
             renderers,
-            visible_node_ids,
             sync_plugin,
             history,
             clipboard_subgraph,
@@ -579,9 +574,6 @@ pub struct RenderContext<'a> {
     pub viewport: &'a Viewport,
     pub renderers: &'a RendererRegistry,
 
-    /// Nodes visible in [`Viewport`] for this frame, in [`Graph::node_order`] sequence.
-    pub visible_node_ids: &'a [NodeId],
-
     pub window: &'a Window,
 
     pub layer: RenderLayer,
@@ -596,7 +588,6 @@ impl<'a> RenderContext<'a> {
         port_offset_cache: &'a mut PortLayoutCache,
         viewport: &'a Viewport,
         renderers: &'a RendererRegistry,
-        visible_node_ids: &'a [NodeId],
         window: &'a Window,
         layer: RenderLayer,
         theme: &'a FlowTheme,
@@ -606,7 +597,6 @@ impl<'a> RenderContext<'a> {
             port_offset_cache,
             viewport,
             renderers,
-            visible_node_ids,
             window,
             layer,
             theme,
@@ -749,7 +739,7 @@ impl<'a> RenderContext<'a> {
         }
     }
 
-    pub fn cache_port_offset_with_nodes(&mut self, node_ids: &[NodeId]) {
+    pub fn cache_port_offset_with_nodes(&mut self, node_ids: &Vec<NodeId>) {
         for node_id in node_ids {
             self.cache_node_port_offset(node_id);
         }

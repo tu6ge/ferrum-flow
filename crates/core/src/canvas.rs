@@ -10,7 +10,6 @@ use crate::{
     plugin::{
         EventResult, FlowEvent, InitPluginContext, InputEvent, Plugin, PluginContext,
         PluginRegistry, RenderContext, RenderLayer, invalidate_port_layout_cache_for_graph_change,
-        is_node_visible,
     },
     viewport::Viewport,
 };
@@ -55,9 +54,6 @@ pub struct FlowCanvas {
 
     /// Visual tokens for canvas chrome; plugins adjust via [`InitPluginContext::theme`](crate::plugin::InitPluginContext::theme).
     pub theme: FlowTheme,
-
-    visible_node_ids_cache: Vec<crate::NodeId>,
-    visible_nodes_cache_key: Option<(u64, u64)>,
 }
 
 // // TODO
@@ -90,8 +86,6 @@ impl FlowCanvas {
             port_offset_cache: PortLayoutCache::new(),
             clipboard_subgraph: None,
             theme: FlowTheme::default(),
-            visible_node_ids_cache: Vec::new(),
-            visible_nodes_cache_key: None,
         }
     }
 
@@ -111,24 +105,7 @@ impl FlowCanvas {
         }
     }
 
-    pub(crate) fn sync_visible_node_ids_cache(&mut self) {
-        let vp_fp = self.viewport.visibility_layout_fingerprint();
-        let layout_gen = self.graph.node_layout_generation();
-        if self.visible_nodes_cache_key != Some((vp_fp, layout_gen)) {
-            self.visible_node_ids_cache.clear();
-            for node_id in self.graph.node_order() {
-                if is_node_visible(&self.graph, &self.viewport, node_id) {
-                    self.visible_node_ids_cache.push(*node_id);
-                }
-            }
-            self.visible_nodes_cache_key = Some((vp_fp, layout_gen));
-        }
-    }
-
     pub fn handle_event(&mut self, event: FlowEvent, cx: &mut Context<Self>) {
-        self.sync_visible_node_ids_cache();
-        let visible_for_plugins = self.visible_node_ids_cache.clone();
-
         let event_queue = &mut self.event_queue;
 
         let mut emit = |event: FlowEvent| {
@@ -147,7 +124,6 @@ impl FlowCanvas {
                 &mut self.viewport,
                 &mut self.interaction,
                 &mut self.renderers,
-                visible_for_plugins.as_slice(),
                 &mut self.sync_plugin,
                 self.history.as_mut(),
                 &mut self.clipboard_subgraph,
@@ -192,7 +168,6 @@ impl FlowCanvas {
             &mut self.viewport,
             &mut self.interaction,
             &mut self.renderers,
-            visible_for_plugins.as_slice(),
             &mut self.sync_plugin,
             self.history.as_mut(),
             &mut self.clipboard_subgraph,
@@ -212,9 +187,6 @@ impl FlowCanvas {
 
     fn process_event_queue(&mut self, cx: &mut Context<Self>) {
         while let Some(event) = self.event_queue.pop() {
-            self.sync_visible_node_ids_cache();
-            let visible_for_plugins = self.visible_node_ids_cache.clone();
-
             let mut emit = |e| self.event_queue.push(e);
 
             let mut notify = || {
@@ -227,7 +199,6 @@ impl FlowCanvas {
                 &mut self.viewport,
                 &mut self.interaction,
                 &mut self.renderers,
-                visible_for_plugins.as_slice(),
                 &mut self.sync_plugin,
                 self.history.as_mut(),
                 &mut self.clipboard_subgraph,
@@ -293,9 +264,6 @@ impl FlowCanvas {
 impl Render for FlowCanvas {
     fn render(&mut self, window: &mut Window, this_cx: &mut Context<Self>) -> impl IntoElement {
         self.viewport.sync_drawable_bounds(window);
-        self.sync_visible_node_ids_cache();
-
-        let visible_node_ids_vec = self.visible_node_ids_cache.clone();
 
         let entity = this_cx.entity();
 
@@ -316,7 +284,6 @@ impl Render for FlowCanvas {
                 port_offset_cache,
                 viewport,
                 renderder,
-                visible_node_ids_vec.as_slice(),
                 window,
                 layer,
                 theme,
@@ -333,7 +300,6 @@ impl Render for FlowCanvas {
                 port_offset_cache,
                 viewport,
                 renderder,
-                visible_node_ids_vec.as_slice(),
                 window,
                 RenderLayer::Interaction,
                 theme,
@@ -350,7 +316,6 @@ impl Render for FlowCanvas {
                 port_offset_cache,
                 viewport,
                 renderder,
-                visible_node_ids_vec.as_slice(),
                 window,
                 RenderLayer::Overlay,
                 theme,
@@ -492,8 +457,6 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
             port_offset_cache: PortLayoutCache::new(),
             clipboard_subgraph: None,
             theme: self.theme,
-            visible_node_ids_cache: Vec::new(),
-            visible_nodes_cache_key: None,
         };
 
         if let Some(sync_plugin) = &mut canvas.sync_plugin {

@@ -20,11 +20,6 @@ pub struct Graph {
 
     pub selected_edge: HashSet<EdgeId>,
     pub selected_node: HashSet<NodeId>,
-
-    /// Bumped when any node’s position or size changes (see [`Graph::bump_node_layout_generation`]).
-    /// Used to invalidate visible-node caches across frames.
-    #[serde(skip)]
-    node_layout_generation: u64,
 }
 
 impl Graph {
@@ -36,20 +31,7 @@ impl Graph {
             edges: HashMap::new(),
             selected_edge: HashSet::new(),
             selected_node: HashSet::new(),
-            node_layout_generation: 0,
         }
-    }
-
-    #[inline]
-    pub fn node_layout_generation(&self) -> u64 {
-        self.node_layout_generation
-    }
-
-    /// **MUST** be called after mutating node `x`/`y`/`size` outside [`Graph::apply`] /
-    /// [`add_node`](Self::add_node) / [`remove_node`](Self::remove_node) (e.g. live drag).
-    #[inline]
-    pub fn bump_node_layout_generation(&mut self) {
-        self.node_layout_generation = self.node_layout_generation.wrapping_add(1);
     }
 
     pub fn from_json(json: &str) -> serde_json::Result<Self> {
@@ -78,19 +60,16 @@ impl Graph {
                     node.x = px(x);
                     node.y = px(y);
                 }
-                self.bump_node_layout_generation();
             }
             GraphChangeKind::NodeSetWidthed { id, width } => {
                 if let Some(node) = self.nodes.get_mut(&id) {
                     node.size.width = px(width);
                 }
-                self.bump_node_layout_generation();
             }
             GraphChangeKind::NodeSetHeighted { id, height } => {
                 if let Some(node) = self.nodes.get_mut(&id) {
                     node.size.height = px(height);
                 }
-                self.bump_node_layout_generation();
             }
             GraphChangeKind::NodeDataUpdated { id, data } => {
                 if let Some(node) = self.nodes.get_mut(&id) {
@@ -144,7 +123,6 @@ impl Graph {
         let node_id = node.id;
         self.nodes.insert(node.id, node);
         self.node_order.push(node_id);
-        self.bump_node_layout_generation();
     }
 
     pub fn add_port(&mut self, port: Port) {
@@ -219,7 +197,6 @@ impl Graph {
 
             self.ports.remove(port_id);
         }
-        self.bump_node_layout_generation();
     }
 
     pub fn add_selected_node(&mut self, id: NodeId, shift: bool) {
