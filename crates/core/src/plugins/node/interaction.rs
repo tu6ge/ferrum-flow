@@ -132,6 +132,7 @@ impl Interaction for NodeDragInteraction {
                         node.y = point.y + dy;
                     }
                 }
+                ctx.graph.bump_node_layout_generation();
 
                 if ctx.has_sync_plugin() {
                     let now = Instant::now();

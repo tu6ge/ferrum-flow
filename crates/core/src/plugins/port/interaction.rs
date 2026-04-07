@@ -3,13 +3,38 @@ use gpui::{Element, MouseButton, Pixels, Point, canvas, px, rgb};
 use crate::{
     PortId, PortKind, PortPosition,
     canvas::Interaction,
-    plugin::{FlowEvent, InputEvent, Plugin, RenderContext},
+    plugin::{FlowEvent, InputEvent, Plugin, PluginContext, RenderContext},
     plugins::port::{
         edge_bezier, filled_disc_path, port_screen_big_bounds, port_screen_bounds,
     },
 };
 
 use super::command::CreateEdge;
+
+/// Port hit-test using only ports on [`PluginContext::visible_node_ids`] (same culling as node rendering).
+fn find_port_hit_world(
+    ctx: &PluginContext,
+    mouse_world: Point<Pixels>,
+    use_big_bounds: bool,
+) -> Option<(PortId, PortPosition)> {
+    for node_id in ctx.visible_node_ids {
+        let node = ctx.graph.get_node(node_id)?;
+        for port_id in node.inputs.iter().chain(node.outputs.iter()) {
+            let bounds = if use_big_bounds {
+                port_screen_big_bounds(*port_id, ctx)
+            } else {
+                port_screen_bounds(*port_id, ctx)
+            };
+            if let Some(b) = bounds {
+                if b.contains(&mouse_world) {
+                    let port = ctx.graph.ports.get(port_id)?;
+                    return Some((*port_id, port.position));
+                }
+            }
+        }
+    }
+    None
+}
 
 /// Dangling link from a port to a world-space endpoint (shown with a dot until the user clicks it).
 #[derive(Clone, Copy)]
@@ -145,16 +170,7 @@ impl Plugin for PortInteractionPlugin {
             }
 
             let mouse_world = ctx.viewport.screen_to_world(ev.position);
-            let port_hit = ctx
-                .graph
-                .ports
-                .iter()
-                .filter(|(_, port)| ctx.is_node_visible(&port.node_id))
-                .find(|(id, _)| match port_screen_bounds(**id, ctx) {
-                    Some(b) => b.contains(&mouse_world),
-                    None => false,
-                })
-                .map(|(_, p)| (p.id, p.position));
+            let port_hit = find_port_hit_world(ctx, mouse_world, false);
 
             if let Some((port_id, position)) = port_hit {
                 self.pending = None;
@@ -219,19 +235,9 @@ impl Interaction for PortConnecting {
     ) -> crate::canvas::InteractionResult {
         self.mouse = Some(event.position);
         let mouse_world = ctx.screen_to_world(event.position);
-        if let Some(port) = ctx
-            .graph
-            .ports
-            .iter()
-            .filter(|(_, port)| ctx.is_node_visible(&port.node_id))
-            .find(|(id, _)| match port_screen_big_bounds(**id, ctx) {
-                Some(b) => b.contains(&mouse_world),
-                None => false,
-            })
-            .map(|(_, p)| p)
-        {
-            if port.id != self.port_id {
-                self.target_position = port.position;
+        if let Some((hit_port_id, hit_position)) = find_port_hit_world(ctx, mouse_world, true) {
+            if hit_port_id != self.port_id {
+                self.target_position = hit_position;
             }
         }
         ctx.notify();
@@ -243,17 +249,8 @@ impl Interaction for PortConnecting {
         ctx: &mut crate::plugin::PluginContext,
     ) -> crate::canvas::InteractionResult {
         let mouse_world = ctx.screen_to_world(ev.position);
-        if let Some((node_id, port_id)) = ctx
-            .graph
-            .ports
-            .iter()
-            .filter(|(_, port)| ctx.is_node_visible(&port.node_id))
-            .find(|(id, _)| match port_screen_bounds(**id, ctx) {
-                Some(b) => b.contains(&mouse_world),
-                None => false,
-            })
-            .map(|(_, p)| (p.node_id, p.id))
-        {
+        if let Some((port_id, _)) = find_port_hit_world(ctx, mouse_world, false) {
+            let node_id = ctx.graph.ports[&port_id].node_id;
             let source_node = ctx.graph.ports[&self.port_id].node_id;
             if node_id == source_node {
                 ctx.cancel_interaction();

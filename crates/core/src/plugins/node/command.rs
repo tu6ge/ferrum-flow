@@ -101,6 +101,7 @@ impl Command for DragNodesCommand {
                 node.y = point.y;
             }
         }
+        ctx.graph.bump_node_layout_generation();
     }
     fn undo(&mut self, ctx: &mut crate::canvas::CommandContext) {
         for (id, point) in self.from.iter() {
@@ -109,6 +110,7 @@ impl Command for DragNodesCommand {
                 node.y = point.y;
             }
         }
+        ctx.graph.bump_node_layout_generation();
     }
 
     fn to_ops(&self, _ctx: &mut crate::CommandContext) -> Vec<crate::GraphOp> {
