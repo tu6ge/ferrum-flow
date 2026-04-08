@@ -13,6 +13,7 @@ mod node;
 mod port;
 mod select_all_viewport;
 mod selection;
+mod snap_guides;
 mod viewport;
 mod viewport_frame;
 mod zoom_controls;
@@ -27,12 +28,13 @@ pub use fit_all::FitAllGraphPlugin;
 pub use focus_selection::FocusSelectionPlugin;
 pub use history::HistoryPlugin;
 pub use minimap::MinimapPlugin;
-pub use node::{NodeInteractionPlugin, NodePlugin};
+pub use node::{NodeDragEvent, NodeInteractionPlugin, NodePlugin, NODE_DRAG_TICK_INTERVAL};
 pub use port::{
     CreateEdge, CreateNode, CreatePort, PortInteractionPlugin, edge_bezier, filled_disc_path,
     port_screen_big_bounds, port_screen_bounds,
 };
 pub use select_all_viewport::SelectAllViewportPlugin;
 pub use selection::SelectionPlugin;
+pub use snap_guides::{AlignmentGuides, SetAlignmentGuides, SnapGuidesPlugin};
 pub use viewport::ViewportPlugin;
 pub use zoom_controls::ZoomControlsPlugin;

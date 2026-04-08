@@ -577,7 +577,6 @@ pub struct RenderContext<'a> {
     pub window: &'a Window,
 
     pub layer: RenderLayer,
-    /// Populated while dragging nodes when alignment matches other nodes.
     /// Active canvas theme (from [`FlowCanvas::theme`](crate::canvas::FlowCanvas::theme)).
     pub theme: &'a FlowTheme,
 }

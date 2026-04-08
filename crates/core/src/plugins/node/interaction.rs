@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use gpui::{MouseButton, Pixels, Point, px};
@@ -6,17 +7,38 @@ use crate::{
     NodeId,
     canvas::{Interaction, InteractionResult},
     plugin::{EventResult, FlowEvent, InitPluginContext, InputEvent, Plugin, PluginContext},
-    plugins::node::command::{DragNodesCommand, SelecteNodeCommand},
+    plugins::node::{
+        NODE_DRAG_TICK_INTERVAL, NodeDragEvent,
+        command::{DragNodesCommand, SelecteNodeCommand},
+    },
 };
 
 const DRAG_THRESHOLD: Pixels = px(2.0);
 const DRAG_COMMAND_INTERVAL: Duration = Duration::from_millis(50);
 
-pub struct NodeInteractionPlugin;
+/// Configures [`NodeDragInteraction`] sampling for [`NodeDragEvent::Tick`].
+pub struct NodeInteractionPlugin {
+    drag_tick_interval: Duration,
+}
 
 impl NodeInteractionPlugin {
     pub fn new() -> Self {
-        Self
+        Self {
+            drag_tick_interval: NODE_DRAG_TICK_INTERVAL,
+        }
+    }
+
+    /// Override the drag tick interval (e.g. lower for snappier alignment feedback, higher to reduce load).
+    pub fn with_drag_tick_interval(interval: Duration) -> Self {
+        Self {
+            drag_tick_interval: interval,
+        }
+    }
+}
+
+impl Default for NodeInteractionPlugin {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -39,6 +61,7 @@ impl Plugin for NodeInteractionPlugin {
                     node_id,
                     mouse_world,
                     ev.modifiers.shift,
+                    self.drag_tick_interval,
                 ));
 
                 return EventResult::Stop;
@@ -57,7 +80,9 @@ impl Plugin for NodeInteractionPlugin {
 
 pub struct NodeDragInteraction {
     state: NodeDragState,
+    drag_tick_interval: Duration,
     last_drag_command_at: Option<Instant>,
+    last_node_drag_tick_at: Option<Instant>,
 }
 
 enum NodeDragState {
@@ -69,18 +94,27 @@ enum NodeDragState {
     Draging {
         start_mouse: Point<Pixels>,
         start_positions: Vec<(NodeId, Point<Pixels>)>,
+        /// Stable for this drag; cheap to [`Arc::clone`] into each [`NodeDragEvent::Tick`].
+        dragged_ids: Arc<[NodeId]>,
     },
 }
 
 impl NodeDragInteraction {
-    fn start(node_id: NodeId, start_mouse: Point<Pixels>, shift: bool) -> Self {
+    fn start(
+        node_id: NodeId,
+        start_mouse: Point<Pixels>,
+        shift: bool,
+        drag_tick_interval: Duration,
+    ) -> Self {
         Self {
             state: NodeDragState::Pending {
                 node_id,
                 start_mouse,
                 shift,
             },
+            drag_tick_interval,
             last_drag_command_at: None,
+            last_node_drag_tick_at: None,
         }
     }
 }
@@ -112,9 +146,12 @@ impl Interaction for NodeDragInteraction {
                             nodes.push((node_id.clone(), node.point()));
                         }
                     }
+                    let dragged_ids: Arc<[NodeId]> =
+                        nodes.iter().map(|(id, _)| *id).collect::<Vec<_>>().into();
                     self.state = NodeDragState::Draging {
                         start_mouse: ev.position,
                         start_positions: nodes,
+                        dragged_ids,
                     };
 
                     ctx.notify();
@@ -123,6 +160,7 @@ impl Interaction for NodeDragInteraction {
             NodeDragState::Draging {
                 start_mouse,
                 start_positions,
+                dragged_ids,
             } => {
                 let dx = (ev.position.x - start_mouse.x) / ctx.viewport.zoom;
                 let dy = (ev.position.y - start_mouse.y) / ctx.viewport.zoom;
@@ -133,8 +171,9 @@ impl Interaction for NodeDragInteraction {
                     }
                 }
 
+                let now = Instant::now();
+
                 if ctx.has_sync_plugin() {
-                    let now = Instant::now();
                     let should_command = self
                         .last_drag_command_at
                         .map(|t| now.duration_since(t) >= DRAG_COMMAND_INTERVAL)
@@ -144,7 +183,19 @@ impl Interaction for NodeDragInteraction {
                         self.last_drag_command_at = Some(now);
                     }
                 }
-                ctx.notify();
+
+                let should_tick = self
+                    .last_node_drag_tick_at
+                    .map(|t| now.duration_since(t) >= self.drag_tick_interval)
+                    .unwrap_or(true);
+                if should_tick {
+                    self.last_node_drag_tick_at = Some(now);
+                    ctx.emit(FlowEvent::custom(NodeDragEvent::Tick(Arc::clone(
+                        dragged_ids,
+                    ))));
+                } else {
+                    ctx.notify();
+                }
             }
         }
         InteractionResult::Continue
@@ -156,12 +207,14 @@ impl Interaction for NodeDragInteraction {
     ) -> crate::canvas::InteractionResult {
         match &self.state {
             NodeDragState::Pending { node_id, shift, .. } => {
+                ctx.emit(FlowEvent::custom(NodeDragEvent::End));
                 ctx.execute_command(SelecteNodeCommand::new(*node_id, *shift, ctx));
                 InteractionResult::End
             }
             NodeDragState::Draging {
                 start_positions, ..
             } => {
+                ctx.emit(FlowEvent::custom(NodeDragEvent::End));
                 ctx.execute_command(DragNodesCommand::new(start_positions, &ctx));
                 InteractionResult::End
             }

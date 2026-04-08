@@ -34,6 +34,7 @@ fn main() {
                     .plugin(FocusSelectionPlugin::new())
                     //.plugin(FitAllGraphPlugin::new())
                     .plugin(ZoomControlsPlugin::new())
+                    .plugin(SnapGuidesPlugin::new())
                     .build()
             })
         })

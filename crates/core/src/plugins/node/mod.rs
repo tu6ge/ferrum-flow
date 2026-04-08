@@ -1,7 +1,9 @@
 mod command;
+mod drag_events;
 mod interaction;
 
 pub use command::DragNodesCommand;
+pub use drag_events::{NodeDragEvent, NODE_DRAG_TICK_INTERVAL};
 use gpui::{Element, ParentElement, div};
 pub use interaction::NodeInteractionPlugin;
 
