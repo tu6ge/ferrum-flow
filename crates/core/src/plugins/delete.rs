@@ -1,5 +1,5 @@
 use crate::{
-    Edge, GraphOp, Node,
+    Edge, GraphOp, Node, Port,
     canvas::Command,
     plugin::{FlowEvent, Plugin},
 };
@@ -39,6 +39,7 @@ impl Plugin for DeletePlugin {
 struct DeleteCommand {
     selected_edge: Vec<Edge>,
     selected_node: Vec<Node>,
+    selected_port: Vec<Port>,
 }
 
 impl DeleteCommand {
@@ -56,6 +57,14 @@ impl DeleteCommand {
                 .iter()
                 .filter_map(|id| ctx.get_node(id).cloned())
                 .collect(),
+            selected_port: ctx
+                .graph
+                .selected_node
+                .iter()
+                .filter_map(|node_id| ctx.get_node(node_id))
+                .flat_map(|node| node.inputs.iter().chain(node.outputs.iter()))
+                .filter_map(|port_id| ctx.graph.ports.get(port_id).cloned())
+                .collect(),
         }
     }
 }
@@ -69,14 +78,18 @@ impl Command for DeleteCommand {
         ctx.remove_selected_node();
     }
     fn undo(&mut self, ctx: &mut crate::canvas::CommandContext) {
-        for edge in &self.selected_edge {
-            ctx.add_edge(edge.clone());
-            ctx.add_selected_edge(edge.id, true);
-        }
-
         for node in &self.selected_node {
             ctx.add_node(node.clone());
             ctx.add_selected_node(node.id, true);
+        }
+
+        for port in &self.selected_port {
+            ctx.add_port(port.clone());
+        }
+
+        for edge in &self.selected_edge {
+            ctx.add_edge(edge.clone());
+            ctx.add_selected_edge(edge.id, true);
         }
     }
 
