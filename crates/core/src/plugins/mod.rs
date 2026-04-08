@@ -11,9 +11,8 @@ mod history;
 mod minimap;
 mod node;
 mod port;
-mod selection;
 mod select_all_viewport;
-mod snap_guides;
+mod selection;
 mod viewport;
 mod viewport_frame;
 mod zoom_controls;
@@ -34,7 +33,6 @@ pub use port::{
     port_screen_big_bounds, port_screen_bounds,
 };
 pub use select_all_viewport::SelectAllViewportPlugin;
-pub use snap_guides::SnapGuidesPlugin;
 pub use selection::SelectionPlugin;
 pub use viewport::ViewportPlugin;
 pub use zoom_controls::ZoomControlsPlugin;

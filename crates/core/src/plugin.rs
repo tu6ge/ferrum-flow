@@ -8,7 +8,6 @@ use gpui::{
 use crate::{
     Edge, EdgeBuilder, EdgeId, FlowCanvas, FlowTheme, Graph, Node, NodeBuilder, NodeId,
     NodeRenderer, Port, PortId, RendererRegistry, Viewport,
-    alignment_guides::AlignmentGuides,
     canvas::{
         Command, CommandContext, HistoryProvider, Interaction, InteractionState, PortLayoutCache,
     },
@@ -263,12 +262,10 @@ impl<'a> PluginContext<'a> {
     }
 
     pub fn start_interaction(&mut self, handler: impl Interaction + 'static) {
-        self.interaction.alignment_guides = None;
         self.interaction.handler = Some(Box::new(handler));
     }
 
     pub fn cancel_interaction(&mut self) {
-        self.interaction.alignment_guides = None;
         self.interaction.handler = None;
     }
 
@@ -528,7 +525,6 @@ pub struct RenderContext<'a> {
 
     pub layer: RenderLayer,
     /// Populated while dragging nodes when alignment matches other nodes.
-    pub alignment_guides: Option<&'a AlignmentGuides>,
     /// Active canvas theme (from [`FlowCanvas::theme`](crate::canvas::FlowCanvas::theme)).
     pub theme: &'a FlowTheme,
 }
@@ -541,7 +537,6 @@ impl<'a> RenderContext<'a> {
         renderers: &'a RendererRegistry,
         window: &'a Window,
         layer: RenderLayer,
-        alignment_guides: Option<&'a AlignmentGuides>,
         theme: &'a FlowTheme,
     ) -> Self {
         Self {
@@ -551,7 +546,6 @@ impl<'a> RenderContext<'a> {
             renderers,
             window,
             layer,
-            alignment_guides,
             theme,
         }
     }

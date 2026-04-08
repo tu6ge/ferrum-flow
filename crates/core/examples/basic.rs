@@ -41,7 +41,6 @@ fn main() {
                 FlowCanvas::builder(graph, ctx, window)
                     .plugins_core()
                     .plugin(MinimapPlugin::new())
-                    .plugin(SnapGuidesPlugin::new())
                     .plugin(ZoomControlsPlugin::new())
                     .plugin(ClipboardPlugin::new())
                     .plugin(ContextMenuPlugin::new())

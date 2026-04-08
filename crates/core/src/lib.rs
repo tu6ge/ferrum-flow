@@ -1,4 +1,3 @@
-mod alignment_guides;
 mod canvas;
 mod copied_subgraph;
 mod edge;
@@ -17,7 +16,6 @@ pub use canvas::{
 pub use edge::*;
 pub use graph::*;
 pub use node::*;
-pub use alignment_guides::AlignmentGuides;
 pub use plugin::{
     EventResult, FlowEvent, InitPluginContext, InputEvent, NodeCardVariant, Plugin, PluginContext,
     RenderContext, RenderLayer, SyncPlugin, primary_platform_modifier,

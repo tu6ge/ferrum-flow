@@ -276,8 +276,6 @@ impl Render for FlowCanvas {
         let mut layers: Vec<Vec<AnyElement>> =
             (0..RenderLayer::ALL.len()).map(|_| Vec::new()).collect();
 
-        let alignment_guides = self.interaction.alignment_guides.as_ref();
-
         for plugin in self.plugins_registry.plugins.iter_mut() {
             let layer = plugin.render_layer();
 
@@ -288,7 +286,6 @@ impl Render for FlowCanvas {
                 renderder,
                 window,
                 layer,
-                alignment_guides,
                 theme,
             );
 
@@ -305,7 +302,6 @@ impl Render for FlowCanvas {
                 renderder,
                 window,
                 RenderLayer::Interaction,
-                alignment_guides,
                 theme,
             );
 
@@ -322,7 +318,6 @@ impl Render for FlowCanvas {
                 renderder,
                 window,
                 RenderLayer::Overlay,
-                alignment_guides,
                 theme,
             );
             let els = sync_plugin.render(&mut ctx);

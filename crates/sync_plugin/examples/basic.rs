@@ -88,7 +88,6 @@ fn main() {
                 FlowCanvas::builder(Graph::new(), ctx, window)
                     .plugin(SelectionPlugin::new())
                     .plugin(NodeInteractionPlugin::new())
-                    .plugin(SnapGuidesPlugin::new())
                     .plugin(ViewportPlugin::new())
                     .plugin(ZoomControlsPlugin::new())
                     .plugin(BackgroundPlugin::new())

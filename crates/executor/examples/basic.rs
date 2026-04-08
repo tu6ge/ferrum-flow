@@ -81,11 +81,7 @@ struct CalcDemoRenderer;
 
 impl NodeRenderer for CalcDemoRenderer {
     fn render(&self, node: &Node, ctx: &mut RenderContext) -> AnyElement {
-        let text = node
-            .data
-            .get("text")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
+        let text = node.data.get("text").and_then(|v| v.as_str()).unwrap_or("");
 
         let screen = ctx.world_to_screen(node.point());
         let node_id = node.id;
@@ -208,9 +204,7 @@ fn format_result_value(v: &Value) -> String {
 }
 
 fn main() {
-    eprintln!(
-        "Executor demo — custom node labels: 1, +1, (empty) → press F5 with canvas focused."
-    );
+    eprintln!("Executor demo — custom node labels: 1, +1, (empty) → press F5 with canvas focused.");
 
     let mut registry = NodeRegistry::new();
     registry.register(SourceNode);
@@ -242,7 +236,6 @@ fn main() {
                     .plugin(exec_plugin)
                     .plugin(SelectionPlugin::new())
                     .plugin(NodeInteractionPlugin::new())
-                    .plugin(SnapGuidesPlugin::new())
                     .plugin(ViewportPlugin::new())
                     .plugin(ZoomControlsPlugin::new())
                     .plugin(FocusSelectionPlugin::new())

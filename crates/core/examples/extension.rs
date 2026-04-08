@@ -34,7 +34,6 @@ fn main() {
             cx.new(|ctx| {
                 FlowCanvas::builder(graph, ctx, window)
                     .plugins_core()
-                    .plugin(SnapGuidesPlugin::new())
                     .plugin(ZoomControlsPlugin::new())
                     .plugin(FocusSelectionPlugin::new())
                     .plugin(FitAllGraphPlugin::new())

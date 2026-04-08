@@ -33,7 +33,6 @@ fn main() {
                     .plugin(AlignPlugin::new())
                     .plugin(FocusSelectionPlugin::new())
                     .plugin(FitAllGraphPlugin::new())
-                    .plugin(SnapGuidesPlugin::new())
                     .plugin(ZoomControlsPlugin::new())
                     .build()
             })

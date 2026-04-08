@@ -1,4 +1,3 @@
-use std::collections::HashSet;
 use std::time::{Duration, Instant};
 
 use gpui::{MouseButton, Pixels, Point, px};
@@ -7,10 +6,7 @@ use crate::{
     NodeId,
     canvas::{Interaction, InteractionResult},
     plugin::{EventResult, FlowEvent, InitPluginContext, InputEvent, Plugin, PluginContext},
-    plugins::{
-        node::command::{DragNodesCommand, SelecteNodeCommand},
-        snap_guides::compute_alignment_guides,
-    },
+    plugins::node::command::{DragNodesCommand, SelecteNodeCommand},
 };
 
 const DRAG_THRESHOLD: Pixels = px(2.0);
@@ -101,7 +97,6 @@ impl Interaction for NodeDragInteraction {
                 start_mouse,
                 ..
             } => {
-                ctx.interaction.alignment_guides = None;
                 let delta = ctx.screen_to_world(ev.position) - *start_mouse;
                 if delta.x.abs() > DRAG_THRESHOLD || delta.y.abs() > DRAG_THRESHOLD {
                     let mut nodes = vec![];
@@ -138,16 +133,6 @@ impl Interaction for NodeDragInteraction {
                     }
                 }
 
-                let dragged: HashSet<NodeId> =
-                    start_positions.iter().map(|(id, _)| *id).collect();
-                let guides = compute_alignment_guides(ctx.graph, ctx.viewport, &dragged);
-                ctx.interaction.alignment_guides =
-                    if guides.vertical_x.is_empty() && guides.horizontal_y.is_empty() {
-                        None
-                    } else {
-                        Some(guides)
-                    };
-
                 if ctx.has_sync_plugin() {
                     let now = Instant::now();
                     let should_command = self
@@ -169,7 +154,6 @@ impl Interaction for NodeDragInteraction {
         _ev: &gpui::MouseUpEvent,
         ctx: &mut PluginContext,
     ) -> crate::canvas::InteractionResult {
-        ctx.interaction.alignment_guides = None;
         match &self.state {
             NodeDragState::Pending { node_id, shift, .. } => {
                 ctx.execute_command(SelecteNodeCommand::new(*node_id, *shift, ctx));
