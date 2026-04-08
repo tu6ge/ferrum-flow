@@ -13,6 +13,8 @@ mod command;
 
 use command::SelectEdgeCommand;
 
+const HIDE_EDGES_DURING_PORT_PREVIEW_NODE_THRESHOLD: usize = 2000;
+
 pub struct EdgePlugin {
     hide_during_port_preview: bool,
 }
@@ -36,7 +38,8 @@ impl Plugin for EdgePlugin {
         ctx: &mut crate::plugin::PluginContext,
     ) -> crate::plugin::EventResult {
         if let Some(PortPreviewActive(active)) = event.as_custom::<PortPreviewActive>() {
-            self.hide_during_port_preview = *active;
+            self.hide_during_port_preview =
+                *active && ctx.graph.nodes().len() >= HIDE_EDGES_DURING_PORT_PREVIEW_NODE_THRESHOLD;
             return crate::plugin::EventResult::Continue;
         }
         if let FlowEvent::Input(crate::plugin::InputEvent::MouseDown(ev)) = event {
