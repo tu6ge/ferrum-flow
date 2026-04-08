@@ -13,7 +13,10 @@ use crate::{
 };
 
 use super::{
-    clipboard_ops::{extract_subgraph, paste_subgraph},
+    clipboard::{
+        extract_subgraph, get_clipboard_subgraph, has_clipboard_subgraph, paste_subgraph,
+        set_clipboard_subgraph,
+    },
     delete::delete_selection,
     fit_all::fit_entire_graph,
     focus_selection::focus_viewport_on_selection,
@@ -213,7 +216,7 @@ impl ContextMenuPlugin {
         let mut v = Vec::new();
         v.push(MenuItem::Builtin(MenuBuiltin::FitAllGraph));
         v.push(MenuItem::Separator);
-        if ctx.clipboard_subgraph.is_some() {
+        if has_clipboard_subgraph(ctx) {
             v.push(MenuItem::Builtin(MenuBuiltin::Paste));
             v.push(MenuItem::Separator);
         }
@@ -248,7 +251,7 @@ impl ContextMenuPlugin {
             MenuItem::Builtin(b) => match b {
                 MenuBuiltin::FitAllGraph => fit_entire_graph(ctx),
                 MenuBuiltin::Paste => {
-                    if let Some(sub) = ctx.clipboard_subgraph.clone() {
+                    if let Some(sub) = get_clipboard_subgraph(ctx) {
                         paste_subgraph(ctx, &sub);
                     }
                 }
@@ -256,7 +259,7 @@ impl ContextMenuPlugin {
                 MenuBuiltin::FocusSelection => focus_viewport_on_selection(ctx),
                 MenuBuiltin::Copy => {
                     if let Some(s) = extract_subgraph(ctx.graph) {
-                        *ctx.clipboard_subgraph = Some(s);
+                        set_clipboard_subgraph(ctx, s);
                     }
                 }
                 MenuBuiltin::Delete => delete_selection(ctx),

@@ -3,11 +3,29 @@ use std::collections::{HashMap, HashSet};
 use gpui::px;
 
 use crate::{
-    CompositeCommand, Edge, Graph, Node, NodeId, Port, copied_subgraph::CopiedSubgraph,
+    CompositeCommand, Edge, Graph, Node, NodeId, Port,
     plugin::PluginContext,
 };
 
-use super::{CreateEdge, CreateNode, CreatePort};
+use super::{copied_subgraph::CopiedSubgraph};
+use crate::plugins::{CreateEdge, CreateNode, CreatePort};
+
+#[derive(Clone)]
+pub(crate) struct ClipboardShared(pub CopiedSubgraph);
+
+pub(crate) fn set_clipboard_subgraph(ctx: &mut PluginContext, sub: CopiedSubgraph) {
+    ctx.shared_state.insert(ClipboardShared(sub));
+}
+
+pub(crate) fn get_clipboard_subgraph(ctx: &PluginContext) -> Option<CopiedSubgraph> {
+    ctx.shared_state
+        .get::<ClipboardShared>()
+        .map(|s| s.0.clone())
+}
+
+pub(crate) fn has_clipboard_subgraph(ctx: &PluginContext) -> bool {
+    ctx.shared_state.contains::<ClipboardShared>()
+}
 
 pub(crate) fn extract_subgraph(graph: &Graph) -> Option<CopiedSubgraph> {
     if graph.selected_node.is_empty() {
@@ -123,3 +141,4 @@ pub(crate) fn paste_subgraph(ctx: &mut PluginContext, sub: &CopiedSubgraph) {
     }
     ctx.cache_port_offset_with_node(&new_node_ids);
 }
+

@@ -5,7 +5,6 @@ use crate::{
     BackgroundPlugin, DeletePlugin, EdgePlugin, FlowTheme, GraphChange, HistoryPlugin,
     NodeInteractionPlugin, NodePlugin, PortInteractionPlugin, SelectionPlugin, SharedState,
     SyncPlugin, ViewportPlugin,
-    copied_subgraph::CopiedSubgraph,
     graph::Graph,
     plugin::{
         EventResult, FlowEvent, InitPluginContext, InputEvent, Plugin, PluginContext,
@@ -49,9 +48,6 @@ pub struct FlowCanvas {
     pub event_queue: Vec<FlowEvent>,
     pub port_offset_cache: PortLayoutCache,
 
-    /// Shared with [`crate::plugins::ClipboardPlugin`] and context menu.
-    pub(crate) clipboard_subgraph: Option<CopiedSubgraph>,
-
     /// Visual tokens for canvas chrome; plugins adjust via [`InitPluginContext::theme`](crate::plugin::InitPluginContext::theme).
     pub theme: FlowTheme,
 
@@ -87,7 +83,6 @@ impl FlowCanvas {
             history: Box::new(LocalHistory::new()),
             event_queue: vec![],
             port_offset_cache: PortLayoutCache::new(),
-            clipboard_subgraph: None,
             theme: FlowTheme::default(),
             shared_state: SharedState::new(),
         }
@@ -130,7 +125,6 @@ impl FlowCanvas {
                 &mut self.renderers,
                 &mut self.sync_plugin,
                 self.history.as_mut(),
-                &mut self.clipboard_subgraph,
                 &mut self.theme,
                 &mut self.shared_state,
                 &mut emit,
@@ -175,7 +169,6 @@ impl FlowCanvas {
             &mut self.renderers,
             &mut self.sync_plugin,
             self.history.as_mut(),
-            &mut self.clipboard_subgraph,
             &mut self.theme,
             &mut self.shared_state,
             &mut emit,
@@ -207,7 +200,6 @@ impl FlowCanvas {
                 &mut self.renderers,
                 &mut self.sync_plugin,
                 self.history.as_mut(),
-                &mut self.clipboard_subgraph,
                 &mut self.theme,
                 &mut self.shared_state,
                 &mut emit,
@@ -466,7 +458,6 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
             history: Box::new(LocalHistory::new()),
             event_queue: vec![],
             port_offset_cache: PortLayoutCache::new(),
-            clipboard_subgraph: None,
             theme: self.theme,
             shared_state: SharedState::new(),
         };

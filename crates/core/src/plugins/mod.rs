@@ -1,7 +1,6 @@
 mod align;
 mod background;
 mod clipboard;
-mod clipboard_ops;
 mod context_menu;
 mod delete;
 mod edge;

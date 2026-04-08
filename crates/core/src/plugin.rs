@@ -11,7 +11,6 @@ use crate::{
     canvas::{
         Command, CommandContext, HistoryProvider, Interaction, InteractionState, PortLayoutCache,
     },
-    copied_subgraph::CopiedSubgraph,
     port_screen::PortScreenFrame,
 };
 
@@ -248,8 +247,6 @@ pub struct PluginContext<'a> {
     sync_plugin: &'a mut Option<Box<dyn SyncPlugin + 'static>>,
 
     pub history: &'a mut dyn HistoryProvider,
-    /// Shared node subgraph for [`crate::plugins::ClipboardPlugin`] and context menu.
-    pub(crate) clipboard_subgraph: &'a mut Option<CopiedSubgraph>,
     /// Canvas theme; change during event handling and call [`PluginContext::notify`] to redraw.
     pub theme: &'a mut FlowTheme,
     /// Plugin-local shared state on the [`FlowCanvas`](FlowCanvas).
@@ -272,7 +269,6 @@ impl<'a> PluginContext<'a> {
         renderers: &'a mut RendererRegistry,
         sync_plugin: &'a mut Option<Box<dyn SyncPlugin + 'static>>,
         history: &'a mut dyn HistoryProvider,
-        clipboard_subgraph: &'a mut Option<CopiedSubgraph>,
         theme: &'a mut FlowTheme,
         shared_state: &'a mut SharedState,
         emit: &'a mut dyn FnMut(FlowEvent),
@@ -286,7 +282,6 @@ impl<'a> PluginContext<'a> {
             renderers,
             sync_plugin,
             history,
-            clipboard_subgraph,
             theme,
             shared_state,
             emit,

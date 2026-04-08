@@ -1,6 +1,8 @@
 use crate::plugin::{FlowEvent, Plugin, PluginContext, primary_platform_modifier};
 
-use super::clipboard_ops::{extract_subgraph, paste_subgraph};
+use super::clipboard_ops::{
+    extract_subgraph, get_clipboard_subgraph, paste_subgraph, set_clipboard_subgraph,
+};
 
 /// Copy / paste selected nodes, their ports, and edges **between** those ports (one undo on paste).
 pub struct ClipboardPlugin;
@@ -34,12 +36,12 @@ impl Plugin for ClipboardPlugin {
             match ev.keystroke.key.as_str() {
                 "c" => {
                     if let Some(sub) = extract_subgraph(ctx.graph) {
-                        *ctx.clipboard_subgraph = Some(sub);
+                        set_clipboard_subgraph(ctx, sub);
                     }
                     return crate::plugin::EventResult::Stop;
                 }
                 "v" => {
-                    if let Some(sub) = ctx.clipboard_subgraph.clone() {
+                    if let Some(sub) = get_clipboard_subgraph(ctx) {
                         paste_subgraph(ctx, &sub);
                     }
                     return crate::plugin::EventResult::Stop;
@@ -50,3 +52,4 @@ impl Plugin for ClipboardPlugin {
         crate::plugin::EventResult::Continue
     }
 }
+
