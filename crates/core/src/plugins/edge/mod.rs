@@ -6,17 +6,22 @@ use crate::{
     Edge, EdgeId, PortPosition, RenderContext, Viewport,
     plugin::{FlowEvent, Plugin, PluginContext},
     plugins::edge::command::ClearEdgeCommand,
+    plugins::port::PortPreviewActive,
 };
 
 mod command;
 
 use command::SelectEdgeCommand;
 
-pub struct EdgePlugin;
+pub struct EdgePlugin {
+    hide_during_port_preview: bool,
+}
 
 impl EdgePlugin {
     pub fn new() -> Self {
-        Self {}
+        Self {
+            hide_during_port_preview: false,
+        }
     }
 }
 
@@ -30,6 +35,10 @@ impl Plugin for EdgePlugin {
         event: &FlowEvent,
         ctx: &mut crate::plugin::PluginContext,
     ) -> crate::plugin::EventResult {
+        if let Some(PortPreviewActive(active)) = event.as_custom::<PortPreviewActive>() {
+            self.hide_during_port_preview = *active;
+            return crate::plugin::EventResult::Continue;
+        }
         if let FlowEvent::Input(crate::plugin::InputEvent::MouseDown(ev)) = event {
             if ev.button != MouseButton::Left {
                 return crate::plugin::EventResult::Continue;
@@ -54,6 +63,9 @@ impl Plugin for EdgePlugin {
         crate::plugin::RenderLayer::Edges
     }
     fn render(&mut self, ctx: &mut crate::RenderContext) -> Option<gpui::AnyElement> {
+        if self.hide_during_port_preview {
+            return None;
+        }
         let visible_nodes: HashSet<_> = ctx
             .graph
             .nodes()

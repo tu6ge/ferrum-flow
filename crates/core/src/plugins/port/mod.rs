@@ -1,7 +1,7 @@
 mod interaction;
 mod utils;
 
-pub use interaction::PortInteractionPlugin;
+pub use interaction::{PortInteractionPlugin, PortPreviewActive};
 
 mod command;
 

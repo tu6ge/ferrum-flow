@@ -25,6 +25,10 @@ struct PendingLinkCommitted {
     end_world: Point<Pixels>,
 }
 
+/// Broadcast while a temporary port-connection preview wire is active.
+#[derive(Clone, Copy)]
+pub struct PortPreviewActive(pub bool);
+
 pub struct PortInteractionPlugin {
     pending: Option<PendingPortLink>,
 }
@@ -180,6 +184,7 @@ impl Plugin for PortInteractionPlugin {
 
             if let Some((port_id, position)) = port_hit {
                 self.pending = None;
+                ctx.emit(FlowEvent::custom(PortPreviewActive(true)));
                 ctx.start_interaction(PortConnecting {
                     port_id,
                     position,
@@ -278,17 +283,21 @@ impl Interaction for PortConnecting {
         {
             let port_id = candidate.id;
             let Some(target_port) = ctx.graph.ports.get(&port_id).cloned() else {
+                ctx.emit(FlowEvent::custom(PortPreviewActive(false)));
                 return crate::canvas::InteractionResult::End;
             };
             let Some(soruce_port) = ctx.graph.ports.get(&self.port_id).cloned() else {
+                ctx.emit(FlowEvent::custom(PortPreviewActive(false)));
                 return crate::canvas::InteractionResult::End;
             };
             if target_port.node_id == soruce_port.node_id {
+                ctx.emit(FlowEvent::custom(PortPreviewActive(false)));
                 ctx.cancel_interaction();
                 ctx.notify();
                 return crate::canvas::InteractionResult::End;
             }
             if soruce_port.kind == target_port.kind {
+                ctx.emit(FlowEvent::custom(PortPreviewActive(false)));
                 ctx.cancel_interaction();
                 ctx.notify();
                 return crate::canvas::InteractionResult::End;
@@ -301,16 +310,19 @@ impl Interaction for PortConnecting {
                     ctx.new_edge().source(port_id).target(self.port_id)
                 }
                 _ => {
+                    ctx.emit(FlowEvent::custom(PortPreviewActive(false)));
                     ctx.cancel_interaction();
                     ctx.notify();
                     return crate::canvas::InteractionResult::End;
                 }
             };
 
+            ctx.emit(FlowEvent::custom(PortPreviewActive(false)));
             ctx.execute_command(CreateEdge::new(edge));
             return crate::canvas::InteractionResult::End;
         }
 
+        ctx.emit(FlowEvent::custom(PortPreviewActive(false)));
         ctx.emit(FlowEvent::custom(PendingLinkCommitted {
             source_port: self.port_id,
             end_world: mouse_world,
