@@ -6,6 +6,7 @@ mod node;
 mod plugin;
 mod plugins;
 mod port_screen;
+mod shared_state;
 mod theme;
 mod viewport;
 
@@ -26,5 +27,6 @@ pub use plugin::{
 };
 pub use plugins::*;
 pub use port_screen::PortScreenFrame;
+pub use shared_state::SharedState;
 pub use theme::FlowTheme;
 pub use viewport::Viewport;

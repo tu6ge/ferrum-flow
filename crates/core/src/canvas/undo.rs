@@ -4,7 +4,7 @@ use gpui::{Bounds, Pixels, Point};
 
 use crate::{
     Edge, EdgeBuilder, EdgeId, Graph, GraphOp, Node, NodeBuilder, NodeId, Port, PortId,
-    RendererRegistry, Viewport,
+    RendererRegistry, SharedState, Viewport,
     canvas::PortLayoutCache,
     plugin::{
         cache_all_node_port_offset, cache_node_port_offset, is_edge_visible, is_node_visible,
@@ -38,6 +38,8 @@ pub struct CommandContext<'a> {
     pub port_offset_cache: &'a mut PortLayoutCache,
     pub viewport: &'a mut Viewport,
     pub renderers: &'a mut RendererRegistry,
+    /// Shared plugin state on the [`FlowCanvas`](crate::canvas::FlowCanvas).
+    pub shared_state: &'a mut SharedState,
     pub(crate) notify: &'a mut dyn FnMut(),
 }
 const MAX_HISTORY: usize = 100;

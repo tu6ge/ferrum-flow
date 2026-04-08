@@ -3,8 +3,8 @@ use gpui::*;
 
 use crate::{
     BackgroundPlugin, DeletePlugin, EdgePlugin, FlowTheme, GraphChange, HistoryPlugin,
-    NodeInteractionPlugin, NodePlugin, PortInteractionPlugin, SelectionPlugin, SyncPlugin,
-    ViewportPlugin,
+    NodeInteractionPlugin, NodePlugin, PortInteractionPlugin, SelectionPlugin, SharedState,
+    SyncPlugin, ViewportPlugin,
     copied_subgraph::CopiedSubgraph,
     graph::Graph,
     plugin::{
@@ -54,6 +54,9 @@ pub struct FlowCanvas {
 
     /// Visual tokens for canvas chrome; plugins adjust via [`InitPluginContext::theme`](crate::plugin::InitPluginContext::theme).
     pub theme: FlowTheme,
+
+    /// Type-erased map for cross-plugin data on this canvas instance.
+    pub shared_state: SharedState,
 }
 
 // // TODO
@@ -86,6 +89,7 @@ impl FlowCanvas {
             port_offset_cache: PortLayoutCache::new(),
             clipboard_subgraph: None,
             theme: FlowTheme::default(),
+            shared_state: SharedState::new(),
         }
     }
 
@@ -128,6 +132,7 @@ impl FlowCanvas {
                 self.history.as_mut(),
                 &mut self.clipboard_subgraph,
                 &mut self.theme,
+                &mut self.shared_state,
                 &mut emit,
                 &mut notify,
             );
@@ -172,6 +177,7 @@ impl FlowCanvas {
             self.history.as_mut(),
             &mut self.clipboard_subgraph,
             &mut self.theme,
+            &mut self.shared_state,
             &mut emit,
             &mut notify,
         );
@@ -203,6 +209,7 @@ impl FlowCanvas {
                 self.history.as_mut(),
                 &mut self.clipboard_subgraph,
                 &mut self.theme,
+                &mut self.shared_state,
                 &mut emit,
                 &mut notify,
             );
@@ -272,6 +279,7 @@ impl Render for FlowCanvas {
         let renderder = &self.renderers;
         let port_offset_cache = &mut self.port_offset_cache;
         let theme = &self.theme;
+        let shared_state = &self.shared_state;
 
         let mut layers: Vec<Vec<AnyElement>> =
             (0..RenderLayer::ALL.len()).map(|_| Vec::new()).collect();
@@ -287,6 +295,7 @@ impl Render for FlowCanvas {
                 window,
                 layer,
                 theme,
+                shared_state,
             );
 
             if let Some(el) = plugin.render(&mut ctx) {
@@ -303,6 +312,7 @@ impl Render for FlowCanvas {
                 window,
                 RenderLayer::Interaction,
                 theme,
+                shared_state,
             );
 
             if let Some(el) = i.render(&mut ctx) {
@@ -319,6 +329,7 @@ impl Render for FlowCanvas {
                 window,
                 RenderLayer::Overlay,
                 theme,
+                shared_state,
             );
             let els = sync_plugin.render(&mut ctx);
             for el in els {
@@ -457,6 +468,7 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
             port_offset_cache: PortLayoutCache::new(),
             clipboard_subgraph: None,
             theme: self.theme,
+            shared_state: SharedState::new(),
         };
 
         if let Some(sync_plugin) = &mut canvas.sync_plugin {
@@ -494,6 +506,7 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
                 gpui_ctx: &self.ctx,
                 drawable_size,
                 theme: &mut canvas.theme,
+                shared_state: &mut canvas.shared_state,
                 //notify: &mut notify,
             };
 

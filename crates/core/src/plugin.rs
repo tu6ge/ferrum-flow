@@ -7,7 +7,7 @@ use gpui::{
 
 use crate::{
     Edge, EdgeBuilder, EdgeId, FlowCanvas, FlowTheme, Graph, Node, NodeBuilder, NodeId,
-    NodeRenderer, Port, PortId, RendererRegistry, Viewport,
+    NodeRenderer, Port, PortId, RendererRegistry, SharedState, Viewport,
     canvas::{
         Command, CommandContext, HistoryProvider, Interaction, InteractionState, PortLayoutCache,
     },
@@ -74,6 +74,8 @@ pub struct InitPluginContext<'a, 'b> {
     pub drawable_size: Size<Pixels>,
     /// Canvas colors and strokes; mutate in [`Plugin::setup`](Plugin::setup) to customize chrome.
     pub theme: &'a mut FlowTheme,
+    /// Plugin-local shared state on the [`FlowCanvas`](FlowCanvas).
+    pub shared_state: &'a mut SharedState,
     // pub notify: &'a mut dyn FnMut(),
 }
 
@@ -250,6 +252,8 @@ pub struct PluginContext<'a> {
     pub(crate) clipboard_subgraph: &'a mut Option<CopiedSubgraph>,
     /// Canvas theme; change during event handling and call [`PluginContext::notify`] to redraw.
     pub theme: &'a mut FlowTheme,
+    /// Plugin-local shared state on the [`FlowCanvas`](FlowCanvas).
+    pub shared_state: &'a mut SharedState,
     emit: &'a mut dyn FnMut(FlowEvent),
     notify: &'a mut dyn FnMut(),
 }
@@ -270,6 +274,7 @@ impl<'a> PluginContext<'a> {
         history: &'a mut dyn HistoryProvider,
         clipboard_subgraph: &'a mut Option<CopiedSubgraph>,
         theme: &'a mut FlowTheme,
+        shared_state: &'a mut SharedState,
         emit: &'a mut dyn FnMut(FlowEvent),
         notify: &'a mut dyn FnMut(),
     ) -> Self {
@@ -283,6 +288,7 @@ impl<'a> PluginContext<'a> {
             history,
             clipboard_subgraph,
             theme,
+            shared_state,
             emit,
             notify,
         }
@@ -320,6 +326,7 @@ impl<'a> PluginContext<'a> {
             port_offset_cache: self.port_offset_cache,
             viewport: self.viewport,
             renderers: self.renderers,
+            shared_state: self.shared_state,
             notify: self.notify,
         };
         if let Some(sync) = &mut self.sync_plugin {
@@ -344,6 +351,7 @@ impl<'a> PluginContext<'a> {
                 port_offset_cache: self.port_offset_cache,
                 viewport: self.viewport,
                 renderers: self.renderers,
+                shared_state: self.shared_state,
                 notify: self.notify,
             };
 
@@ -362,6 +370,7 @@ impl<'a> PluginContext<'a> {
                 port_offset_cache: self.port_offset_cache,
                 viewport: self.viewport,
                 renderers: self.renderers,
+                shared_state: self.shared_state,
                 notify: self.notify,
             };
 
@@ -579,6 +588,8 @@ pub struct RenderContext<'a> {
     pub layer: RenderLayer,
     /// Active canvas theme (from [`FlowCanvas::theme`](crate::canvas::FlowCanvas::theme)).
     pub theme: &'a FlowTheme,
+    /// Read-only shared plugin state on the [`FlowCanvas`](FlowCanvas).
+    pub shared_state: &'a SharedState,
 }
 
 impl<'a> RenderContext<'a> {
@@ -590,6 +601,7 @@ impl<'a> RenderContext<'a> {
         window: &'a Window,
         layer: RenderLayer,
         theme: &'a FlowTheme,
+        shared_state: &'a SharedState,
     ) -> Self {
         Self {
             graph,
@@ -599,6 +611,7 @@ impl<'a> RenderContext<'a> {
             window,
             layer,
             theme,
+            shared_state,
         }
     }
 
