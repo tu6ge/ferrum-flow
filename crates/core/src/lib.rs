@@ -9,7 +9,6 @@ mod port_screen;
 mod theme;
 mod viewport;
 
-pub use alignment_guides::AlignmentGuides;
 /// Prefer [`RenderContext::port_screen_frame`](crate::plugin::RenderContext::port_screen_frame).
 #[allow(deprecated)]
 pub use canvas::port_screen_position;
