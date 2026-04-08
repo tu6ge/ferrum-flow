@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use gpui::{Bounds, Element, MouseButton, PathBuilder, Pixels, Point, canvas, px, rgb};
 
 use crate::{
@@ -52,11 +54,29 @@ impl Plugin for EdgePlugin {
         crate::plugin::RenderLayer::Edges
     }
     fn render(&mut self, ctx: &mut crate::RenderContext) -> Option<gpui::AnyElement> {
+        let visible_nodes: HashSet<_> = ctx
+            .graph
+            .nodes()
+            .iter()
+            .filter(|(_, node)| ctx.viewport.is_node_visible(node))
+            .map(|(id, _)| *id)
+            .collect();
+
         let edges: Vec<_> = ctx
             .graph
             .edges
             .iter()
-            .filter(|(_, edge)| ctx.is_edge_visible(edge))
+            .filter(|(_, edge)| {
+                let Some(source_port) = ctx.graph.ports.get(&edge.source_port) else {
+                    return false;
+                };
+                let Some(target_port) = ctx.graph.ports.get(&edge.target_port) else {
+                    return false;
+                };
+
+                visible_nodes.contains(&source_port.node_id)
+                    || visible_nodes.contains(&target_port.node_id)
+            })
             .map(|(k, v)| (*k, edge_geometry2(v, &ctx)))
             .collect();
 
@@ -84,10 +104,7 @@ impl Plugin for EdgePlugin {
                         let selected = selected_edges.iter().find(|i| **i == *id).is_some();
 
                         if let Ok(line) = line.build() {
-                            win.paint_path(
-                                line,
-                                rgb(if selected { stroke_sel } else { stroke }),
-                            );
+                            win.paint_path(line, rgb(if selected { stroke_sel } else { stroke }));
                         }
                     }
                 },
@@ -143,11 +160,24 @@ fn edge_geometry2(edge: &Edge, ctx: &RenderContext) -> Option<EdgeGeometry> {
 }
 
 fn hit_test_get_edge(mouse: Point<Pixels>, ctx: &PluginContext) -> Option<EdgeId> {
-    let edges = ctx
+    let visible_nodes: HashSet<_> = ctx
         .graph
-        .edges
-        .values()
-        .filter(|edge| ctx.is_edge_visible(edge));
+        .nodes()
+        .iter()
+        .filter(|(_, node)| ctx.viewport.is_node_visible(node))
+        .map(|(id, _)| *id)
+        .collect();
+
+    let edges = ctx.graph.edges.values().filter(|edge| {
+        let Some(source_port) = ctx.graph.ports.get(&edge.source_port) else {
+            return false;
+        };
+        let Some(target_port) = ctx.graph.ports.get(&edge.target_port) else {
+            return false;
+        };
+
+        visible_nodes.contains(&source_port.node_id) || visible_nodes.contains(&target_port.node_id)
+    });
     for edge in edges {
         let Some(geom) = edge_geometry(edge, ctx) else {
             continue;
@@ -158,7 +188,7 @@ fn hit_test_get_edge(mouse: Point<Pixels>, ctx: &PluginContext) -> Option<EdgeId
             continue;
         }
 
-        if hit_test_edge(mouse, edge, ctx) {
+        if hit_test_edge(mouse, &geom) {
             return Some(edge.id);
         }
     }
@@ -179,11 +209,7 @@ pub fn edge_bounds(geom: &EdgeGeometry) -> Bounds<Pixels> {
     )
 }
 
-fn hit_test_edge(mouse: Point<Pixels>, edge: &Edge, ctx: &PluginContext) -> bool {
-    let Some(geom) = edge_geometry(edge, ctx) else {
-        return false;
-    };
-
+fn hit_test_edge(mouse: Point<Pixels>, geom: &EdgeGeometry) -> bool {
     let points = sample_bezier(&geom, 20);
 
     for segment in points.windows(2) {
