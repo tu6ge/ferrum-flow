@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{any::Any, collections::HashMap};
 
 use gpui::{
     AnyElement, Bounds, Context, Div, KeyDownEvent, KeyUpEvent, MouseDownEvent, MouseMoveEvent,
@@ -731,7 +731,7 @@ pub enum InputEvent {
 
 pub struct RenderContext<'a> {
     pub graph: &'a Graph,
-    pub port_offset_cache: &'a mut PortLayoutCache,
+    port_offset_cache: &'a mut PortLayoutCache,
     viewport: &'a Viewport,
     pub renderers: &'a RendererRegistry,
 
@@ -739,7 +739,7 @@ pub struct RenderContext<'a> {
     /// Active canvas theme (from [`FlowCanvas::theme`](crate::canvas::FlowCanvas::theme)).
     pub theme: &'a FlowTheme,
     /// Read-only shared plugin state on the [`FlowCanvas`](FlowCanvas).
-    pub shared_state: &'a SharedState,
+    shared_state: &'a SharedState,
 }
 
 impl<'a> RenderContext<'a> {
@@ -964,6 +964,14 @@ impl<'a> RenderContext<'a> {
 
     fn cache_node_port_offset(&mut self, node_id: &NodeId) {
         cache_node_port_offset(self.graph, self.renderers, self.port_offset_cache, node_id);
+    }
+
+    pub fn get_shared_state<T: Any + Send + 'static>(&self) -> Option<&T> {
+        self.shared_state.get::<T>()
+    }
+
+    pub fn contains_shared_state<T: Any + Send + 'static>(&self) -> bool {
+        self.shared_state.contains::<T>()
     }
 }
 
