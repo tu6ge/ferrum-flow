@@ -1,7 +1,7 @@
 use gpui::{Pixels, Point, px};
 
 use crate::{
-    InitPluginContext, Viewport,
+    InitPluginContext,
     canvas::{Command, CommandContext},
     plugin::PluginContext,
 };
@@ -105,7 +105,7 @@ mod command_interop_tests {
 
 /// Pan + zoom so the given world-space axis-aligned box (position + size) fits the window.
 pub(crate) fn frame_world_rect(ctx: &mut PluginContext, bx: f32, by: f32, bw: f32, bh: f32) {
-    let Some(wb) = ctx.viewport.window_bounds() else {
+    let Some(wb) = ctx.window_bounds() else {
         return;
     };
 
@@ -115,8 +115,8 @@ pub(crate) fn frame_world_rect(ctx: &mut PluginContext, bx: f32, by: f32, bw: f3
         return;
     };
 
-    let from_zoom = ctx.viewport.zoom();
-    let from_offset = ctx.viewport.offset();
+    let from_zoom = ctx.zoom();
+    let from_offset = ctx.offset();
     let zoom_changed = (from_zoom - z).abs() > 1e-4;
     let ox: f32 = from_offset.x.into();
     let oy: f32 = from_offset.y.into();

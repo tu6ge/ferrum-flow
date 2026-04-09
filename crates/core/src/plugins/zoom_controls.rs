@@ -160,8 +160,8 @@ mod command_interop_tests {
 
 fn apply_zoom(ctx: &mut PluginContext, anchor_screen: Point<Pixels>, to_zoom: f32) {
     let to_zoom = to_zoom.clamp(ZOOM_MIN, ZOOM_MAX);
-    let from_zoom = ctx.viewport.zoom();
-    let from_offset = ctx.viewport.offset();
+    let from_zoom = ctx.zoom();
+    let from_offset = ctx.offset();
     if (from_zoom - to_zoom).abs() < 1e-5 {
         return;
     }
@@ -180,7 +180,7 @@ fn apply_zoom(ctx: &mut PluginContext, anchor_screen: Point<Pixels>, to_zoom: f3
 }
 
 fn window_center_screen(ctx: &PluginContext) -> Option<Point<Pixels>> {
-    let wb = ctx.viewport.window_bounds()?;
+    let wb = ctx.window_bounds()?;
     let cx: f32 = (wb.size.width / 2.0).into();
     let cy: f32 = (wb.size.height / 2.0).into();
     Some(Point::new(px(cx), px(cy)))
@@ -190,7 +190,7 @@ fn zoom_by_factor(ctx: &mut PluginContext, factor: f32) {
     let Some(center) = window_center_screen(ctx) else {
         return;
     };
-    apply_zoom(ctx, center, ctx.viewport.zoom_scaled_by(factor));
+    apply_zoom(ctx, center, ctx.zoom_scaled_by(factor));
 }
 
 fn reset_zoom(ctx: &mut PluginContext) {

@@ -1,6 +1,6 @@
 use gpui::{Bounds, Path, PathBuilder, Pixels, Point, Size, px};
 
-use crate::{PortId, PortPosition, RenderContext, Viewport, plugins::edge::get_control_point};
+use crate::{PortId, PortPosition, RenderContext, Viewport};
 
 #[deprecated(note = "use `ctx.port_screen_center_by_port_id(port_id)`")]
 #[allow(dead_code)] // kept for re-export; callers should migrate to `RenderContext` methods
@@ -70,8 +70,8 @@ pub fn edge_bezier(
     end: Point<Pixels>,
     viewport: &Viewport,
 ) -> Result<Path<Pixels>, anyhow::Error> {
-    let control_a = get_control_point(start, start_position, viewport);
-    let control_b = get_control_point(end, end_poisition, viewport);
+    let control_a = viewport.edge_control_point(start, start_position);
+    let control_b = viewport.edge_control_point(end, end_poisition);
     let mut line = PathBuilder::stroke(px(1.0));
     line.move_to(start);
     line.cubic_bezier_to(end, control_a, control_b);

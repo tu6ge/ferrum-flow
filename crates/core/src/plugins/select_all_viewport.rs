@@ -1,9 +1,6 @@
 use crate::{
     Edge, EdgeId, NodeId,
-    plugin::{
-        FlowEvent, Plugin, PluginContext, is_edge_visible, is_node_visible,
-        primary_platform_modifier,
-    },
+    plugin::{FlowEvent, Plugin, PluginContext, primary_platform_modifier},
 };
 
 /// Select every node and edge that intersects the current window viewport (⌘A / Ctrl+A).
@@ -19,13 +16,13 @@ fn select_visible(ctx: &mut PluginContext) {
     let order: Vec<NodeId> = ctx.graph.node_order().to_vec();
     let visible_nodes: Vec<NodeId> = order
         .into_iter()
-        .filter(|id| is_node_visible(ctx.graph, ctx.viewport, id))
+        .filter(|id| ctx.is_node_visible(id))
         .collect();
 
     let edges: Vec<Edge> = ctx.graph.edges_values().cloned().collect();
     let visible_edges: Vec<EdgeId> = edges
         .into_iter()
-        .filter(|e| is_edge_visible(ctx.graph, ctx.viewport, &e))
+        .filter(|e| ctx.is_edge_visible(e))
         .map(|e| e.id)
         .collect();
 

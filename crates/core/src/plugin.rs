@@ -7,7 +7,7 @@ use gpui::{
 
 use crate::{
     Edge, EdgeBuilder, EdgeId, FlowCanvas, FlowTheme, Graph, Node, NodeBuilder, NodeId,
-    NodeRenderer, Port, PortId, RendererRegistry, SharedState, Viewport,
+    NodeRenderer, Port, PortId, PortPosition, RendererRegistry, SharedState, Viewport,
     canvas::{
         Command, CommandContext, HistoryProvider, Interaction, InteractionState, PortLayoutCache,
     },
@@ -254,6 +254,10 @@ impl<'a, 'b> InitPluginContext<'a, 'b> {
         self.viewport.screen_to_world(p)
     }
 
+    pub fn edge_control_point(&self, source: Point<Pixels>, position: PortPosition) -> Point<Pixels> {
+        self.viewport.edge_control_point(source, position)
+    }
+
     pub fn is_node_visible(&self, node_id: &NodeId) -> bool {
         is_node_visible(self.graph, self.viewport, node_id)
     }
@@ -317,7 +321,7 @@ impl<'a, 'b> InitPluginContext<'a, 'b> {
 pub struct PluginContext<'a> {
     pub graph: &'a mut Graph,
     pub port_offset_cache: &'a mut PortLayoutCache,
-    pub viewport: &'a mut Viewport,
+    viewport: &'a mut Viewport,
     pub(crate) interaction: &'a mut InteractionState,
     pub renderers: &'a mut RendererRegistry,
 
@@ -613,6 +617,10 @@ impl<'a> PluginContext<'a> {
         self.viewport.screen_to_world(p)
     }
 
+    pub fn edge_control_point(&self, source: Point<Pixels>, position: PortPosition) -> Point<Pixels> {
+        self.viewport.edge_control_point(source, position)
+    }
+
     pub fn is_node_visible(&self, node_id: &NodeId) -> bool {
         is_node_visible(self.graph, self.viewport, node_id)
     }
@@ -866,6 +874,10 @@ impl<'a> RenderContext<'a> {
 
     pub fn screen_to_world(&self, p: Point<Pixels>) -> Point<Pixels> {
         self.viewport.screen_to_world(p)
+    }
+
+    pub fn edge_control_point(&self, source: Point<Pixels>, position: PortPosition) -> Point<Pixels> {
+        self.viewport.edge_control_point(source, position)
     }
 
     pub fn is_node_visible(&self, node_id: &NodeId) -> bool {
