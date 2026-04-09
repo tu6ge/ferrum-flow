@@ -110,18 +110,18 @@ impl Command for ViewportZoomCommand {
     }
 
     fn execute(&mut self, ctx: &mut CommandContext) {
-        ctx.viewport.set_zoom(self.to_zoom);
-        ctx.viewport.set_offset(self.to_offset);
+        ctx.set_zoom(self.to_zoom);
+        ctx.set_offset(self.to_offset);
     }
 
     fn undo(&mut self, ctx: &mut CommandContext) {
-        ctx.viewport.set_zoom(self.from_zoom);
-        ctx.viewport.set_offset(self.from_offset);
+        ctx.set_zoom(self.from_zoom);
+        ctx.set_offset(self.from_offset);
     }
 
     fn to_ops(&self, ctx: &mut crate::CommandContext) -> Vec<crate::GraphOp> {
-        ctx.viewport.set_zoom(self.to_zoom);
-        ctx.viewport.set_offset(self.to_offset);
+        ctx.set_zoom(self.to_zoom);
+        ctx.set_offset(self.to_offset);
         vec![]
     }
 }

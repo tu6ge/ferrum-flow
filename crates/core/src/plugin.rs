@@ -401,14 +401,14 @@ impl<'a> PluginContext<'a> {
     }
 
     pub fn execute_command(&mut self, command: impl Command + 'static) {
-        let mut ctx = CommandContext {
-            graph: self.graph,
-            port_offset_cache: self.port_offset_cache,
-            viewport: self.viewport,
-            renderers: self.renderers,
-            shared_state: self.shared_state,
-            notify: self.notify,
-        };
+        let mut ctx = CommandContext::new(
+            self.graph,
+            self.port_offset_cache,
+            &mut self.viewport,
+            &mut self.renderers,
+            self.shared_state,
+            self.notify,
+        );
         if let Some(sync) = &mut self.sync_plugin {
             let ops = command.to_ops(&mut ctx);
             for op in ops.into_iter() {
@@ -426,14 +426,14 @@ impl<'a> PluginContext<'a> {
         if let Some(sync) = &mut self.sync_plugin {
             sync.undo();
         } else {
-            let mut ctx = CommandContext {
-                graph: self.graph,
-                port_offset_cache: self.port_offset_cache,
-                viewport: self.viewport,
-                renderers: self.renderers,
-                shared_state: self.shared_state,
-                notify: self.notify,
-            };
+            let mut ctx = CommandContext::new(
+                self.graph,
+                self.port_offset_cache,
+                &mut self.viewport,
+                &mut self.renderers,
+                self.shared_state,
+                self.notify,
+            );
 
             self.history.undo(&mut ctx);
 
@@ -445,14 +445,14 @@ impl<'a> PluginContext<'a> {
         if let Some(sync) = &mut self.sync_plugin {
             sync.redo();
         } else {
-            let mut ctx = CommandContext {
-                graph: self.graph,
-                port_offset_cache: self.port_offset_cache,
-                viewport: self.viewport,
-                renderers: self.renderers,
-                shared_state: self.shared_state,
-                notify: self.notify,
-            };
+            let mut ctx = CommandContext::new(
+                self.graph,
+                self.port_offset_cache,
+                &mut self.viewport,
+                &mut self.renderers,
+                self.shared_state,
+                self.notify,
+            );
 
             self.history.redo(&mut ctx);
 
