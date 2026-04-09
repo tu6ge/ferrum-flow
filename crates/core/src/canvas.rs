@@ -175,7 +175,7 @@ impl FlowCanvas {
             &mut notify,
         );
 
-        for plugin in &mut self.plugins_registry.plugins {
+        for plugin in self.plugins_registry.iter_mut() {
             let result = plugin.on_event(&event, &mut ctx);
             match result {
                 EventResult::Continue => {}
@@ -206,7 +206,7 @@ impl FlowCanvas {
                 &mut notify,
             );
 
-            for plugin in &mut self.plugins_registry.plugins {
+            for plugin in self.plugins_registry.iter_mut() {
                 let result = plugin.on_event(&event, &mut ctx);
                 match result {
                     EventResult::Continue => {}
@@ -276,7 +276,7 @@ impl Render for FlowCanvas {
         let mut layers: Vec<Vec<AnyElement>> =
             (0..RenderLayer::ALL.len()).map(|_| Vec::new()).collect();
 
-        for plugin in self.plugins_registry.plugins.iter_mut() {
+        for plugin in self.plugins_registry.iter_mut() {
             let mut ctx = RenderContext::new(
                 graph,
                 port_offset_cache,
@@ -380,7 +380,7 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
     /// When building a list of heterogeneous plugin types, use an explicitly typed
     /// `Vec<Box<dyn Plugin>>` so each `Box::new(concrete)` coerces to the trait object.
     pub fn plugins(mut self, plugins: impl IntoIterator<Item = Box<dyn Plugin>>) -> Self {
-        self.plugins.plugins.extend(plugins);
+        self.plugins.extend_boxed(plugins);
         self
     }
 
@@ -478,10 +478,7 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
             sync_plugin.setup(change_sender);
         }
 
-        canvas
-            .plugins_registry
-            .plugins
-            .sort_by_key(|p| -p.priority());
+        canvas.plugins_registry.sort_by_priority_desc();
 
         {
             let mut ctx = InitPluginContext::new(
@@ -495,7 +492,7 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
                 &mut canvas.shared_state,
             );
 
-            for plugin in &mut canvas.plugins_registry.plugins {
+            for plugin in canvas.plugins_registry.iter_mut() {
                 plugin.setup(&mut ctx);
             }
         }
