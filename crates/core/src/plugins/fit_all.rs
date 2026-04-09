@@ -1,7 +1,7 @@
 use gpui::{Bounds, Point, px};
 
 use crate::{
-    Graph,
+    Node,
     plugin::{FlowEvent, InitPluginContext, Plugin, PluginContext, primary_platform_modifier},
     plugins::viewport_frame::{apply_frame_world_rect_direct, frame_world_rect},
 };
@@ -18,14 +18,16 @@ impl FitAllGraphPlugin {
     }
 }
 
-fn graph_world_bounds_graph(graph: &Graph) -> Option<(f32, f32, f32, f32)> {
+fn graph_world_bounds_graph<'a>(
+    nodes: impl Iterator<Item = &'a Node> + 'a,
+) -> Option<(f32, f32, f32, f32)> {
     let mut min_x = f32::MAX;
     let mut min_y = f32::MAX;
     let mut max_x = f32::MIN;
     let mut max_y = f32::MIN;
     let mut any = false;
 
-    for n in graph.nodes().values() {
+    for n in nodes {
         let x: f32 = n.x.into();
         let y: f32 = n.y.into();
         let w: f32 = n.size.width.into();
@@ -50,7 +52,7 @@ fn graph_world_bounds_graph(graph: &Graph) -> Option<(f32, f32, f32, f32)> {
 }
 
 fn graph_world_bounds(ctx: &PluginContext) -> Option<(f32, f32, f32, f32)> {
-    graph_world_bounds_graph(ctx.graph)
+    graph_world_bounds_graph(ctx.nodes().values())
 }
 
 fn fit_all(ctx: &mut PluginContext) {
@@ -70,7 +72,7 @@ impl Plugin for FitAllGraphPlugin {
     }
 
     fn setup(&mut self, ctx: &mut InitPluginContext) {
-        let Some((bx, by, bw, bh)) = graph_world_bounds_graph(ctx.graph) else {
+        let Some((bx, by, bw, bh)) = graph_world_bounds_graph(ctx.nodes().values()) else {
             return;
         };
         let win_w: f32 = ctx.drawable_size.width.into();
