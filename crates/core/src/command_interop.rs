@@ -73,7 +73,7 @@ fn apply_graph_op(graph: &mut Graph, op: GraphOp) {
         GraphOp::AddPort(port) => graph.add_port(port),
         GraphOp::RemovePort(id) => graph.remove_port(&id),
         GraphOp::AddEdge(edge) => graph.add_edge(edge),
-        GraphOp::RemoveEdge(id) => graph.remove_edge(id),
+        GraphOp::RemoveEdge(id) => graph.remove_edge(&id),
         GraphOp::Batch(ops) => {
             for op in ops {
                 apply_graph_op(graph, op);
