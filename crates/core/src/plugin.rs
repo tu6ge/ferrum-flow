@@ -172,6 +172,59 @@ impl<'a, 'b> InitPluginContext<'a, 'b> {
         self.graph.bring_node_to_front(node_id);
     }
 
+    // ---- Viewport shortcuts ----
+    pub fn zoom(&self) -> f32 {
+        self.viewport.zoom()
+    }
+
+    pub fn set_zoom(&mut self, zoom: f32) {
+        self.viewport.set_zoom(zoom);
+    }
+
+    pub fn zoom_scaled_by(&self, factor: f32) -> f32 {
+        self.viewport.zoom_scaled_by(factor)
+    }
+
+    pub fn offset(&self) -> Point<Pixels> {
+        self.viewport.offset()
+    }
+
+    pub fn set_offset(&mut self, offset: Point<Pixels>) {
+        self.viewport.set_offset(offset);
+    }
+
+    pub fn set_offset_xy(&mut self, x: Pixels, y: Pixels) {
+        self.viewport.set_offset_xy(x, y);
+    }
+
+    pub fn translate_offset(&mut self, dx: Pixels, dy: Pixels) {
+        self.viewport.translate_offset(dx, dy);
+    }
+
+    pub fn window_bounds(&self) -> Option<Bounds<Pixels>> {
+        self.viewport.window_bounds()
+    }
+
+    pub fn set_window_bounds(&mut self, bounds: Option<Bounds<Pixels>>) {
+        self.viewport.set_window_bounds(bounds);
+    }
+
+    pub fn world_scalar_to_screen(&self, value: f32) -> f32 {
+        self.viewport.world_scalar_to_screen(value)
+    }
+
+    pub fn screen_scalar_to_world(&self, value: f32) -> f32 {
+        self.viewport.screen_scalar_to_world(value)
+    }
+
+    pub fn world_length_to_screen(&self, value: Pixels) -> Pixels {
+        self.viewport.world_length_to_screen(value)
+    }
+
+    pub fn screen_length_to_world(&self, value: Pixels) -> Pixels {
+        self.viewport.screen_length_to_world(value)
+    }
+
     pub fn world_to_screen(&self, p: Point<Pixels>) -> Point<Pixels> {
         self.viewport.world_to_screen(p)
     }
@@ -475,6 +528,59 @@ impl<'a> PluginContext<'a> {
         self.graph.bring_node_to_front(node_id);
     }
 
+    // ---- Viewport shortcuts ----
+    pub fn zoom(&self) -> f32 {
+        self.viewport.zoom()
+    }
+
+    pub fn set_zoom(&mut self, zoom: f32) {
+        self.viewport.set_zoom(zoom);
+    }
+
+    pub fn zoom_scaled_by(&self, factor: f32) -> f32 {
+        self.viewport.zoom_scaled_by(factor)
+    }
+
+    pub fn offset(&self) -> Point<Pixels> {
+        self.viewport.offset()
+    }
+
+    pub fn set_offset(&mut self, offset: Point<Pixels>) {
+        self.viewport.set_offset(offset);
+    }
+
+    pub fn set_offset_xy(&mut self, x: Pixels, y: Pixels) {
+        self.viewport.set_offset_xy(x, y);
+    }
+
+    pub fn translate_offset(&mut self, dx: Pixels, dy: Pixels) {
+        self.viewport.translate_offset(dx, dy);
+    }
+
+    pub fn window_bounds(&self) -> Option<Bounds<Pixels>> {
+        self.viewport.window_bounds()
+    }
+
+    pub fn set_window_bounds(&mut self, bounds: Option<Bounds<Pixels>>) {
+        self.viewport.set_window_bounds(bounds);
+    }
+
+    pub fn world_scalar_to_screen(&self, value: f32) -> f32 {
+        self.viewport.world_scalar_to_screen(value)
+    }
+
+    pub fn screen_scalar_to_world(&self, value: f32) -> f32 {
+        self.viewport.screen_scalar_to_world(value)
+    }
+
+    pub fn world_length_to_screen(&self, value: Pixels) -> Pixels {
+        self.viewport.world_length_to_screen(value)
+    }
+
+    pub fn screen_length_to_world(&self, value: Pixels) -> Pixels {
+        self.viewport.screen_length_to_world(value)
+    }
+
     pub fn world_to_screen(&self, p: Point<Pixels>) -> Point<Pixels> {
         self.viewport.world_to_screen(p)
     }
@@ -661,6 +767,39 @@ impl<'a> RenderContext<'a> {
 
     pub fn hit_node(&self, mouse: Point<Pixels>) -> Option<NodeId> {
         self.graph.hit_node(mouse)
+    }
+
+    // ---- Viewport shortcuts ----
+    pub fn zoom(&self) -> f32 {
+        self.viewport.zoom()
+    }
+
+    pub fn zoom_scaled_by(&self, factor: f32) -> f32 {
+        self.viewport.zoom_scaled_by(factor)
+    }
+
+    pub fn offset(&self) -> Point<Pixels> {
+        self.viewport.offset()
+    }
+
+    pub fn window_bounds(&self) -> Option<Bounds<Pixels>> {
+        self.viewport.window_bounds()
+    }
+
+    pub fn world_scalar_to_screen(&self, value: f32) -> f32 {
+        self.viewport.world_scalar_to_screen(value)
+    }
+
+    pub fn screen_scalar_to_world(&self, value: f32) -> f32 {
+        self.viewport.screen_scalar_to_world(value)
+    }
+
+    pub fn world_length_to_screen(&self, value: Pixels) -> Pixels {
+        self.viewport.world_length_to_screen(value)
+    }
+
+    pub fn screen_length_to_world(&self, value: Pixels) -> Pixels {
+        self.viewport.screen_length_to_world(value)
     }
 
     pub fn world_to_screen(&self, p: Point<Pixels>) -> Point<Pixels> {
