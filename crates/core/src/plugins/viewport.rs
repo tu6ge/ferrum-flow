@@ -111,10 +111,10 @@ impl Command for PanningCommand {
         "panning"
     }
     fn execute(&mut self, ctx: &mut crate::canvas::CommandContext) {
-        ctx.viewport.set_offset(self.to);
+        ctx.set_offset(self.to);
     }
     fn undo(&mut self, ctx: &mut crate::canvas::CommandContext) {
-        ctx.viewport.set_offset(self.from);
+        ctx.set_offset(self.from);
     }
 
     fn to_ops(&self, _ctx: &mut crate::CommandContext) -> Vec<crate::GraphOp> {

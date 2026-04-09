@@ -31,14 +31,14 @@ fn with_command_ctx<R>(graph: &mut Graph, f: impl FnOnce(&mut CommandContext) ->
     let mut renderers = RendererRegistry::new();
     let mut shared_state = SharedState::new();
     let mut notify = || {};
-    let mut ctx = CommandContext {
+    let mut ctx = CommandContext::new(
         graph,
-        port_offset_cache: &mut port_offset_cache,
-        viewport: &mut viewport,
-        renderers: &mut renderers,
-        shared_state: &mut shared_state,
-        notify: &mut notify,
-    };
+        &mut port_offset_cache,
+        &mut viewport,
+        &mut renderers,
+        &mut shared_state,
+        &mut notify,
+    );
     f(&mut ctx)
 }
 

@@ -36,7 +36,7 @@ pub trait HistoryProvider {
 pub struct CommandContext<'a> {
     pub graph: &'a mut Graph,
     pub port_offset_cache: &'a mut PortLayoutCache,
-    pub viewport: &'a mut Viewport,
+    viewport: &'a mut Viewport,
     pub renderers: &'a mut RendererRegistry,
     /// Shared plugin state on the [`FlowCanvas`](crate::canvas::FlowCanvas).
     pub shared_state: &'a mut SharedState,
@@ -130,6 +130,23 @@ impl Command for CompositeCommand {
 }
 
 impl<'a> CommandContext<'a> {
+    pub(crate) fn new(
+        graph: &'a mut Graph,
+        port_offset_cache: &'a mut PortLayoutCache,
+        viewport: &'a mut Viewport,
+        renderers: &'a mut RendererRegistry,
+        shared_state: &'a mut SharedState,
+        notify: &'a mut dyn FnMut(),
+    ) -> Self {
+        Self {
+            graph,
+            port_offset_cache,
+            viewport,
+            renderers,
+            shared_state,
+            notify,
+        }
+    }
     pub fn create_node(&self, node_type: &str) -> NodeBuilder {
         self.graph.create_node(node_type)
     }
