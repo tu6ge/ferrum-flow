@@ -51,7 +51,7 @@ pub struct NumberNode;
 
 impl NodeRenderer for NumberNode {
     fn render(&self, node: &Node, ctx: &mut RenderContext) -> AnyElement {
-        let screen = ctx.viewport.world_to_screen(node.point());
+        let screen = ctx.world_to_screen(node.point());
         let node_x = screen.x;
         let node_y = screen.y;
 
@@ -59,8 +59,8 @@ impl NodeRenderer for NumberNode {
             .absolute()
             .left(node_x)
             .top(node_y)
-            .w(ctx.viewport.world_length_to_screen(node.size.width))
-            .h(ctx.viewport.world_length_to_screen(node.size.height))
+            .w(ctx.world_length_to_screen(node.size.width))
+            .h(ctx.world_length_to_screen(node.size.height))
             .bg(rgb(0x505078))
             .child(div().child("Number Node").text_color(white()))
             .into_any()

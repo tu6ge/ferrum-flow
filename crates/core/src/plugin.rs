@@ -254,7 +254,11 @@ impl<'a, 'b> InitPluginContext<'a, 'b> {
         self.viewport.screen_to_world(p)
     }
 
-    pub fn edge_control_point(&self, source: Point<Pixels>, position: PortPosition) -> Point<Pixels> {
+    pub fn edge_control_point(
+        &self,
+        source: Point<Pixels>,
+        position: PortPosition,
+    ) -> Point<Pixels> {
         self.viewport.edge_control_point(source, position)
     }
 
@@ -342,7 +346,7 @@ pub enum EventResult {
 }
 
 impl<'a> PluginContext<'a> {
-    pub fn new(
+    pub(crate) fn new(
         graph: &'a mut Graph,
         port_offset_cache: &'a mut PortLayoutCache,
         viewport: &'a mut Viewport,
@@ -617,7 +621,11 @@ impl<'a> PluginContext<'a> {
         self.viewport.screen_to_world(p)
     }
 
-    pub fn edge_control_point(&self, source: Point<Pixels>, position: PortPosition) -> Point<Pixels> {
+    pub fn edge_control_point(
+        &self,
+        source: Point<Pixels>,
+        position: PortPosition,
+    ) -> Point<Pixels> {
         self.viewport.edge_control_point(source, position)
     }
 
@@ -716,7 +724,7 @@ pub enum InputEvent {
 pub struct RenderContext<'a> {
     pub graph: &'a Graph,
     pub port_offset_cache: &'a mut PortLayoutCache,
-    pub viewport: &'a Viewport,
+    viewport: &'a Viewport,
     pub renderers: &'a RendererRegistry,
 
     pub window: &'a Window,
@@ -729,7 +737,7 @@ pub struct RenderContext<'a> {
 }
 
 impl<'a> RenderContext<'a> {
-    pub fn new(
+    pub(crate) fn new(
         graph: &'a mut Graph,
         port_offset_cache: &'a mut PortLayoutCache,
         viewport: &'a Viewport,
@@ -805,6 +813,11 @@ impl<'a> RenderContext<'a> {
     }
 
     // ---- Viewport shortcuts ----
+
+    pub fn viewport(&self) -> &Viewport {
+        &self.viewport
+    }
+
     pub fn zoom(&self) -> f32 {
         self.viewport.zoom()
     }
@@ -876,7 +889,11 @@ impl<'a> RenderContext<'a> {
         self.viewport.screen_to_world(p)
     }
 
-    pub fn edge_control_point(&self, source: Point<Pixels>, position: PortPosition) -> Point<Pixels> {
+    pub fn edge_control_point(
+        &self,
+        source: Point<Pixels>,
+        position: PortPosition,
+    ) -> Point<Pixels> {
         self.viewport.edge_control_point(source, position)
     }
 

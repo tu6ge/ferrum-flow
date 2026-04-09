@@ -107,7 +107,7 @@ impl Plugin for MeiliPortInteractionPlugin {
                 }
             }
 
-            let mouse_world = ctx.viewport.screen_to_world(ev.position);
+            let mouse_world = ctx.screen_to_world(ev.position);
             let port_hit = ctx
                 .graph
                 .ports()
@@ -151,7 +151,7 @@ impl Plugin for MeiliPortInteractionPlugin {
         let source_port = ctx.graph.get_port(&p.source_port)?;
         let start_position = source_port.position;
         let target_position = Self::facing_position(start_position);
-        let viewport = ctx.viewport.clone();
+        let viewport = ctx.viewport().clone();
         let line_rgb = ctx.theme.port_preview_line;
         let dot_rgb = ctx.theme.port_preview_dot;
 
@@ -273,7 +273,7 @@ impl Interaction for PortConnecting {
         let start = ctx.port_screen_center(node, self.port_id)?;
         let position = self.position;
         let target_position = self.target_position;
-        let viewport = ctx.viewport.clone();
+        let viewport = ctx.viewport().clone();
         let line_rgb = ctx.theme.port_preview_line;
         let dot_rgb = ctx.theme.port_preview_dot;
 

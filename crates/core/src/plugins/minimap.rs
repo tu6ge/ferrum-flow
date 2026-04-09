@@ -3,7 +3,7 @@
 use gpui::{Bounds, Element, MouseButton, PathBuilder, Pixels, Point, Size, canvas, px, rgb};
 
 use crate::{
-    Graph, Viewport,
+    Viewport,
     canvas::{Command, CommandContext},
     plugin::{
         EventResult, FlowEvent, InputEvent, Plugin, PluginContext, RenderContext, RenderLayer,
@@ -48,11 +48,12 @@ impl MinimapLayout {
     }
 }
 
-fn graph_world_extent(graph: &Graph, viewport: &Viewport) -> (f32, f32, f32, f32) {
-    let nodes: Vec<_> = graph
+fn graph_world_extent(ctx: &RenderContext) -> (f32, f32, f32, f32) {
+    let nodes: Vec<_> = ctx
+        .graph
         .nodes()
         .values()
-        .filter(|n| viewport.is_node_visible(n))
+        .filter(|n| ctx.is_node_visible_node(n))
         .collect();
     if nodes.is_empty() {
         return (0.0, 0.0, 640.0, 480.0);
@@ -105,8 +106,8 @@ fn visible_world_aabb(viewport: &Viewport, win: &Bounds<Pixels>) -> (f32, f32, f
     )
 }
 
-fn build_layout(viewport: &Viewport, graph: &Graph) -> Option<MinimapLayout> {
-    let win = viewport.window_bounds()?;
+fn build_layout(ctx: &RenderContext) -> Option<MinimapLayout> {
+    let win = ctx.window_bounds()?;
     let ww: f32 = win.size.width.into();
     let wh: f32 = win.size.height.into();
     if ww < MAP_W + OUTER_MARGIN || wh < MAP_H + OUTER_MARGIN {
@@ -128,7 +129,7 @@ fn build_layout(viewport: &Viewport, graph: &Graph) -> Option<MinimapLayout> {
         ),
     );
 
-    let (wx0, wy0, ww, wh) = graph_world_extent(graph, viewport);
+    let (wx0, wy0, ww, wh) = graph_world_extent(ctx);
 
     Some(MinimapLayout {
         chrome,
@@ -265,7 +266,7 @@ impl Plugin for MinimapPlugin {
     }
 
     fn render(&mut self, ctx: &mut RenderContext) -> Option<gpui::AnyElement> {
-        let layout = build_layout(ctx.viewport, ctx.graph)?;
+        let layout = build_layout(ctx)?;
         self.last_layout = Some(layout.clone());
 
         let inner = layout.inner;
@@ -302,8 +303,8 @@ impl Plugin for MinimapPlugin {
             })
             .collect();
 
-        let win_bounds = ctx.viewport.window_bounds()?;
-        let (vx0, vy0, vw, vh) = visible_world_aabb(ctx.viewport, &win_bounds);
+        let win_bounds = ctx.window_bounds()?;
+        let (vx0, vy0, vw, vh) = visible_world_aabb(ctx.viewport(), &win_bounds);
         let v_tl = world_to_inner_pt(vx0, vy0, &layout);
         let v_br = world_to_inner_pt(vx0 + vw, vy0 + vh, &layout);
 

@@ -77,8 +77,7 @@ impl Plugin for ExecutionHighlightPlugin {
         let step_delay = self.step_delay;
         let on_run_complete = self.on_run_complete.clone();
 
-        init
-            .gpui_ctx
+        init.gpui_ctx
             .spawn(async move |this, cx| {
                 while let Some(()) = rx.next().await {
                     let graph = match this.update(cx, |canvas, _| canvas.graph.clone()) {
@@ -153,8 +152,8 @@ impl Plugin for ExecutionHighlightPlugin {
         let node = ctx.graph.nodes().get(&id)?;
         let top_left = ctx.world_to_screen(Point::new(node.x, node.y));
         let size = Size::new(
-            ctx.viewport.world_length_to_screen(node.size.width),
-            ctx.viewport.world_length_to_screen(node.size.height),
+            ctx.world_length_to_screen(node.size.width),
+            ctx.world_length_to_screen(node.size.height),
         );
 
         Some(

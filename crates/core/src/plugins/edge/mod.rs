@@ -73,7 +73,7 @@ impl Plugin for EdgePlugin {
             .graph
             .nodes()
             .iter()
-            .filter(|(_, node)| ctx.viewport.is_node_visible(node))
+            .filter(|(_, node)| ctx.is_node_visible_node(node))
             .map(|(id, _)| *id)
             .collect();
 

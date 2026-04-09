@@ -3,12 +3,10 @@
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use ferrum_flow::{
-    EventResult, FlowEvent, Plugin, RenderContext, RenderLayer,
-};
+use ferrum_flow::{EventResult, FlowEvent, Plugin, RenderContext, RenderLayer};
 use gpui::{
-    Bounds, FontWeight, ImageSource, IntoElement as _, ParentElement as _, Point, RenderImage, Size,
-    Styled as _, div, img, px, rgb, rgba,
+    Bounds, FontWeight, ImageSource, IntoElement as _, ParentElement as _, Point, RenderImage,
+    Size, Styled as _, div, img, px, rgb, rgba,
 };
 use image::{Frame, RgbaImage};
 use smallvec::SmallVec;
@@ -26,8 +24,7 @@ fn rgba_to_gpui_frame(mut rgba: Vec<u8>, width: u32, height: u32) -> Frame {
     for px in rgba.chunks_exact_mut(4) {
         px.swap(0, 2);
     }
-    let buf =
-        RgbaImage::from_raw(width, height, rgba).expect("buffer size matches width*height*4");
+    let buf = RgbaImage::from_raw(width, height, rgba).expect("buffer size matches width*height*4");
     Frame::new(buf)
 }
 
@@ -107,9 +104,10 @@ impl WgpuPreviewPlugin {
 
         if self.compile_ok && self.rig.is_none() && !self.wgsl_source.is_empty() {
             let now = Instant::now();
-            if self.last_rig_attempt.map_or(true, |t| {
-                now.saturating_duration_since(t) > RIG_RETRY
-            }) {
+            if self
+                .last_rig_attempt
+                .map_or(true, |t| now.saturating_duration_since(t) > RIG_RETRY)
+            {
                 self.last_rig_attempt = Some(now);
                 self.rebuild_rig();
             }
@@ -157,14 +155,18 @@ impl Plugin for WgpuPreviewPlugin {
         RenderLayer::Overlay
     }
 
-    fn on_event(&mut self, _event: &FlowEvent, _ctx: &mut ferrum_flow::PluginContext) -> EventResult {
+    fn on_event(
+        &mut self,
+        _event: &FlowEvent,
+        _ctx: &mut ferrum_flow::PluginContext,
+    ) -> EventResult {
         EventResult::Continue
     }
 
     fn render(&mut self, ctx: &mut RenderContext) -> Option<gpui::AnyElement> {
         self.sync_graph(ctx.graph);
 
-        let win = ctx.viewport.window_bounds().unwrap_or_else(|| {
+        let win = ctx.window_bounds().unwrap_or_else(|| {
             let vs = ctx.window.viewport_size();
             Bounds::new(Point::new(px(0.0), px(0.0)), Size::new(vs.width, vs.height))
         });

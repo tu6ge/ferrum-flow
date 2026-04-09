@@ -70,7 +70,7 @@ fn frame_params(
 
 /// Update viewport directly (not on undo stack); one-shot after open or sample swap.
 pub fn fit_entire_graph_in_viewport(ctx: &mut PluginContext) {
-    let Some(wb) = ctx.viewport.window_bounds() else {
+    let Some(wb) = ctx.window_bounds() else {
         return;
     };
     let win_w: f32 = wb.size.width.into();
@@ -82,6 +82,6 @@ pub fn fit_entire_graph_in_viewport(ctx: &mut PluginContext) {
         return;
     };
 
-    ctx.viewport.set_zoom(z);
-    ctx.viewport.set_offset(new_offset);
+    ctx.set_zoom(z);
+    ctx.set_offset(new_offset);
 }
