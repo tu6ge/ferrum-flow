@@ -64,10 +64,10 @@ pub trait Plugin {
 }
 
 pub struct InitPluginContext<'a, 'b> {
-    pub graph: &'a mut Graph,
-    pub port_offset_cache: &'a mut PortLayoutCache,
+    graph: &'a mut Graph,
+    port_offset_cache: &'a mut PortLayoutCache,
     viewport: &'a mut Viewport,
-    pub renderers: &'a mut RendererRegistry,
+    renderers: &'a mut RendererRegistry,
     pub gpui_ctx: &'a Context<'b, FlowCanvas>,
     /// Drawable size from the `window` passed to [`FlowCanvas::builder`] (`Window::viewport_size` when `build()` runs).
     pub drawable_size: Size<Pixels>,
