@@ -84,7 +84,7 @@ impl Graph {
                 self.remove_port(&id);
             }
             GraphChangeKind::EdgeAdded(edge) => self.add_edge(edge),
-            GraphChangeKind::EdgeRemoved { id } => self.remove_edge(id),
+            GraphChangeKind::EdgeRemoved { id } => self.remove_edge(&id),
             GraphChangeKind::RedrawRequested => {}
             GraphChangeKind::Batch(graph_change_kinds) => {
                 for change in graph_change_kinds {
@@ -153,9 +153,9 @@ impl Graph {
         self.edges.insert(edge.id, edge);
     }
 
-    pub fn remove_edge(&mut self, edge_id: EdgeId) {
-        self.edges.remove(&edge_id);
-        self.selected_edge.remove(&edge_id);
+    pub fn remove_edge(&mut self, edge_id: &EdgeId) {
+        self.edges.remove(edge_id);
+        self.selected_edge.remove(edge_id);
     }
 
     pub fn get_node(&self, id: &NodeId) -> Option<&Node> {

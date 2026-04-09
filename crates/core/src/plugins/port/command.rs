@@ -18,7 +18,7 @@ impl Command for CreateEdge {
         ctx.add_edge(self.edge.clone());
     }
     fn undo(&mut self, ctx: &mut crate::canvas::CommandContext) {
-        ctx.remove_edge(self.edge.id);
+        ctx.remove_edge(&self.edge.id);
     }
 
     fn to_ops(&self, _ctx: &mut crate::CommandContext) -> Vec<crate::GraphOp> {

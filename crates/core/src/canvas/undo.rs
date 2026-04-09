@@ -187,7 +187,7 @@ impl<'a> CommandContext<'a> {
         self.graph.add_edge(edge);
     }
 
-    pub fn remove_edge(&mut self, edge_id: EdgeId) {
+    pub fn remove_edge(&mut self, edge_id: &EdgeId) {
         self.graph.remove_edge(edge_id);
     }
 
