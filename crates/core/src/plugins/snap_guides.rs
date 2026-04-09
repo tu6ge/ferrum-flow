@@ -193,7 +193,7 @@ impl Plugin for SnapGuidesPlugin {
 
     fn render(&mut self, ctx: &mut RenderContext) -> Option<AnyElement> {
         let guides = self.guides.as_ref()?;
-        let wb = ctx.viewport.window_bounds()?;
+        let wb = ctx.window_bounds()?;
         let w = wb.size.width;
         let h = wb.size.height;
         let theme = ctx.theme;
@@ -223,7 +223,7 @@ impl Plugin for SnapGuidesPlugin {
 }
 
 fn vline(wx: Pixels, win_h: Pixels, ctx: &RenderContext<'_>, theme: &FlowTheme) -> AnyElement {
-    let sx = ctx.viewport.world_to_screen(Point::new(wx, px(0.0))).x;
+    let sx = ctx.world_to_screen(Point::new(wx, px(0.0))).x;
     div()
         .absolute()
         .left(sx)
@@ -235,7 +235,7 @@ fn vline(wx: Pixels, win_h: Pixels, ctx: &RenderContext<'_>, theme: &FlowTheme) 
 }
 
 fn hline(wy: Pixels, win_w: Pixels, ctx: &RenderContext<'_>, theme: &FlowTheme) -> AnyElement {
-    let sy = ctx.viewport.world_to_screen(Point::new(px(0.0), wy)).y;
+    let sy = ctx.world_to_screen(Point::new(px(0.0), wy)).y;
     div()
         .absolute()
         .left(px(0.0))

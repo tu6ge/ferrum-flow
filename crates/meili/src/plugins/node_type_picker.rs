@@ -159,7 +159,7 @@ impl Plugin for NodeTypePickerPlugin {
         let end = ctx.world_to_screen(p.end_world);
         let start_position = port.position;
         let target_position = Self::facing_position(start_position);
-        let viewport = ctx.viewport.clone();
+        let viewport = ctx.viewport().clone();
         let line_rgb = ctx.theme.port_preview_line;
         let dot_rgb = ctx.theme.port_preview_dot;
 

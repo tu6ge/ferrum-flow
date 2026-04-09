@@ -2,9 +2,7 @@
 
 use std::hash::{Hash, Hasher};
 
-use ferrum_flow::{
-    EventResult, FlowEvent, Plugin, RenderContext, RenderLayer,
-};
+use ferrum_flow::{EventResult, FlowEvent, Plugin, RenderContext, RenderLayer};
 use gpui::{
     Bounds, FontWeight, IntoElement as _, ParentElement as _, Point, Size, Styled as _, div, px,
     rgb, rgba,
@@ -95,14 +93,18 @@ impl Plugin for WgslPreviewPlugin {
         RenderLayer::Overlay
     }
 
-    fn on_event(&mut self, _event: &FlowEvent, _ctx: &mut ferrum_flow::PluginContext) -> EventResult {
+    fn on_event(
+        &mut self,
+        _event: &FlowEvent,
+        _ctx: &mut ferrum_flow::PluginContext,
+    ) -> EventResult {
         EventResult::Continue
     }
 
     fn render(&mut self, ctx: &mut RenderContext) -> Option<gpui::AnyElement> {
         self.refresh(ctx.graph);
 
-        let win = ctx.viewport.window_bounds().unwrap_or_else(|| {
+        let win = ctx.window_bounds().unwrap_or_else(|| {
             let vs = ctx.window.viewport_size();
             Bounds::new(Point::new(px(0.0), px(0.0)), Size::new(vs.width, vs.height))
         });

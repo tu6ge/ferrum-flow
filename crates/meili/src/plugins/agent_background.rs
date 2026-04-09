@@ -1,8 +1,9 @@
 //! Dark canvas with a soft dot grid — replaces the default light [`BackgroundPlugin`](ferrum_flow::BackgroundPlugin).
 
-use ferrum_flow::{FlowEvent, InitPluginContext, Plugin, PluginContext, RenderContext, RenderLayer};
+use ferrum_flow::{
+    FlowEvent, InitPluginContext, Plugin, PluginContext, RenderContext, RenderLayer,
+};
 use gpui::{Element, ParentElement, Styled, div, px, rgb};
-
 
 pub struct AgentBackgroundPlugin;
 
@@ -37,10 +38,10 @@ impl Plugin for AgentBackgroundPlugin {
 
     fn render(&mut self, ctx: &mut RenderContext) -> Option<gpui::AnyElement> {
         let base_grid = 48.0_f32;
-        let zoom = ctx.viewport.zoom();
+        let zoom = ctx.zoom();
         let grid = base_grid * zoom;
 
-        let offset = ctx.viewport.offset();
+        let offset = ctx.offset();
         let start_x = f32::from(offset.x).rem_euclid(grid);
         let start_y = f32::from(offset.y).rem_euclid(grid);
 

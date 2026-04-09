@@ -102,9 +102,9 @@ impl NodeRenderer for WorkflowNodeRenderer {
     fn render(&self, node: &Node, ctx: &mut RenderContext) -> AnyElement {
         let node_id = node.id;
         let selected = ctx.graph.selected_node().contains(&node_id);
-        let screen = ctx.viewport.world_to_screen(node.point());
-        let w = ctx.viewport.world_length_to_screen(node.size.width);
-        let h = ctx.viewport.world_length_to_screen(node.size.height);
+        let screen = ctx.world_to_screen(node.point());
+        let w = ctx.world_length_to_screen(node.size.width);
+        let h = ctx.world_length_to_screen(node.size.height);
         let accent = self.kind.accent();
         let bg = self.card_bg();
         let title = self.read_title(node);
@@ -117,22 +117,14 @@ impl NodeRenderer for WorkflowNodeRenderer {
             rgba((accent << 8) | 0x55)
         };
 
-        let header = div()
-            .w_full()
-            .h(px(3.0))
-            .bg(rgb(accent));
+        let header = div().w_full().h(px(3.0)).bg(rgb(accent));
 
-        let mut body = div()
-            .flex()
-            .flex_col()
-            .gap(px(4.0))
-            .p(px(10.0))
-            .child(
-                div()
-                    .child(title)
-                    .text_color(rgb(ctx.theme.node_caption_text))
-                    .text_size(px(13.0)),
-            );
+        let mut body = div().flex().flex_col().gap(px(4.0)).p(px(10.0)).child(
+            div()
+                .child(title)
+                .text_color(rgb(ctx.theme.node_caption_text))
+                .text_size(px(13.0)),
+        );
 
         if let Some(sub) = subtitle {
             if !sub.is_empty() {
