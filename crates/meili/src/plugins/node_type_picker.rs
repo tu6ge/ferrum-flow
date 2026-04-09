@@ -25,7 +25,8 @@ use crate::plugins::node_kind_preset::{NodeKindPreset, preset_for_digit};
 use crate::plugins::pick_link_event::{NodeTypeSelectConfirm, PickNodeTypeForPendingLink};
 use ferrum_flow::{
     CreateEdge, CreateNode, CreatePort, EventResult, FlowEvent, InputEvent, NodeBuilder, Plugin,
-    PluginContext, PortKind, PortPosition, RenderContext, RenderLayer, edge_bezier, filled_disc_path,
+    PluginContext, PortKind, PortPosition, RenderContext, RenderLayer, edge_bezier,
+    filled_disc_path,
 };
 use gpui::{Element as _, ParentElement as _, Styled, canvas, div, px, rgb};
 
@@ -62,7 +63,7 @@ impl NodeTypePickerPlugin {
         let Some(p) = pick_state::pending_take() else {
             return;
         };
-        let Some(source) = ctx.graph.ports.get(&p.source_port).cloned() else {
+        let Some(source) = ctx.graph.get_port(&p.source_port).cloned() else {
             return;
         };
 
@@ -152,7 +153,7 @@ impl Plugin for NodeTypePickerPlugin {
     /// Renders only the dangling wire and blue dot; type UI is the gpui-component `Select` in [`crate::shell::MeiliShell`].
     fn render(&mut self, ctx: &mut RenderContext) -> Option<gpui::AnyElement> {
         let p = pick_state::pending_peek()?;
-        let port = ctx.graph.ports.get(&p.source_port)?;
+        let port = ctx.graph.get_port(&p.source_port)?;
         let node = ctx.nodes().get(&port.node_id)?;
         let start = ctx.port_screen_center(node, p.source_port)?;
         let end = ctx.world_to_screen(p.end_world);

@@ -12,7 +12,7 @@ pub fn port_screen_bounds(
     port_id: PortId,
     ctx: &crate::plugin::PluginContext,
 ) -> Option<Bounds<Pixels>> {
-    let port = &ctx.graph.ports.get(&port_id)?;
+    let port = &ctx.graph.get_port(&port_id)?;
     let node = &ctx.nodes().get(&port.node_id)?;
 
     let node_pos = node.point();
@@ -56,10 +56,7 @@ pub fn filled_disc_path(
     let mut pts: Vec<Point<Pixels>> = Vec::with_capacity(SEGMENTS);
     for i in 0..SEGMENTS {
         let t = i as f32 / SEGMENTS as f32 * std::f32::consts::TAU;
-        pts.push(Point::new(
-            px(cx + r * t.cos()),
-            px(cy + r * t.sin()),
-        ));
+        pts.push(Point::new(px(cx + r * t.cos()), px(cy + r * t.sin())));
     }
     let mut pb = PathBuilder::fill();
     pb.add_polygon(&pts, true);

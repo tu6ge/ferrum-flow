@@ -86,14 +86,11 @@ impl EdgeBuilder {
 
         let edge_id = graph.next_edge_id();
 
-        graph.edges.insert(
-            edge_id,
-            Edge {
-                id: edge_id,
-                source_port: source,
-                target_port: target,
-            },
-        );
+        graph.add_edge(Edge {
+            id: edge_id,
+            source_port: source,
+            target_port: target,
+        });
 
         Some(edge_id)
     }

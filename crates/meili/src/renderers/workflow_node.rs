@@ -101,7 +101,7 @@ fn data_str<'a>(data: &'a Value, key: &str) -> Option<&'a str> {
 impl NodeRenderer for WorkflowNodeRenderer {
     fn render(&self, node: &Node, ctx: &mut RenderContext) -> AnyElement {
         let node_id = node.id;
-        let selected = ctx.graph.selected_node.contains(&node_id);
+        let selected = ctx.graph.selected_node().contains(&node_id);
         let screen = ctx.viewport.world_to_screen(node.point());
         let w = node.size.width * ctx.viewport.zoom;
         let h = node.size.height * ctx.viewport.zoom;

@@ -79,13 +79,13 @@ impl Plugin for EdgePlugin {
 
         let edges: Vec<_> = ctx
             .graph
-            .edges
+            .edges()
             .iter()
             .filter(|(_, edge)| {
-                let Some(source_port) = ctx.graph.ports.get(&edge.source_port) else {
+                let Some(source_port) = ctx.graph.get_port(&edge.source_port) else {
                     return false;
                 };
-                let Some(target_port) = ctx.graph.ports.get(&edge.target_port) else {
+                let Some(target_port) = ctx.graph.get_port(&edge.target_port) else {
                     return false;
                 };
 
@@ -100,7 +100,7 @@ impl Plugin for EdgePlugin {
             ctx.cache_port_offset_with_edge(&edge_id);
         }
 
-        let selected_edges = ctx.graph.selected_edge.clone();
+        let selected_edges = ctx.graph.selected_edge().clone();
         let stroke = ctx.theme.edge_stroke;
         let stroke_sel = ctx.theme.edge_stroke_selected;
 
@@ -146,8 +146,8 @@ fn edge_geometry(edge: &Edge, ctx: &PluginContext) -> Option<EdgeGeometry> {
     let start = ctx.port_screen_center_by_port_id(*source_id)?;
     let end = ctx.port_screen_center_by_port_id(*target_id)?;
 
-    let source_port = ctx.graph.ports.get(source_id)?;
-    let target_port = ctx.graph.ports.get(target_id)?;
+    let source_port = ctx.graph.get_port(source_id)?;
+    let target_port = ctx.graph.get_port(target_id)?;
 
     let c1 = get_control_point(start, source_port.position, ctx.viewport);
     let c2 = get_control_point(end, target_port.position, ctx.viewport);
@@ -165,8 +165,8 @@ fn edge_geometry2(edge: &Edge, ctx: &RenderContext) -> Option<EdgeGeometry> {
     let start = ctx.port_screen_center_by_port_id(*source_id)?;
     let end = ctx.port_screen_center_by_port_id(*target_id)?;
 
-    let source_port = ctx.graph.ports.get(source_id)?;
-    let target_port = ctx.graph.ports.get(target_id)?;
+    let source_port = ctx.graph.get_port(source_id)?;
+    let target_port = ctx.graph.get_port(target_id)?;
 
     let c1 = get_control_point(start, source_port.position, ctx.viewport);
     let c2 = get_control_point(end, target_port.position, ctx.viewport);
@@ -183,11 +183,11 @@ fn hit_test_get_edge(mouse: Point<Pixels>, ctx: &PluginContext) -> Option<EdgeId
         .map(|(id, _)| *id)
         .collect();
 
-    let edges = ctx.graph.edges.values().filter(|edge| {
-        let Some(source_port) = ctx.graph.ports.get(&edge.source_port) else {
+    let edges = ctx.graph.edges_values().filter(|edge| {
+        let Some(source_port) = ctx.graph.get_port(&edge.source_port) else {
             return false;
         };
-        let Some(target_port) = ctx.graph.ports.get(&edge.target_port) else {
+        let Some(target_port) = ctx.graph.get_port(&edge.target_port) else {
             return false;
         };
 

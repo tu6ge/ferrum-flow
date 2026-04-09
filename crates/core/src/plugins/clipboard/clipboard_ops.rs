@@ -2,12 +2,9 @@ use std::collections::{HashMap, HashSet};
 
 use gpui::px;
 
-use crate::{
-    CompositeCommand, Edge, Graph, Node, NodeId, Port,
-    plugin::PluginContext,
-};
+use crate::{CompositeCommand, Edge, Graph, Node, NodeId, Port, plugin::PluginContext};
 
-use super::{copied_subgraph::CopiedSubgraph};
+use super::copied_subgraph::CopiedSubgraph;
 use crate::plugins::{CreateEdge, CreateNode, CreatePort};
 
 #[derive(Clone)]
@@ -28,10 +25,10 @@ pub(crate) fn has_clipboard_subgraph(ctx: &PluginContext) -> bool {
 }
 
 pub(crate) fn extract_subgraph(graph: &Graph) -> Option<CopiedSubgraph> {
-    if graph.selected_node.is_empty() {
+    if graph.selected_node_is_empty() {
         return None;
     }
-    let selected = &graph.selected_node;
+    let selected = graph.selected_node();
     let node_ids: Vec<NodeId> = graph
         .node_order()
         .iter()
@@ -45,7 +42,7 @@ pub(crate) fn extract_subgraph(graph: &Graph) -> Option<CopiedSubgraph> {
     let mut port_ids = HashSet::new();
     let mut nodes = Vec::new();
     for nid in &node_ids {
-        let n = graph.nodes.get(nid)?.clone();
+        let n = graph.get_node(nid)?.clone();
         for pid in n.inputs.iter().chain(n.outputs.iter()) {
             port_ids.insert(*pid);
         }
@@ -54,16 +51,16 @@ pub(crate) fn extract_subgraph(graph: &Graph) -> Option<CopiedSubgraph> {
 
     let mut ports = Vec::new();
     for nid in &node_ids {
-        let n = graph.nodes.get(nid)?;
+        let n = graph.get_node(nid)?;
         for pid in n.inputs.iter().chain(n.outputs.iter()) {
-            if let Some(p) = graph.ports.get(pid) {
+            if let Some(p) = graph.get_port(pid) {
                 ports.push(p.clone());
             }
         }
     }
 
     let mut edges = Vec::new();
-    for e in graph.edges.values() {
+    for e in graph.edges_values() {
         if port_ids.contains(&e.source_port) && port_ids.contains(&e.target_port) {
             edges.push(e.clone());
         }
@@ -141,4 +138,3 @@ pub(crate) fn paste_subgraph(ctx: &mut PluginContext, sub: &CopiedSubgraph) {
     }
     ctx.cache_port_offset_with_node(&new_node_ids);
 }
-

@@ -47,23 +47,23 @@ impl DeleteCommand {
         Self {
             selected_edge: ctx
                 .graph
-                .selected_edge
+                .selected_edge()
                 .iter()
-                .filter_map(|id| ctx.graph.edges.get(id).cloned())
+                .filter_map(|id| ctx.graph.get_edge(id).cloned())
                 .collect(),
             selected_node: ctx
                 .graph
-                .selected_node
+                .selected_node()
                 .iter()
                 .filter_map(|id| ctx.get_node(id).cloned())
                 .collect(),
             selected_port: ctx
                 .graph
-                .selected_node
+                .selected_node()
                 .iter()
                 .filter_map(|node_id| ctx.get_node(node_id))
                 .flat_map(|node| node.inputs.iter().chain(node.outputs.iter()))
-                .filter_map(|port_id| ctx.graph.ports.get(port_id).cloned())
+                .filter_map(|port_id| ctx.graph.get_port(port_id).cloned())
                 .collect(),
         }
     }
@@ -108,7 +108,7 @@ impl Command for DeleteCommand {
             for port_id in port_ids.iter() {
                 let edge1 = ctx
                     .graph
-                    .edges
+                    .edges()
                     .iter()
                     .find(|(_, edge)| edge.source_port == *port_id);
                 if let Some((&edge_id, _)) = edge1 {
@@ -117,7 +117,7 @@ impl Command for DeleteCommand {
 
                 let edge2 = ctx
                     .graph
-                    .edges
+                    .edges()
                     .iter()
                     .find(|(_, edge)| edge.target_port == *port_id);
                 if let Some((&edge_id, _)) = edge2 {
@@ -144,21 +144,21 @@ mod command_interop_tests {
 
     fn delete_command_like_new(graph: &Graph) -> DeleteCommand {
         let selected_edge: Vec<crate::Edge> = graph
-            .selected_edge
+            .selected_edge()
             .iter()
-            .filter_map(|id| graph.edges.get(id).cloned())
+            .filter_map(|id| graph.get_edge(id).cloned())
             .collect();
         let selected_node: Vec<crate::Node> = graph
-            .selected_node
+            .selected_node()
             .iter()
             .filter_map(|id| graph.get_node(id).cloned())
             .collect();
         let selected_port: Vec<crate::Port> = graph
-            .selected_node
+            .selected_node()
             .iter()
             .filter_map(|node_id| graph.get_node(node_id))
             .flat_map(|node| node.inputs.iter().chain(node.outputs.iter()))
-            .filter_map(|port_id| graph.ports.get(port_id).cloned())
+            .filter_map(|port_id| graph.get_port(port_id).cloned())
             .collect();
         DeleteCommand {
             selected_edge,
@@ -176,7 +176,7 @@ mod command_interop_tests {
             .output()
             .build(&mut base);
         let nid = *base.node_order().first().expect("node");
-        base.selected_node.insert(nid);
+        base.add_selected_node(nid, false);
 
         let cmd = delete_command_like_new(&base);
         assert_command_interop(

@@ -54,7 +54,7 @@ impl Plugin for NodePlugin {
 
             let ports = ctx
                 .graph
-                .ports
+                .ports()
                 .iter()
                 .filter(|(_, port)| port.node_id == *node_id)
                 .filter_map(|(_, port)| render.port_render(node, port, ctx));

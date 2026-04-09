@@ -41,7 +41,7 @@ fn selected_nodes_ordered(ctx: &PluginContext) -> Vec<NodeId> {
     ctx.graph
         .node_order()
         .iter()
-        .filter(|id| ctx.graph.selected_node.contains(id))
+        .filter(|id| ctx.graph.selected_node().contains(id))
         .copied()
         .collect()
 }

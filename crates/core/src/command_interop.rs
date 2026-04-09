@@ -45,7 +45,7 @@ fn with_command_ctx<R>(graph: &mut Graph, f: impl FnOnce(&mut CommandContext) ->
 fn apply_graph_op(graph: &mut Graph, op: GraphOp) {
     match op {
         GraphOp::AddNode(node) => {
-            graph.nodes.insert(node.id, node);
+            graph.add_node_without_order(node);
         }
         GraphOp::RemoveNode { id } => graph.remove_node(&id),
         GraphOp::MoveNode { id, x, y } => {
@@ -104,7 +104,7 @@ pub fn graph_snapshot(graph: &Graph) -> Value {
     nodes.sort_by(|a, b| a.0.cmp(&b.0));
 
     let mut ports: Vec<_> = graph
-        .ports
+        .ports()
         .iter()
         .map(|(id, p)| {
             (
@@ -123,7 +123,7 @@ pub fn graph_snapshot(graph: &Graph) -> Value {
     ports.sort_by(|a, b| a.0.cmp(&b.0));
 
     let mut edges: Vec<_> = graph
-        .edges
+        .edges()
         .iter()
         .map(|(id, e)| {
             (
@@ -138,13 +138,13 @@ pub fn graph_snapshot(graph: &Graph) -> Value {
     edges.sort_by(|a, b| a.0.cmp(&b.0));
 
     let mut selected_node: Vec<_> = graph
-        .selected_node
+        .selected_node()
         .iter()
         .map(ToString::to_string)
         .collect();
     selected_node.sort();
     let mut selected_edge: Vec<_> = graph
-        .selected_edge
+        .selected_edge()
         .iter()
         .map(ToString::to_string)
         .collect();

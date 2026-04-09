@@ -14,8 +14,8 @@ impl SelectEdgeCommand {
         Self {
             edge_id,
             shift,
-            old_selected_edge: ctx.graph.selected_edge.clone(),
-            old_selected_node: ctx.graph.selected_node.clone(),
+            old_selected_edge: ctx.graph.selected_edge().clone(),
+            old_selected_node: ctx.graph.selected_node().clone(),
         }
     }
 }
@@ -31,8 +31,8 @@ impl Command for SelectEdgeCommand {
         ctx.add_selected_edge(self.edge_id, self.shift);
     }
     fn undo(&mut self, ctx: &mut crate::canvas::CommandContext) {
-        ctx.graph.selected_node = self.old_selected_node.clone();
-        ctx.graph.selected_edge = self.old_selected_edge.clone();
+        ctx.graph.set_selected_node(self.old_selected_node.clone());
+        ctx.graph.set_selected_edge(self.old_selected_edge.clone());
     }
     fn to_ops(&self, ctx: &mut crate::CommandContext) -> Vec<crate::GraphOp> {
         if !self.shift {
@@ -50,7 +50,7 @@ pub(super) struct ClearEdgeCommand {
 impl ClearEdgeCommand {
     pub(super) fn new(ctx: &PluginContext) -> Self {
         Self {
-            old_selected_edge: ctx.graph.selected_edge.clone(),
+            old_selected_edge: ctx.graph.selected_edge().clone(),
         }
     }
 }
@@ -63,7 +63,7 @@ impl Command for ClearEdgeCommand {
         ctx.clear_selected_edge();
     }
     fn undo(&mut self, ctx: &mut crate::canvas::CommandContext) {
-        ctx.graph.selected_edge = self.old_selected_edge.clone();
+        ctx.graph.set_selected_edge(self.old_selected_edge.clone());
     }
 
     fn to_ops(&self, ctx: &mut crate::CommandContext) -> Vec<crate::GraphOp> {
@@ -100,8 +100,8 @@ mod command_interop_tests {
             .build(&mut base)
             .expect("edge");
 
-        let old_selected_edge = base.selected_edge.clone();
-        let old_selected_node = base.selected_node.clone();
+        let old_selected_edge = base.selected_edge().clone();
+        let old_selected_node = base.selected_node().clone();
 
         assert_command_interop(
             &base,
@@ -138,9 +138,9 @@ mod command_interop_tests {
             .target(n2_node.inputs[0])
             .build(&mut base)
             .expect("edge");
-        base.selected_edge.insert(edge_id);
+        base.add_selected_edge(edge_id, false);
 
-        let old_selected_edge = base.selected_edge.clone();
+        let old_selected_edge = base.selected_edge().clone();
 
         assert_command_interop(
             &base,

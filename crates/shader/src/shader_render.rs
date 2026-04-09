@@ -45,7 +45,7 @@ fn caption_secondary(node: &Node) -> Option<String> {
 impl NodeRenderer for ShaderNodeRenderer {
     fn render(&self, node: &Node, ctx: &mut RenderContext) -> AnyElement {
         let node_id = node.id;
-        let selected = ctx.graph.selected_node.iter().any(|id| *id == node_id);
+        let selected = ctx.graph.selected_node_iter().any(|id| *id == node_id);
 
         let (bg, border) = card_colors(node.node_type.as_str());
         let border = if selected {

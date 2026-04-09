@@ -22,7 +22,7 @@ fn select_visible(ctx: &mut PluginContext) {
         .filter(|id| is_node_visible(ctx.graph, ctx.viewport, id))
         .collect();
 
-    let edges: Vec<Edge> = ctx.graph.edges.values().cloned().collect();
+    let edges: Vec<Edge> = ctx.graph.edges_values().cloned().collect();
     let visible_edges: Vec<EdgeId> = edges
         .into_iter()
         .filter(|e| is_edge_visible(ctx.graph, ctx.viewport, &e))

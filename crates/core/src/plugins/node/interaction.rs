@@ -135,8 +135,8 @@ impl Interaction for NodeDragInteraction {
                 if delta.x.abs() > DRAG_THRESHOLD || delta.y.abs() > DRAG_THRESHOLD {
                     let mut nodes = vec![];
 
-                    if ctx.graph.selected_node.contains(&node_id) {
-                        for id in &ctx.graph.selected_node {
+                    if ctx.graph.selected_node().contains(&node_id) {
+                        for id in ctx.graph.selected_node() {
                             if let Some(node) = ctx.nodes().get(&id) {
                                 nodes.push((id.clone(), node.point()));
                             }

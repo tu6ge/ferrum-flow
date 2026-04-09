@@ -19,7 +19,7 @@ pub fn graph_validation_notes(graph: &Graph) -> Vec<String> {
     let mut notes = Vec::new();
 
     let targets: HashSet<ferrum_flow::PortId> = graph
-        .edges
+        .edges()
         .values()
         .map(|e| e.target_port)
         .collect();

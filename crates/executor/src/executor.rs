@@ -98,10 +98,10 @@ impl GraphExecutor {
 
         // Reverse lookup: port -> owning node
         let port_to_node: HashMap<PortId, NodeId> =
-            graph.ports.values().map(|p| (p.id, p.node_id)).collect();
+            graph.ports_values().map(|p| (p.id, p.node_id)).collect();
 
         // Derive dependencies from edges
-        for edge in graph.edges.values() {
+        for edge in graph.edges_values() {
             if let Some(target_node) = port_to_node.get(&edge.target_port) {
                 *in_degree.entry(*target_node).or_insert(0) += 1;
             }
@@ -117,7 +117,7 @@ impl GraphExecutor {
         let mut sorted = Vec::new();
         while let Some(node_id) = queue.pop_front() {
             sorted.push(node_id);
-            for edge in graph.edges.values() {
+            for edge in graph.edges_values() {
                 if let Some(&src_node) = port_to_node.get(&edge.source_port) {
                     if src_node == node_id {
                         if let Some(&tgt_node) = port_to_node.get(&edge.target_port) {
@@ -140,8 +140,7 @@ impl GraphExecutor {
 
     fn build_edge_map(&self, graph: &Graph) -> HashMap<PortId, PortId> {
         graph
-            .edges
-            .values()
+            .edges_values()
             .map(|e| (e.target_port, e.source_port))
             .collect()
     }

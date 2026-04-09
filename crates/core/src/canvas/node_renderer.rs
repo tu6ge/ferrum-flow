@@ -25,8 +25,7 @@ pub trait NodeRenderer: Send + Sync {
     /// built-in Node Plugin is cached this.
     fn port_offset(&self, node: &Node, port: &Port, graph: &Graph) -> Point<Pixels> {
         let ports: Vec<&Port> = graph
-            .ports
-            .values()
+            .ports_values()
             .filter(|p| p.node_id == node.id && p.kind == port.kind && p.position == port.position)
             .collect();
 
@@ -100,7 +99,7 @@ impl NodeRenderer for DefaultNodeRenderer {
         let node_id = node.id;
         let selected = ctx
             .graph
-            .selected_node
+            .selected_node()
             .iter()
             .find(|id| **id == node_id)
             .is_some();

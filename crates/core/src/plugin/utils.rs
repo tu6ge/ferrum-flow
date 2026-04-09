@@ -22,7 +22,7 @@ pub fn invalidate_port_layout_cache_for_graph_change(
         | GraphChangeKind::NodeDataUpdated { id, .. } => cache.clear_node(id),
         GraphChangeKind::PortAdded(port) => cache.clear_node(&port.node_id),
         GraphChangeKind::PortRemoved { id } => {
-            if let Some(p) = graph.ports.get(id) {
+            if let Some(p) = graph.get_port(id) {
                 cache.clear_node(&p.node_id);
             }
         }
@@ -66,21 +66,21 @@ pub fn is_edge_visible(graph: &Graph, viewport: &Viewport, edge: &Edge) -> bool 
         ..
     } = edge;
 
-    let Some(Port { node_id: n1, .. }) = graph.ports.get(source_port) else {
+    let Some(Port { node_id: n1, .. }) = graph.get_port(source_port) else {
         return false;
     };
 
-    let Some(Port { node_id: n2, .. }) = graph.ports.get(target_port) else {
+    let Some(Port { node_id: n2, .. }) = graph.get_port(target_port) else {
         return false;
     };
 
     let node1_visible = graph
-        .get_node(n1)
+        .get_node(&n1)
         .map(|n| viewport.is_node_visible(n))
         .unwrap_or(false);
 
     let node2_visible = graph
-        .get_node(n2)
+        .get_node(&n2)
         .map(|n| viewport.is_node_visible(n))
         .unwrap_or(false);
 
@@ -113,7 +113,7 @@ pub fn cache_node_port_offset(
 
     let mut result = HashMap::new();
 
-    for port in graph.ports.values().filter(|p| p.node_id == node.id) {
+    for port in graph.ports_values().filter(|p| p.node_id == node.id) {
         let pos = renderer.port_offset(node, port, graph);
         result.insert(port.id, pos);
     }
@@ -139,7 +139,7 @@ pub fn cache_port_offset_with_edge(
     cache: &mut PortLayoutCache,
     edge_id: &EdgeId,
 ) {
-    let Some(edge) = graph.edges.get(edge_id) else {
+    let Some(edge) = graph.get_edge(edge_id) else {
         return;
     };
 
@@ -153,7 +153,7 @@ pub fn cache_port_offset_with_port(
     cache: &mut PortLayoutCache,
     port_id: &PortId,
 ) {
-    let Some(port) = graph.ports.get(port_id) else {
+    let Some(port) = graph.get_port(port_id) else {
         return;
     };
 
