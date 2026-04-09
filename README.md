@@ -17,7 +17,7 @@ Designed for building visual programming tools, workflow editors, and graph-base
 - Built with performance in mind
 - Multi-user collaboration support (by [plugin](https://github.com/tu6ge/ferrum-flow/tree/master/crates/sync_plugin))
 
-<video src="https://github.com/user-attachments/assets/96d0588b-73a4-433a-80db-8502c2dd1b8b" controls width="600"></video>
+https://github.com/user-attachments/assets/1d275e79-fcbf-4a4e-aba5-a1e3f3ff6029
 
 [GitHub](https://github.com/tu6ge/ferrum-flow)
 
