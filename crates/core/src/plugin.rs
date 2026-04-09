@@ -324,14 +324,14 @@ impl<'a, 'b> InitPluginContext<'a, 'b> {
 
 pub struct PluginContext<'a> {
     pub graph: &'a mut Graph,
-    pub port_offset_cache: &'a mut PortLayoutCache,
+    port_offset_cache: &'a mut PortLayoutCache,
     viewport: &'a mut Viewport,
     pub(crate) interaction: &'a mut InteractionState,
-    pub renderers: &'a mut RendererRegistry,
+    renderers: &'a mut RendererRegistry,
 
     sync_plugin: &'a mut Option<Box<dyn SyncPlugin + 'static>>,
 
-    pub history: &'a mut dyn HistoryProvider,
+    history: &'a mut dyn HistoryProvider,
     /// Canvas theme; change during event handling and call [`PluginContext::notify`] to redraw.
     pub theme: &'a mut FlowTheme,
     /// Plugin-local shared state on the [`FlowCanvas`](FlowCanvas).
@@ -458,6 +458,10 @@ impl<'a> PluginContext<'a> {
 
             self.notify();
         }
+    }
+
+    pub fn history_clear(&mut self) {
+        self.history.clear();
     }
 
     pub fn create_node(&self, node_type: &str) -> NodeBuilder {
@@ -642,6 +646,10 @@ impl<'a> PluginContext<'a> {
 
     pub fn port_offset_cached(&self, node_id: &NodeId, port_id: &PortId) -> Option<Point<Pixels>> {
         port_offset_cached(self.port_offset_cache, node_id, port_id)
+    }
+
+    pub fn port_offset_cache_clear_all(&mut self) {
+        self.port_offset_cache.clear_all();
     }
 
     /// Port center in screen pixels when you already have the owning [`Node`].
