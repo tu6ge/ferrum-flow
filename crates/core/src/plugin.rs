@@ -1007,7 +1007,7 @@ impl RenderLayer {
 }
 
 pub struct PluginRegistry {
-    pub plugins: Vec<Box<dyn Plugin>>,
+    plugins: Vec<Box<dyn Plugin>>,
 }
 
 impl PluginRegistry {
@@ -1018,5 +1018,17 @@ impl PluginRegistry {
     pub fn add(mut self, plugin: impl Plugin + 'static) -> Self {
         self.plugins.push(Box::new(plugin));
         self
+    }
+
+    pub fn extend_boxed(&mut self, plugins: impl IntoIterator<Item = Box<dyn Plugin>>) {
+        self.plugins.extend(plugins);
+    }
+
+    pub fn sort_by_priority_desc(&mut self) {
+        self.plugins.sort_by_key(|p| -p.priority());
+    }
+
+    pub fn iter_mut(&mut self) -> std::slice::IterMut<'_, Box<dyn Plugin>> {
+        self.plugins.iter_mut()
     }
 }
