@@ -1,6 +1,6 @@
 use gpui::{Bounds, Pixels, Point, Size, Window, px};
 
-use crate::Node;
+use crate::{Node, PortPosition};
 
 #[derive(Debug, Clone)]
 pub struct Viewport {
@@ -106,6 +106,28 @@ impl Viewport {
             self.screen_length_to_world(p.x - self.offset.x),
             self.screen_length_to_world(p.y - self.offset.y),
         )
+    }
+
+    /// Bezier control point for an edge tangent at a port direction.
+    pub fn edge_control_point(
+        &self,
+        source: Point<Pixels>,
+        position: PortPosition,
+    ) -> Point<Pixels> {
+        match position {
+            PortPosition::Top => {
+                source - Point::new(px(0.0), px(self.world_scalar_to_screen(50.0)))
+            }
+            PortPosition::Left => {
+                source - Point::new(px(self.world_scalar_to_screen(50.0)), px(0.0))
+            }
+            PortPosition::Right => {
+                source + Point::new(px(self.world_scalar_to_screen(50.0)), px(0.0))
+            }
+            PortPosition::Bottom => {
+                source + Point::new(px(0.0), px(self.world_scalar_to_screen(50.0)))
+            }
+        }
     }
 
     pub fn is_node_visible(&self, node: &Node) -> bool {

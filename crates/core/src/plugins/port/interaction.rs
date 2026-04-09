@@ -152,7 +152,7 @@ impl Plugin for PortInteractionPlugin {
                 .graph
                 .nodes()
                 .iter()
-                .filter(|(_, node)| ctx.viewport.is_node_visible(node))
+                .filter(|(_, node)| ctx.is_node_visible_node(node))
                 .map(|(id, _)| *id)
                 .collect();
             let visible_ports: Vec<(PortId, PortPosition)> = ctx
@@ -176,7 +176,7 @@ impl Plugin for PortInteractionPlugin {
                 })
                 .collect();
 
-            let mouse_world = ctx.viewport.screen_to_world(ev.position);
+            let mouse_world = ctx.screen_to_world(ev.position);
             let port_hit = candidate_ports
                 .iter()
                 .find(|c| c.bounds.contains(&mouse_world))

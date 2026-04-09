@@ -47,7 +47,7 @@ impl Plugin for SelectionPlugin {
                 return EventResult::Continue;
             }
             if !ev.modifiers.shift {
-                let start = ctx.viewport.screen_to_world(ev.position);
+                let start = ctx.screen_to_world(ev.position);
                 if let Some(Selected { bounds, nodes }) = self.selected.take() {
                     if bounds.contains(&start) {
                         ctx.start_interaction(SelectionInteraction::start_move(

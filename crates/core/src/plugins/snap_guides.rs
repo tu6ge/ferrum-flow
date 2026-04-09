@@ -10,7 +10,7 @@ use std::collections::HashSet;
 use gpui::{AnyElement, Element, ParentElement, Pixels, Point, Styled, div, px, rgb};
 
 use crate::{
-    Graph, NodeId, Viewport,
+    Graph, NodeId,
     plugin::{EventResult, FlowEvent, Plugin, PluginContext, RenderContext, RenderLayer},
     plugins::node::NodeDragEvent,
     theme::FlowTheme,
@@ -76,13 +76,12 @@ fn dedup_sorted_coords(mut v: Vec<Pixels>) -> Vec<Pixels> {
 /// Computes alignment guides for the current drag. Skips nodes that are not on-screen and uses an
 /// AABB broadphase so distant nodes are not considered.
 pub(crate) fn compute_alignment_guides(
-    graph: &Graph,
-    viewport: &Viewport,
+    ctx: &PluginContext,
     dragged_ids: &[NodeId],
 ) -> Option<AlignmentGuides> {
     let dragged_set: HashSet<NodeId> = dragged_ids.iter().copied().collect();
-    let thr = viewport.screen_length_to_world(px(SNAP_SCREEN_PX));
-    let union = union_drag_bounds(graph, dragged_ids)?;
+    let thr = ctx.screen_length_to_world(px(SNAP_SCREEN_PX));
+    let union = union_drag_bounds(ctx.graph, dragged_ids)?;
     let dl = union.origin.x;
     let dr = union.origin.x + union.size.width;
     let dcx = (dl + dr) * 0.5;
@@ -101,11 +100,11 @@ pub(crate) fn compute_alignment_guides(
     let mut ref_x: Vec<Pixels> = Vec::new();
     let mut ref_y: Vec<Pixels> = Vec::new();
 
-    for (id, node) in graph.nodes() {
+    for (id, node) in ctx.graph.nodes() {
         if dragged_set.contains(id) {
             continue;
         }
-        if !viewport.is_node_visible(node) {
+        if !ctx.is_node_visible_node(node) {
             continue;
         }
 
@@ -180,8 +179,7 @@ impl Plugin for SnapGuidesPlugin {
         if let Some(evt) = event.as_custom::<NodeDragEvent>() {
             match evt {
                 NodeDragEvent::Tick(ids) => {
-                    self.guides =
-                        compute_alignment_guides(ctx.graph, ctx.viewport, ids.as_ref());
+                    self.guides = compute_alignment_guides(ctx, ids.as_ref());
                     ctx.notify();
                 }
                 NodeDragEvent::End => {
@@ -200,16 +198,19 @@ impl Plugin for SnapGuidesPlugin {
         let h = wb.size.height;
         let theme = ctx.theme;
 
-        let vx = guides
-            .vertical_x
-            .iter()
-            .map(|wx| vline(*wx, h, ctx, theme));
+        let vx = guides.vertical_x.iter().map(|wx| vline(*wx, h, ctx, theme));
         let hy = guides
             .horizontal_y
             .iter()
             .map(|wy| hline(*wy, w, ctx, theme));
 
-        Some(div().absolute().size_full().children(vx.chain(hy)).into_any())
+        Some(
+            div()
+                .absolute()
+                .size_full()
+                .children(vx.chain(hy))
+                .into_any(),
+        )
     }
 
     fn priority(&self) -> i32 {

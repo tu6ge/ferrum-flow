@@ -29,7 +29,7 @@ impl Plugin for ViewportPlugin {
         {
             ctx.start_interaction(Panning {
                 start_mouse: ev.position,
-                start_offset: ctx.viewport.offset(),
+                start_offset: ctx.offset(),
             });
             return EventResult::Stop;
         } else if let FlowEvent::Input(InputEvent::Wheel(ev)) = event {
@@ -44,12 +44,12 @@ impl Plugin for ViewportPlugin {
 
             let zoom_delta = if delta > 0.0 { 0.9 } else { 1.1 };
 
-            ctx.viewport.set_zoom(ctx.viewport.zoom_scaled_by(zoom_delta));
-            ctx.viewport.set_zoom(ctx.viewport.zoom().clamp(0.7, 3.0));
+            ctx.set_zoom(ctx.zoom_scaled_by(zoom_delta));
+            ctx.set_zoom(ctx.zoom().clamp(0.7, 3.0));
 
             let after = ctx.world_to_screen(before);
 
-            ctx.viewport.translate_offset(cursor.x - after.x, cursor.y - after.y);
+            ctx.translate_offset(cursor.x - after.x, cursor.y - after.y);
             ctx.notify();
         }
         EventResult::Continue
@@ -76,8 +76,10 @@ impl Interaction for Panning {
         let dx = ev.position.x - self.start_mouse.x;
         let dy = ev.position.y - self.start_mouse.y;
 
-        ctx.viewport
-            .set_offset(Point::new(self.start_offset.x + dx, self.start_offset.y + dy));
+        ctx.set_offset(Point::new(
+            self.start_offset.x + dx,
+            self.start_offset.y + dy,
+        ));
         ctx.notify();
 
         InteractionResult::Continue
@@ -89,7 +91,7 @@ impl Interaction for Panning {
     ) -> crate::canvas::InteractionResult {
         ctx.execute_command(PanningCommand {
             from: self.start_offset,
-            to: ctx.viewport.offset(),
+            to: ctx.offset(),
         });
         ctx.cancel_interaction();
         InteractionResult::End

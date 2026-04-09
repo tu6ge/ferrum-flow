@@ -151,17 +151,17 @@ fn world_to_inner_pt(wx: f32, wy: f32, layout: &MinimapLayout) -> Point<Pixels> 
 }
 
 fn center_viewport_on_world(ctx: &mut PluginContext, world: Point<Pixels>) {
-    let Some(wb) = ctx.viewport.window_bounds() else {
+    let Some(wb) = ctx.window_bounds() else {
         return;
     };
     let cx: f32 = (wb.size.width / 2.0).into();
     let cy: f32 = (wb.size.height / 2.0).into();
-    let z = ctx.viewport.zoom();
+    let z = ctx.zoom();
     let wx: f32 = world.x.into();
     let wy: f32 = world.y.into();
-    let from = ctx.viewport.offset();
-    ctx.viewport.set_offset_xy(px(cx - wx * z), px(cy - wy * z));
-    let to = ctx.viewport.offset();
+    let from = ctx.offset();
+    ctx.set_offset_xy(px(cx - wx * z), px(cy - wy * z));
+    let to = ctx.offset();
     ctx.execute_command(MinimapPanCommand { from, to });
 }
 

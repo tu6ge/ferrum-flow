@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use gpui::{Bounds, Element, MouseButton, PathBuilder, Pixels, Point, canvas, px, rgb};
 
 use crate::{
-    Edge, EdgeId, PortPosition, RenderContext, Viewport,
+    Edge, EdgeId, RenderContext,
     plugin::{FlowEvent, Plugin, PluginContext},
     plugins::edge::command::ClearEdgeCommand,
     plugins::port::PortPreviewActive,
@@ -149,8 +149,8 @@ fn edge_geometry(edge: &Edge, ctx: &PluginContext) -> Option<EdgeGeometry> {
     let source_port = ctx.graph.get_port(source_id)?;
     let target_port = ctx.graph.get_port(target_id)?;
 
-    let c1 = get_control_point(start, source_port.position, ctx.viewport);
-    let c2 = get_control_point(end, target_port.position, ctx.viewport);
+    let c1 = ctx.edge_control_point(start, source_port.position);
+    let c2 = ctx.edge_control_point(end, target_port.position);
 
     Some(EdgeGeometry { start, c1, c2, end })
 }
@@ -168,8 +168,8 @@ fn edge_geometry2(edge: &Edge, ctx: &RenderContext) -> Option<EdgeGeometry> {
     let source_port = ctx.graph.get_port(source_id)?;
     let target_port = ctx.graph.get_port(target_id)?;
 
-    let c1 = get_control_point(start, source_port.position, ctx.viewport);
-    let c2 = get_control_point(end, target_port.position, ctx.viewport);
+    let c1 = ctx.edge_control_point(start, source_port.position);
+    let c2 = ctx.edge_control_point(end, target_port.position);
 
     Some(EdgeGeometry { start, c1, c2, end })
 }
@@ -179,7 +179,7 @@ fn hit_test_get_edge(mouse: Point<Pixels>, ctx: &PluginContext) -> Option<EdgeId
         .graph
         .nodes()
         .iter()
-        .filter(|(_, node)| ctx.viewport.is_node_visible(node))
+        .filter(|(_, node)| ctx.is_node_visible_node(node))
         .map(|(id, _)| *id)
         .collect();
 
@@ -289,25 +289,4 @@ fn vec_dot(a: (f32, f32), b: (f32, f32)) -> f32 {
 
 fn vec_length(v: (f32, f32)) -> f32 {
     (v.0 * v.0 + v.1 * v.1).sqrt()
-}
-
-pub fn get_control_point(
-    source: Point<Pixels>,
-    position: PortPosition,
-    viewport: &Viewport,
-) -> Point<Pixels> {
-    match position {
-        PortPosition::Top => {
-            source - Point::new(px(0.0), px(viewport.world_scalar_to_screen(50.0)))
-        }
-        PortPosition::Left => {
-            source - Point::new(px(viewport.world_scalar_to_screen(50.0)), px(0.0))
-        }
-        PortPosition::Right => {
-            source + Point::new(px(viewport.world_scalar_to_screen(50.0)), px(0.0))
-        }
-        PortPosition::Bottom => {
-            source + Point::new(px(0.0), px(viewport.world_scalar_to_screen(50.0)))
-        }
-    }
 }
