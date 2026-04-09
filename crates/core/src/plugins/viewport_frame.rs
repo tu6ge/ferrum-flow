@@ -1,7 +1,7 @@
 use gpui::{Pixels, Point, px};
 
 use crate::{
-    Viewport,
+    InitPluginContext, Viewport,
     canvas::{Command, CommandContext},
     plugin::PluginContext,
 };
@@ -138,7 +138,7 @@ pub(crate) fn frame_world_rect(ctx: &mut PluginContext, bx: f32, by: f32, bw: f3
 /// Same geometry as [`frame_world_rect`], but writes [`Viewport`] directly (no undo stack).
 /// For [`crate::plugin::InitPluginContext`] / plugin [`Plugin::setup`].
 pub(crate) fn apply_frame_world_rect_direct(
-    viewport: &mut Viewport,
+    ctx: &mut InitPluginContext,
     win_w: f32,
     win_h: f32,
     bx: f32,
@@ -150,8 +150,8 @@ pub(crate) fn apply_frame_world_rect_direct(
         return;
     };
 
-    let zoom_changed = (viewport.zoom() - z).abs() > 1e-4;
-    let off = viewport.offset();
+    let zoom_changed = (ctx.zoom() - z).abs() > 1e-4;
+    let off = ctx.offset();
     let ox: f32 = off.x.into();
     let oy: f32 = off.y.into();
     let nx: f32 = new_offset.x.into();
@@ -161,6 +161,6 @@ pub(crate) fn apply_frame_world_rect_direct(
         return;
     }
 
-    viewport.set_zoom(z);
-    viewport.set_offset(new_offset);
+    ctx.set_zoom(z);
+    ctx.set_offset(new_offset);
 }

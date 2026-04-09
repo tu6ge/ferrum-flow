@@ -66,7 +66,7 @@ pub trait Plugin {
 pub struct InitPluginContext<'a, 'b> {
     pub graph: &'a mut Graph,
     pub port_offset_cache: &'a mut PortLayoutCache,
-    pub viewport: &'a mut Viewport,
+    viewport: &'a mut Viewport,
     pub renderers: &'a mut RendererRegistry,
     pub gpui_ctx: &'a Context<'b, FlowCanvas>,
     /// Drawable size from the `window` passed to [`FlowCanvas::builder`] (`Window::viewport_size` when `build()` runs).
@@ -79,6 +79,27 @@ pub struct InitPluginContext<'a, 'b> {
 }
 
 impl<'a, 'b> InitPluginContext<'a, 'b> {
+    pub(crate) fn new(
+        graph: &'a mut Graph,
+        port_offset_cache: &'a mut PortLayoutCache,
+        viewport: &'a mut Viewport,
+        renderers: &'a mut RendererRegistry,
+        gpui_ctx: &'a Context<'b, FlowCanvas>,
+        drawable_size: Size<Pixels>,
+        theme: &'a mut FlowTheme,
+        shared_state: &'a mut SharedState,
+    ) -> Self {
+        Self {
+            graph,
+            port_offset_cache,
+            viewport,
+            renderers,
+            gpui_ctx,
+            drawable_size,
+            theme,
+            shared_state,
+        }
+    }
     pub fn create_node(&self, node_type: &str) -> NodeBuilder {
         self.graph.create_node(node_type)
     }

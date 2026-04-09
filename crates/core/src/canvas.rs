@@ -489,17 +489,16 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
             .sort_by_key(|p| -p.priority());
 
         {
-            let mut ctx = InitPluginContext {
-                graph: &mut canvas.graph,
-                port_offset_cache: &mut canvas.port_offset_cache,
-                viewport: &mut canvas.viewport,
-                renderers: &mut canvas.renderers,
-                gpui_ctx: &self.ctx,
+            let mut ctx = InitPluginContext::new(
+                &mut canvas.graph,
+                &mut canvas.port_offset_cache,
+                &mut canvas.viewport,
+                &mut canvas.renderers,
+                &self.ctx,
                 drawable_size,
-                theme: &mut canvas.theme,
-                shared_state: &mut canvas.shared_state,
-                //notify: &mut notify,
-            };
+                &mut canvas.theme,
+                &mut canvas.shared_state,
+            );
 
             for plugin in &mut canvas.plugins_registry.plugins {
                 plugin.setup(&mut ctx);
