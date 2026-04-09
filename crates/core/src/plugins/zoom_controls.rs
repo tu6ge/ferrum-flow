@@ -110,21 +110,18 @@ impl Command for ViewportZoomCommand {
     }
 
     fn execute(&mut self, ctx: &mut CommandContext) {
-        ctx.viewport.zoom = self.to_zoom;
-        ctx.viewport.offset.x = self.to_offset.x;
-        ctx.viewport.offset.y = self.to_offset.y;
+        ctx.viewport.set_zoom(self.to_zoom);
+        ctx.viewport.set_offset(self.to_offset);
     }
 
     fn undo(&mut self, ctx: &mut CommandContext) {
-        ctx.viewport.zoom = self.from_zoom;
-        ctx.viewport.offset.x = self.from_offset.x;
-        ctx.viewport.offset.y = self.from_offset.y;
+        ctx.viewport.set_zoom(self.from_zoom);
+        ctx.viewport.set_offset(self.from_offset);
     }
 
     fn to_ops(&self, ctx: &mut crate::CommandContext) -> Vec<crate::GraphOp> {
-        ctx.viewport.zoom = self.to_zoom;
-        ctx.viewport.offset.x = self.to_offset.x;
-        ctx.viewport.offset.y = self.to_offset.y;
+        ctx.viewport.set_zoom(self.to_zoom);
+        ctx.viewport.set_offset(self.to_offset);
         vec![]
     }
 }
@@ -163,8 +160,8 @@ mod command_interop_tests {
 
 fn apply_zoom(ctx: &mut PluginContext, anchor_screen: Point<Pixels>, to_zoom: f32) {
     let to_zoom = to_zoom.clamp(ZOOM_MIN, ZOOM_MAX);
-    let from_zoom = ctx.viewport.zoom;
-    let from_offset = ctx.viewport.offset;
+    let from_zoom = ctx.viewport.zoom();
+    let from_offset = ctx.viewport.offset();
     if (from_zoom - to_zoom).abs() < 1e-5 {
         return;
     }
@@ -183,7 +180,7 @@ fn apply_zoom(ctx: &mut PluginContext, anchor_screen: Point<Pixels>, to_zoom: f3
 }
 
 fn window_center_screen(ctx: &PluginContext) -> Option<Point<Pixels>> {
-    let wb = ctx.viewport.window_bounds?;
+    let wb = ctx.viewport.window_bounds()?;
     let cx: f32 = (wb.size.width / 2.0).into();
     let cy: f32 = (wb.size.height / 2.0).into();
     Some(Point::new(px(cx), px(cy)))
@@ -193,7 +190,7 @@ fn zoom_by_factor(ctx: &mut PluginContext, factor: f32) {
     let Some(center) = window_center_screen(ctx) else {
         return;
     };
-    apply_zoom(ctx, center, ctx.viewport.zoom * factor);
+    apply_zoom(ctx, center, ctx.viewport.zoom_scaled_by(factor));
 }
 
 fn reset_zoom(ctx: &mut PluginContext) {
@@ -250,7 +247,7 @@ impl Plugin for ZoomControlsPlugin {
     }
 
     fn render(&mut self, ctx: &mut RenderContext) -> Option<gpui::AnyElement> {
-        let win = ctx.viewport.window_bounds.unwrap_or_else(|| {
+        let win = ctx.viewport.window_bounds().unwrap_or_else(|| {
             let vs = ctx.window.viewport_size();
             Bounds::new(Point::new(px(0.0), px(0.0)), Size::new(vs.width, vs.height))
         });

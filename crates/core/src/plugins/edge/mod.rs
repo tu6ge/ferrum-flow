@@ -297,9 +297,17 @@ pub fn get_control_point(
     viewport: &Viewport,
 ) -> Point<Pixels> {
     match position {
-        PortPosition::Top => source - Point::new(px(0.0), px(50.0 * viewport.zoom)),
-        PortPosition::Left => source - Point::new(px(50.0 * viewport.zoom), px(0.0)),
-        PortPosition::Right => source + Point::new(px(50.0 * viewport.zoom), px(0.0)),
-        PortPosition::Bottom => source + Point::new(px(0.0), px(50.0 * viewport.zoom)),
+        PortPosition::Top => {
+            source - Point::new(px(0.0), px(viewport.world_scalar_to_screen(50.0)))
+        }
+        PortPosition::Left => {
+            source - Point::new(px(viewport.world_scalar_to_screen(50.0)), px(0.0))
+        }
+        PortPosition::Right => {
+            source + Point::new(px(viewport.world_scalar_to_screen(50.0)), px(0.0))
+        }
+        PortPosition::Bottom => {
+            source + Point::new(px(0.0), px(viewport.world_scalar_to_screen(50.0)))
+        }
     }
 }

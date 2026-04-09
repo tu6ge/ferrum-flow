@@ -76,10 +76,10 @@ impl Plugin for FitAllGraphPlugin {
         let win_w: f32 = ctx.drawable_size.width.into();
         let win_h: f32 = ctx.drawable_size.height.into();
         apply_frame_world_rect_direct(ctx.viewport, win_w, win_h, bx, by, bw, bh);
-        ctx.viewport.window_bounds = Some(Bounds::new(
+        ctx.viewport.set_window_bounds(Some(Bounds::new(
             Point::new(px(0.0), px(0.0)),
             ctx.drawable_size,
-        ));
+        )));
     }
 
     fn priority(&self) -> i32 {

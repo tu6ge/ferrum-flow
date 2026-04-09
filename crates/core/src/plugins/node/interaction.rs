@@ -162,8 +162,12 @@ impl Interaction for NodeDragInteraction {
                 start_positions,
                 dragged_ids,
             } => {
-                let dx = (ev.position.x - start_mouse.x) / ctx.viewport.zoom;
-                let dy = (ev.position.y - start_mouse.y) / ctx.viewport.zoom;
+                let dx = ctx
+                    .viewport
+                    .screen_length_to_world(ev.position.x - start_mouse.x);
+                let dy = ctx
+                    .viewport
+                    .screen_length_to_world(ev.position.y - start_mouse.y);
                 for (id, point) in start_positions.iter() {
                     if let Some(node) = ctx.get_node_mut(id) {
                         node.x = point.x + dx;

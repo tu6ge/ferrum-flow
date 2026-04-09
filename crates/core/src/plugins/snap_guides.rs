@@ -81,7 +81,7 @@ pub(crate) fn compute_alignment_guides(
     dragged_ids: &[NodeId],
 ) -> Option<AlignmentGuides> {
     let dragged_set: HashSet<NodeId> = dragged_ids.iter().copied().collect();
-    let thr = px(SNAP_SCREEN_PX) / viewport.zoom;
+    let thr = viewport.screen_length_to_world(px(SNAP_SCREEN_PX));
     let union = union_drag_bounds(graph, dragged_ids)?;
     let dl = union.origin.x;
     let dr = union.origin.x + union.size.width;
@@ -195,7 +195,7 @@ impl Plugin for SnapGuidesPlugin {
 
     fn render(&mut self, ctx: &mut RenderContext) -> Option<AnyElement> {
         let guides = self.guides.as_ref()?;
-        let wb = ctx.viewport.window_bounds?;
+        let wb = ctx.viewport.window_bounds()?;
         let w = wb.size.width;
         let h = wb.size.height;
         let theme = ctx.theme;

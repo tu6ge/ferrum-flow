@@ -106,7 +106,7 @@ fn visible_world_aabb(viewport: &Viewport, win: &Bounds<Pixels>) -> (f32, f32, f
 }
 
 fn build_layout(viewport: &Viewport, graph: &Graph) -> Option<MinimapLayout> {
-    let win = viewport.window_bounds?;
+    let win = viewport.window_bounds()?;
     let ww: f32 = win.size.width.into();
     let wh: f32 = win.size.height.into();
     if ww < MAP_W + OUTER_MARGIN || wh < MAP_H + OUTER_MARGIN {
@@ -151,18 +151,17 @@ fn world_to_inner_pt(wx: f32, wy: f32, layout: &MinimapLayout) -> Point<Pixels> 
 }
 
 fn center_viewport_on_world(ctx: &mut PluginContext, world: Point<Pixels>) {
-    let Some(wb) = ctx.viewport.window_bounds else {
+    let Some(wb) = ctx.viewport.window_bounds() else {
         return;
     };
     let cx: f32 = (wb.size.width / 2.0).into();
     let cy: f32 = (wb.size.height / 2.0).into();
-    let z = ctx.viewport.zoom;
+    let z = ctx.viewport.zoom();
     let wx: f32 = world.x.into();
     let wy: f32 = world.y.into();
-    let from = ctx.viewport.offset;
-    ctx.viewport.offset.x = px(cx - wx * z);
-    ctx.viewport.offset.y = px(cy - wy * z);
-    let to = ctx.viewport.offset;
+    let from = ctx.viewport.offset();
+    ctx.viewport.set_offset_xy(px(cx - wx * z), px(cy - wy * z));
+    let to = ctx.viewport.offset();
     ctx.execute_command(MinimapPanCommand { from, to });
 }
 
@@ -177,13 +176,11 @@ impl Command for MinimapPanCommand {
     }
 
     fn execute(&mut self, ctx: &mut CommandContext) {
-        ctx.viewport.offset.x = self.to.x;
-        ctx.viewport.offset.y = self.to.y;
+        ctx.viewport.set_offset(self.to);
     }
 
     fn undo(&mut self, ctx: &mut CommandContext) {
-        ctx.viewport.offset.x = self.from.x;
-        ctx.viewport.offset.y = self.from.y;
+        ctx.viewport.set_offset(self.from);
     }
 
     fn to_ops(&self, _ctx: &mut crate::CommandContext) -> Vec<crate::GraphOp> {
@@ -305,7 +302,7 @@ impl Plugin for MinimapPlugin {
             })
             .collect();
 
-        let win_bounds = ctx.viewport.window_bounds?;
+        let win_bounds = ctx.viewport.window_bounds()?;
         let (vx0, vy0, vw, vh) = visible_world_aabb(ctx.viewport, &win_bounds);
         let v_tl = world_to_inner_pt(vx0, vy0, &layout);
         let v_br = world_to_inner_pt(vx0 + vw, vy0 + vh, &layout);

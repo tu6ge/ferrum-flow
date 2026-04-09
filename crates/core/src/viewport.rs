@@ -4,9 +4,9 @@ use crate::Node;
 
 #[derive(Debug, Clone)]
 pub struct Viewport {
-    pub zoom: f32,
-    pub offset: Point<Pixels>,
-    pub window_bounds: Option<Bounds<Pixels>>,
+    zoom: f32,
+    offset: Point<Pixels>,
+    window_bounds: Option<Bounds<Pixels>>,
 }
 
 impl Viewport {
@@ -36,17 +36,75 @@ impl Viewport {
         }
     }
 
+    pub fn zoom(&self) -> f32 {
+        self.zoom
+    }
+
+    pub fn set_zoom(&mut self, zoom: f32) {
+        self.zoom = zoom;
+    }
+
+    /// Compute a new zoom value by multiplying current zoom with `factor`.
+    pub fn zoom_scaled_by(&self, factor: f32) -> f32 {
+        self.zoom * factor
+    }
+
+    pub fn offset(&self) -> Point<Pixels> {
+        self.offset
+    }
+
+    pub fn set_offset(&mut self, offset: Point<Pixels>) {
+        self.offset = offset;
+    }
+
+    pub fn set_offset_xy(&mut self, x: Pixels, y: Pixels) {
+        self.offset = Point::new(x, y);
+    }
+
+    pub fn translate_offset(&mut self, dx: Pixels, dy: Pixels) {
+        self.offset.x += dx;
+        self.offset.y += dy;
+    }
+
+    pub fn window_bounds(&self) -> Option<Bounds<Pixels>> {
+        self.window_bounds
+    }
+
+    pub fn set_window_bounds(&mut self, bounds: Option<Bounds<Pixels>>) {
+        self.window_bounds = bounds;
+    }
+
+    /// Convert a world-space scalar length to screen-space scalar length.
+    pub fn world_scalar_to_screen(&self, value: f32) -> f32 {
+        value * self.zoom
+    }
+
+    /// Convert a screen-space scalar length to world-space scalar length.
+    pub fn screen_scalar_to_world(&self, value: f32) -> f32 {
+        value / self.zoom
+    }
+
+    /// Convert a world-space pixel length to screen-space pixel length.
+    pub fn world_length_to_screen(&self, value: Pixels) -> Pixels {
+        value * self.zoom
+    }
+
+    /// Convert a screen-space pixel length to world-space pixel length.
+    pub fn screen_length_to_world(&self, value: Pixels) -> Pixels {
+        value / self.zoom
+    }
+
     pub fn world_to_screen(&self, p: Point<Pixels>) -> Point<Pixels> {
         Point::new(
-            p.x * self.zoom + self.offset.x,
-            p.y * self.zoom + self.offset.y,
+            self.world_length_to_screen(p.x) + self.offset.x,
+            self.world_length_to_screen(p.y) + self.offset.y,
         )
     }
 
     pub fn screen_to_world(&self, p: Point<Pixels>) -> Point<Pixels> {
         Point::new(
-            (p.x - self.offset.x) / self.zoom,
-            (p.y - self.offset.y) / self.zoom,
+            self.screen_length_to_world(p.x - self.offset.x),
+            self.screen_length_to_world(p.y - self.offset.y),
         )
     }
 
@@ -57,9 +115,9 @@ impl Viewport {
 
         let screen = self.world_to_screen(node.point());
 
-        screen.x + node.size.width * self.zoom > px(0.0)
+        screen.x + self.world_length_to_screen(node.size.width) > px(0.0)
             && screen.x < window_bounds.size.width
-            && screen.y + node.size.height * self.zoom > px(0.0)
+            && screen.y + self.world_length_to_screen(node.size.height) > px(0.0)
             && screen.y < window_bounds.size.height
     }
 }

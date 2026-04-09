@@ -55,21 +55,18 @@ impl Command for ViewportFrameCommand {
     }
 
     fn execute(&mut self, ctx: &mut CommandContext) {
-        ctx.viewport.zoom = self.to_zoom;
-        ctx.viewport.offset.x = self.to_offset.x;
-        ctx.viewport.offset.y = self.to_offset.y;
+        ctx.viewport.set_zoom(self.to_zoom);
+        ctx.viewport.set_offset(self.to_offset);
     }
 
     fn undo(&mut self, ctx: &mut CommandContext) {
-        ctx.viewport.zoom = self.from_zoom;
-        ctx.viewport.offset.x = self.from_offset.x;
-        ctx.viewport.offset.y = self.from_offset.y;
+        ctx.viewport.set_zoom(self.from_zoom);
+        ctx.viewport.set_offset(self.from_offset);
     }
 
     fn to_ops(&self, ctx: &mut CommandContext) -> Vec<crate::GraphOp> {
-        ctx.viewport.zoom = self.to_zoom;
-        ctx.viewport.offset.x = self.to_offset.x;
-        ctx.viewport.offset.y = self.to_offset.y;
+        ctx.viewport.set_zoom(self.to_zoom);
+        ctx.viewport.set_offset(self.to_offset);
         vec![]
     }
 }
@@ -108,7 +105,7 @@ mod command_interop_tests {
 
 /// Pan + zoom so the given world-space axis-aligned box (position + size) fits the window.
 pub(crate) fn frame_world_rect(ctx: &mut PluginContext, bx: f32, by: f32, bw: f32, bh: f32) {
-    let Some(wb) = ctx.viewport.window_bounds else {
+    let Some(wb) = ctx.viewport.window_bounds() else {
         return;
     };
 
@@ -118,8 +115,8 @@ pub(crate) fn frame_world_rect(ctx: &mut PluginContext, bx: f32, by: f32, bw: f3
         return;
     };
 
-    let from_zoom = ctx.viewport.zoom;
-    let from_offset = ctx.viewport.offset;
+    let from_zoom = ctx.viewport.zoom();
+    let from_offset = ctx.viewport.offset();
     let zoom_changed = (from_zoom - z).abs() > 1e-4;
     let ox: f32 = from_offset.x.into();
     let oy: f32 = from_offset.y.into();
@@ -153,9 +150,10 @@ pub(crate) fn apply_frame_world_rect_direct(
         return;
     };
 
-    let zoom_changed = (viewport.zoom - z).abs() > 1e-4;
-    let ox: f32 = viewport.offset.x.into();
-    let oy: f32 = viewport.offset.y.into();
+    let zoom_changed = (viewport.zoom() - z).abs() > 1e-4;
+    let off = viewport.offset();
+    let ox: f32 = off.x.into();
+    let oy: f32 = off.y.into();
     let nx: f32 = new_offset.x.into();
     let ny: f32 = new_offset.y.into();
     let offset_changed = (ox - nx).abs() > 0.5 || (oy - ny).abs() > 0.5;
@@ -163,6 +161,6 @@ pub(crate) fn apply_frame_world_rect_direct(
         return;
     }
 
-    viewport.zoom = z;
-    viewport.offset = new_offset;
+    viewport.set_zoom(z);
+    viewport.set_offset(new_offset);
 }
