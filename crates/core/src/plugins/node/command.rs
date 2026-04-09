@@ -124,3 +124,57 @@ impl Command for DragNodesCommand {
         vec![GraphOp::Batch(list)]
     }
 }
+
+#[cfg(test)]
+mod command_interop_tests {
+    use gpui::{Point, px};
+
+    use crate::{Graph, command_interop::assert_command_interop};
+
+    use super::{DragNodesCommand, SelecteNodeCommand};
+
+    #[test]
+    fn select_node_command_interop() {
+        let mut base = Graph::new();
+        let n1 = base.create_node("a").position(0.0, 0.0).build(&mut base);
+        let _n2 = base.create_node("b").position(50.0, 0.0).build(&mut base);
+
+        let old_node_order = base.node_order().to_vec();
+        let old_selected_edge = base.selected_edge.clone();
+        let old_selected_node = base.selected_node.clone();
+
+        assert_command_interop(
+            &base,
+            || {
+                Box::new(SelecteNodeCommand {
+                    node_id: n1,
+                    shift: false,
+                    old_node_order: old_node_order.clone(),
+                    old_selected_edge: old_selected_edge.clone(),
+                    old_selected_node: old_selected_node.clone(),
+                })
+            },
+            "SelecteNodeCommand",
+        );
+    }
+
+    #[test]
+    fn drag_nodes_command_interop() {
+        let mut base = Graph::new();
+        let n = base.create_node("n").position(0.0, 0.0).build(&mut base);
+        let from = vec![(n, Point::new(px(0.0), px(0.0)))];
+        let to = vec![(n, Point::new(px(30.0), px(40.0)))];
+        let cmd = DragNodesCommand::from_positions(from, to);
+
+        assert_command_interop(
+            &base,
+            || {
+                Box::new(DragNodesCommand::from_positions(
+                    cmd.from.clone(),
+                    cmd.to.clone(),
+                ))
+            },
+            "DragNodesCommand",
+        );
+    }
+}

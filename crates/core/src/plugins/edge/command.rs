@@ -71,3 +71,85 @@ impl Command for ClearEdgeCommand {
         vec![]
     }
 }
+
+#[cfg(test)]
+mod command_interop_tests {
+    use crate::{Graph, command_interop::assert_command_interop};
+
+    use super::{ClearEdgeCommand, SelectEdgeCommand};
+
+    #[test]
+    fn select_edge_command_interop() {
+        let mut base = Graph::new();
+        let n1 = base
+            .create_node("a")
+            .position(0.0, 0.0)
+            .output()
+            .build(&mut base);
+        let n2 = base
+            .create_node("b")
+            .position(100.0, 0.0)
+            .input()
+            .build(&mut base);
+        let n1_node = base.get_node(&n1).expect("n1");
+        let n2_node = base.get_node(&n2).expect("n2");
+        let edge_id = base
+            .create_edge()
+            .source(n1_node.outputs[0])
+            .target(n2_node.inputs[0])
+            .build(&mut base)
+            .expect("edge");
+
+        let old_selected_edge = base.selected_edge.clone();
+        let old_selected_node = base.selected_node.clone();
+
+        assert_command_interop(
+            &base,
+            || {
+                Box::new(SelectEdgeCommand {
+                    edge_id,
+                    shift: false,
+                    old_selected_edge: old_selected_edge.clone(),
+                    old_selected_node: old_selected_node.clone(),
+                })
+            },
+            "SelectEdgeCommand",
+        );
+    }
+
+    #[test]
+    fn clear_edge_command_interop() {
+        let mut base = Graph::new();
+        let n1 = base
+            .create_node("a")
+            .position(0.0, 0.0)
+            .output()
+            .build(&mut base);
+        let n2 = base
+            .create_node("b")
+            .position(100.0, 0.0)
+            .input()
+            .build(&mut base);
+        let n1_node = base.get_node(&n1).expect("n1");
+        let n2_node = base.get_node(&n2).expect("n2");
+        let edge_id = base
+            .create_edge()
+            .source(n1_node.outputs[0])
+            .target(n2_node.inputs[0])
+            .build(&mut base)
+            .expect("edge");
+        base.selected_edge.insert(edge_id);
+
+        let old_selected_edge = base.selected_edge.clone();
+
+        assert_command_interop(
+            &base,
+            || {
+                Box::new(ClearEdgeCommand {
+                    old_selected_edge: old_selected_edge.clone(),
+                })
+            },
+            "ClearEdgeCommand",
+        );
+    }
+}

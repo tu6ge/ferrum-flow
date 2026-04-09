@@ -135,3 +135,60 @@ impl Command for DeleteCommand {
         list
     }
 }
+
+#[cfg(test)]
+mod command_interop_tests {
+    use crate::{Graph, command_interop::assert_command_interop};
+
+    use super::DeleteCommand;
+
+    fn delete_command_like_new(graph: &Graph) -> DeleteCommand {
+        let selected_edge: Vec<crate::Edge> = graph
+            .selected_edge
+            .iter()
+            .filter_map(|id| graph.edges.get(id).cloned())
+            .collect();
+        let selected_node: Vec<crate::Node> = graph
+            .selected_node
+            .iter()
+            .filter_map(|id| graph.get_node(id).cloned())
+            .collect();
+        let selected_port: Vec<crate::Port> = graph
+            .selected_node
+            .iter()
+            .filter_map(|node_id| graph.get_node(node_id))
+            .flat_map(|node| node.inputs.iter().chain(node.outputs.iter()))
+            .filter_map(|port_id| graph.ports.get(port_id).cloned())
+            .collect();
+        DeleteCommand {
+            selected_edge,
+            selected_node,
+            selected_port,
+        }
+    }
+
+    #[test]
+    fn delete_command_interop_single_node_with_port() {
+        let mut base = Graph::new();
+        let _n = base
+            .create_node("x")
+            .position(0.0, 0.0)
+            .output()
+            .build(&mut base);
+        let nid = *base.node_order().first().expect("node");
+        base.selected_node.insert(nid);
+
+        let cmd = delete_command_like_new(&base);
+        assert_command_interop(
+            &base,
+            || {
+                Box::new(DeleteCommand {
+                    selected_edge: cmd.selected_edge.clone(),
+                    selected_node: cmd.selected_node.clone(),
+                    selected_port: cmd.selected_port.clone(),
+                })
+            },
+            "DeleteCommand",
+        );
+    }
+}
