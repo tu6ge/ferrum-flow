@@ -236,6 +236,9 @@ impl<'a, 'b> InitPluginContext<'a, 'b> {
     pub fn is_node_visible(&self, node_id: &NodeId) -> bool {
         is_node_visible(self.graph, self.viewport, node_id)
     }
+    pub fn is_node_visible_node(&self, node: &Node) -> bool {
+        self.viewport.is_node_visible(node)
+    }
 
     pub fn is_edge_visible(&self, edge: &Edge) -> bool {
         is_edge_visible(self.graph, self.viewport, edge)
@@ -592,6 +595,9 @@ impl<'a> PluginContext<'a> {
     pub fn is_node_visible(&self, node_id: &NodeId) -> bool {
         is_node_visible(self.graph, self.viewport, node_id)
     }
+    pub fn is_node_visible_node(&self, node: &Node) -> bool {
+        self.viewport.is_node_visible(node)
+    }
 
     pub fn is_edge_visible(&self, edge: &Edge) -> bool {
         is_edge_visible(self.graph, self.viewport, edge)
@@ -843,6 +849,9 @@ impl<'a> RenderContext<'a> {
 
     pub fn is_node_visible(&self, node_id: &NodeId) -> bool {
         is_node_visible(self.graph, self.viewport, node_id)
+    }
+    pub fn is_node_visible_node(&self, node: &Node) -> bool {
+        self.viewport.is_node_visible(node)
     }
 
     pub fn is_edge_visible(&self, edge: &Edge) -> bool {
