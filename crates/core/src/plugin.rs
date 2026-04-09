@@ -214,7 +214,7 @@ impl<'a, 'b> InitPluginContext<'a, 'b> {
         Some(PortScreenFrame {
             center: self.port_screen_center(node, port.id)?,
             size: port.size,
-            zoom: self.viewport.zoom,
+            zoom: self.viewport.zoom(),
         })
     }
 
@@ -517,7 +517,7 @@ impl<'a> PluginContext<'a> {
         Some(PortScreenFrame {
             center: self.port_screen_center(node, port.id)?,
             size: port.size,
-            zoom: self.viewport.zoom,
+            zoom: self.viewport.zoom(),
         })
     }
 
@@ -672,7 +672,7 @@ impl<'a> RenderContext<'a> {
     /// Chain `.child(...)` for the inner body, then `.into_any()` (see [`gpui::Element`]).
     pub fn node_card_shell(&self, node: &Node, selected: bool, variant: NodeCardVariant) -> Div {
         let screen = self.world_to_screen(node.point());
-        let z = self.viewport.zoom;
+        let z = self.viewport.zoom();
         let base = div()
             .absolute()
             .left(screen.x)
@@ -736,7 +736,7 @@ impl<'a> RenderContext<'a> {
         Some(PortScreenFrame {
             center: self.port_screen_center(node, port.id)?,
             size: port.size,
-            zoom: self.viewport.zoom,
+            zoom: self.viewport.zoom(),
         })
     }
 

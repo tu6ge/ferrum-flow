@@ -103,8 +103,8 @@ impl NodeRenderer for WorkflowNodeRenderer {
         let node_id = node.id;
         let selected = ctx.graph.selected_node().contains(&node_id);
         let screen = ctx.viewport.world_to_screen(node.point());
-        let w = node.size.width * ctx.viewport.zoom;
-        let h = node.size.height * ctx.viewport.zoom;
+        let w = ctx.viewport.world_length_to_screen(node.size.width);
+        let h = ctx.viewport.world_length_to_screen(node.size.height);
         let accent = self.kind.accent();
         let bg = self.card_bg();
         let title = self.read_title(node);

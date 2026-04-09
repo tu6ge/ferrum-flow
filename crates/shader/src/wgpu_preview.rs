@@ -164,7 +164,7 @@ impl Plugin for WgpuPreviewPlugin {
     fn render(&mut self, ctx: &mut RenderContext) -> Option<gpui::AnyElement> {
         self.sync_graph(ctx.graph);
 
-        let win = ctx.viewport.window_bounds.unwrap_or_else(|| {
+        let win = ctx.viewport.window_bounds().unwrap_or_else(|| {
             let vs = ctx.window.viewport_size();
             Bounds::new(Point::new(px(0.0), px(0.0)), Size::new(vs.width, vs.height))
         });

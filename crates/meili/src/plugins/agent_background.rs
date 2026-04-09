@@ -37,10 +37,10 @@ impl Plugin for AgentBackgroundPlugin {
 
     fn render(&mut self, ctx: &mut RenderContext) -> Option<gpui::AnyElement> {
         let base_grid = 48.0_f32;
-        let zoom = ctx.viewport.zoom;
+        let zoom = ctx.viewport.zoom();
         let grid = base_grid * zoom;
 
-        let offset = ctx.viewport.offset;
+        let offset = ctx.viewport.offset();
         let start_x = f32::from(offset.x).rem_euclid(grid);
         let start_y = f32::from(offset.y).rem_euclid(grid);
 

@@ -30,11 +30,11 @@ impl Plugin for BackgroundPlugin {
     }
     fn render(&mut self, ctx: &mut crate::plugin::RenderContext) -> Option<gpui::AnyElement> {
         let base_grid = 40.0;
-        let zoom = ctx.viewport.zoom;
+        let zoom = ctx.viewport.zoom();
 
         let grid = base_grid * zoom;
 
-        let offset = ctx.viewport.offset;
+        let offset = ctx.viewport.offset();
 
         let start_x = f32::from(offset.x) % grid;
         let start_y = f32::from(offset.y) % grid;

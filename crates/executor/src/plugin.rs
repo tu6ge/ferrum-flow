@@ -153,8 +153,8 @@ impl Plugin for ExecutionHighlightPlugin {
         let node = ctx.graph.nodes().get(&id)?;
         let top_left = ctx.world_to_screen(Point::new(node.x, node.y));
         let size = Size::new(
-            node.size.width * ctx.viewport.zoom,
-            node.size.height * ctx.viewport.zoom,
+            ctx.viewport.world_length_to_screen(node.size.width),
+            ctx.viewport.world_length_to_screen(node.size.height),
         );
 
         Some(

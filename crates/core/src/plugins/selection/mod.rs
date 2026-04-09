@@ -82,8 +82,8 @@ impl Plugin for SelectionPlugin {
             let top_left = ctx.world_to_screen(bounds.origin);
 
             let size = Size::new(
-                bounds.size.width * ctx.viewport.zoom,
-                bounds.size.height * ctx.viewport.zoom,
+                ctx.viewport.world_length_to_screen(bounds.size.width),
+                ctx.viewport.world_length_to_screen(bounds.size.height),
             );
             render_rect(Bounds::new(top_left, size), ctx.theme)
         })
@@ -273,8 +273,8 @@ impl Interaction for SelectionInteraction {
                 let top_left = ctx.world_to_screen(rect.origin);
 
                 let size = Size::new(
-                    rect.size.width * ctx.viewport.zoom,
-                    rect.size.height * ctx.viewport.zoom,
+                    ctx.viewport.world_length_to_screen(rect.size.width),
+                    ctx.viewport.world_length_to_screen(rect.size.height),
                 );
 
                 Some(render_rect(Bounds::new(top_left, size), ctx.theme))
@@ -284,8 +284,8 @@ impl Interaction for SelectionInteraction {
                 let top_left = ctx.world_to_screen(bounds.origin);
 
                 let size = Size::new(
-                    bounds.size.width * ctx.viewport.zoom,
-                    bounds.size.height * ctx.viewport.zoom,
+                    ctx.viewport.world_length_to_screen(bounds.size.width),
+                    ctx.viewport.world_length_to_screen(bounds.size.height),
                 );
                 Some(render_rect(Bounds::new(top_left, size), ctx.theme))
             }
