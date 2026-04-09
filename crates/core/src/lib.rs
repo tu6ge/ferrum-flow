@@ -1,6 +1,8 @@
 mod canvas;
 #[cfg(any(feature = "testing", test))]
 pub mod command_interop;
+#[cfg(any(feature = "testing", test))]
+pub mod plugin_testing;
 mod edge;
 mod graph;
 mod node;
