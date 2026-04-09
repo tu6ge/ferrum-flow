@@ -103,19 +103,13 @@ impl PluginTestHarness {
     /// Runs `Plugin::render` once.
     ///
     /// Call this only in tests that already have a GPUI window.
-    pub fn run_render(
-        &mut self,
-        plugin: &mut dyn Plugin,
-        window: &Window,
-        layer: RenderLayer,
-    ) -> Option<AnyElement> {
+    pub fn run_render(&mut self, plugin: &mut dyn Plugin, window: &Window) -> Option<AnyElement> {
         let mut ctx = RenderContext::new(
             &mut self.graph,
             &mut self.port_offset_cache,
             &self.viewport,
             &self.renderers,
             window,
-            layer,
             &self.theme,
             &self.shared_state,
         );
@@ -136,12 +130,10 @@ impl PluginTestHarness {
 impl Default for PluginTestHarness {
     fn default() -> Self {
         let mut harness = Self::new(Graph::new());
-        harness
-            .viewport
-            .set_window_bounds(Some(gpui::Bounds::new(
-                gpui::Point::new(px(0.0), px(0.0)),
-                gpui::Size::new(px(800.0), px(600.0)),
-            )));
+        harness.viewport.set_window_bounds(Some(gpui::Bounds::new(
+            gpui::Point::new(px(0.0), px(0.0)),
+            gpui::Size::new(px(800.0), px(600.0)),
+        )));
         harness
     }
 }

@@ -736,8 +736,6 @@ pub struct RenderContext<'a> {
     pub renderers: &'a RendererRegistry,
 
     pub window: &'a Window,
-
-    pub layer: RenderLayer,
     /// Active canvas theme (from [`FlowCanvas::theme`](crate::canvas::FlowCanvas::theme)).
     pub theme: &'a FlowTheme,
     /// Read-only shared plugin state on the [`FlowCanvas`](FlowCanvas).
@@ -751,7 +749,6 @@ impl<'a> RenderContext<'a> {
         viewport: &'a Viewport,
         renderers: &'a RendererRegistry,
         window: &'a Window,
-        layer: RenderLayer,
         theme: &'a FlowTheme,
         shared_state: &'a SharedState,
     ) -> Self {
@@ -761,7 +758,6 @@ impl<'a> RenderContext<'a> {
             viewport,
             renderers,
             window,
-            layer,
             theme,
             shared_state,
         }
