@@ -11,7 +11,7 @@ struct SyncBasicNodeRenderer;
 impl NodeRenderer for SyncBasicNodeRenderer {
     fn render(&self, node: &Node, ctx: &mut RenderContext) -> AnyElement {
         let node_id = node.id;
-        let selected = ctx.graph.selected_node.contains(&node_id);
+        let selected = ctx.graph.selected_node().contains(&node_id);
 
         ctx.node_card_shell(node, selected, NodeCardVariant::Default)
             .child(

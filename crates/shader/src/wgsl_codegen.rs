@@ -34,7 +34,7 @@ fn find_output_nodes(graph: &Graph) -> Vec<NodeId> {
 /// Follow edges from a target input port to the upstream output; error if unwired.
 fn source_port_for_input(graph: &Graph, input_port: PortId) -> Result<PortId, CompileError> {
     graph
-        .edges
+        .edges()
         .values()
         .find(|e| e.target_port == input_port)
         .map(|e| e.source_port)
@@ -43,8 +43,7 @@ fn source_port_for_input(graph: &Graph, input_port: PortId) -> Result<PortId, Co
 
 fn owner_of_port(graph: &Graph, port: PortId) -> Result<NodeId, CompileError> {
     graph
-        .ports
-        .get(&port)
+        .get_port(&port)
         .map(|p| p.node_id)
         .ok_or_else(|| err(format!("unknown port {port:?}")))
 }
@@ -83,10 +82,11 @@ fn var_for_port<'a>(
     port_to_var: &'a HashMap<PortId, String>,
     p: PortId,
 ) -> Result<&'a str, CompileError> {
-    port_to_var
-        .get(&p)
-        .map(|s| s.as_str())
-        .ok_or_else(|| err(format!("port {p:?} has no generated variable (order/type issue)")))
+    port_to_var.get(&p).map(|s| s.as_str()).ok_or_else(|| {
+        err(format!(
+            "port {p:?} has no generated variable (order/type issue)"
+        ))
+    })
 }
 
 fn vec3_literal_from_node_data(data: &serde_json::Value) -> String {
@@ -156,11 +156,9 @@ pub fn compile_graph_to_wgsl(graph: &Graph) -> Result<String, CompileError> {
     let output_id = outs[0];
     let order = dependency_order(graph, output_id)?;
 
-    let needs_noise = order.iter().any(|id| {
-        graph
-            .get_node(id)
-            .is_some_and(|n| n.node_type == "noise")
-    });
+    let needs_noise = order
+        .iter()
+        .any(|id| graph.get_node(id).is_some_and(|n| n.node_type == "noise"));
 
     let mut port_to_var: HashMap<PortId, String> = HashMap::new();
     let mut body = String::new();
@@ -243,7 +241,9 @@ pub fn compile_graph_to_wgsl(graph: &Graph) -> Result<String, CompileError> {
                     writeln!(&mut body, "    let {name} = {v}f;").unwrap();
                     port_to_var.insert(node.outputs[0], name);
                 } else {
-                    return Err(err("scalar node must have 0 inputs, 1 output, numeric data.value"));
+                    return Err(err(
+                        "scalar node must have 0 inputs, 1 output, numeric data.value",
+                    ));
                 }
             }
             "join_ff" => {

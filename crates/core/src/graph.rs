@@ -1,3 +1,5 @@
+use std::collections::hash_map::Values as HashMapValues;
+use std::collections::hash_set::Iter as HashSetIter;
 use std::collections::{HashMap, HashSet};
 
 use gpui::{Bounds, Pixels, Point, Size, px};
@@ -13,13 +15,14 @@ pub use store::{ChangeSource, GraphChange, GraphChangeKind, GraphOp};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Graph {
-    pub(crate) nodes: HashMap<NodeId, Node>,
+    nodes: HashMap<NodeId, Node>,
     node_order: Vec<NodeId>,
-    pub ports: HashMap<PortId, Port>,
-    pub edges: HashMap<EdgeId, Edge>,
+    ports: HashMap<PortId, Port>,
 
-    pub selected_edge: HashSet<EdgeId>,
-    pub selected_node: HashSet<NodeId>,
+    edges: HashMap<EdgeId, Edge>,
+
+    selected_edge: HashSet<EdgeId>,
+    selected_node: HashSet<NodeId>,
 }
 
 impl Graph {
@@ -124,6 +127,10 @@ impl Graph {
         self.nodes.insert(node.id, node);
         self.node_order.push(node_id);
     }
+    #[cfg(any(test, feature = "testing"))]
+    pub(crate) fn add_node_without_order(&mut self, node: Node) {
+        self.nodes.insert(node.id, node);
+    }
 
     pub fn add_port(&mut self, port: Port) {
         let ref mut map = self.ports;
@@ -143,6 +150,45 @@ impl Graph {
     }
     pub fn node_order_mut(&mut self) -> &mut Vec<NodeId> {
         &mut self.node_order
+    }
+    pub fn ports(&self) -> &HashMap<PortId, Port> {
+        &self.ports
+    }
+    pub fn get_port(&self, id: &PortId) -> Option<&Port> {
+        self.ports.get(id)
+    }
+    pub fn ports_values(&self) -> HashMapValues<'_, PortId, Port> {
+        self.ports.values()
+    }
+    pub fn edges(&self) -> &HashMap<EdgeId, Edge> {
+        &self.edges
+    }
+    pub fn get_edge(&self, id: &EdgeId) -> Option<&Edge> {
+        self.edges.get(id)
+    }
+    pub fn edges_values(&self) -> HashMapValues<'_, EdgeId, Edge> {
+        self.edges.values()
+    }
+    pub fn selected_node(&self) -> &HashSet<NodeId> {
+        &self.selected_node
+    }
+    pub fn selected_node_is_empty(&self) -> bool {
+        self.selected_node.is_empty()
+    }
+    pub fn selected_node_iter(&self) -> HashSetIter<'_, NodeId> {
+        self.selected_node.iter()
+    }
+    pub fn selected_edge(&self) -> &HashSet<EdgeId> {
+        &self.selected_edge
+    }
+    pub fn selected_edge_iter(&self) -> HashSetIter<'_, EdgeId> {
+        self.selected_edge.iter()
+    }
+    pub fn set_selected_node(&mut self, selected: HashSet<NodeId>) {
+        self.selected_node = selected;
+    }
+    pub fn set_selected_edge(&mut self, selected: HashSet<EdgeId>) {
+        self.selected_edge = selected;
     }
 
     pub fn new_edge(&self) -> Edge {

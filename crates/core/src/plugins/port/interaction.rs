@@ -60,7 +60,7 @@ impl PortInteractionPlugin {
     }
 
     fn finish_pending_link(&mut self, ctx: &mut crate::plugin::PluginContext, p: PendingPortLink) {
-        let Some(source) = ctx.graph.ports.get(&p.source_port).cloned() else {
+        let Some(source) = ctx.graph.get_port(&p.source_port).cloned() else {
             return;
         };
 
@@ -157,7 +157,7 @@ impl Plugin for PortInteractionPlugin {
                 .collect();
             let visible_ports: Vec<(PortId, PortPosition)> = ctx
                 .graph
-                .ports
+                .ports()
                 .iter()
                 .filter(|(_, port)| visible_nodes.contains(&port.node_id))
                 .map(|(_, port)| (port.id, port.position))
@@ -209,7 +209,7 @@ impl Plugin for PortInteractionPlugin {
         let p = self.pending.as_ref()?;
         let start = ctx.port_screen_center_by_port_id(p.source_port)?;
         let end = ctx.world_to_screen(p.end_world);
-        let source_port = ctx.graph.ports.get(&p.source_port)?;
+        let source_port = ctx.graph.get_port(&p.source_port)?;
         let start_position = source_port.position;
         let target_position = Self::facing_position(start_position);
         let viewport = ctx.viewport.clone();
@@ -282,11 +282,11 @@ impl Interaction for PortConnecting {
             .find(|c| c.bounds.contains(&mouse_world))
         {
             let port_id = candidate.id;
-            let Some(target_port) = ctx.graph.ports.get(&port_id).cloned() else {
+            let Some(target_port) = ctx.graph.get_port(&port_id).cloned() else {
                 ctx.emit(FlowEvent::custom(PortPreviewActive(false)));
                 return crate::canvas::InteractionResult::End;
             };
-            let Some(soruce_port) = ctx.graph.ports.get(&self.port_id).cloned() else {
+            let Some(soruce_port) = ctx.graph.get_port(&self.port_id).cloned() else {
                 ctx.emit(FlowEvent::custom(PortPreviewActive(false)));
                 return crate::canvas::InteractionResult::End;
             };

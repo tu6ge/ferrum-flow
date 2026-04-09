@@ -358,10 +358,9 @@ impl NodeBuilder {
 
     pub fn build(self, graph: &mut Graph) -> NodeId {
         let (node, ports) = self.only_build(graph);
-        graph.nodes.insert(node.id, node.clone());
-        graph.node_order_mut().push(node.id);
+        graph.add_node(node.clone());
         for port in ports {
-            graph.ports.insert(port.id, port);
+            graph.add_port(port);
         }
         node.id
     }

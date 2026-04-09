@@ -98,10 +98,10 @@ impl YrsSyncPlugin {
         for node in self.init_graph.nodes().values() {
             self.insert_node(&mut txn, node);
         }
-        for port in self.init_graph.ports.values() {
+        for port in self.init_graph.ports_values() {
             self.add_port(&mut txn, port);
         }
-        for edge in self.init_graph.edges.values() {
+        for edge in self.init_graph.edges_values() {
             self.insert_edge(&mut txn, edge);
         }
         for order in self.init_graph.node_order() {

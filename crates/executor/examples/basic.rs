@@ -85,7 +85,7 @@ impl NodeRenderer for CalcDemoRenderer {
 
         let screen = ctx.world_to_screen(node.point());
         let node_id = node.id;
-        let selected = ctx.graph.selected_node.contains(&node_id);
+        let selected = ctx.graph.selected_node().contains(&node_id);
 
         div()
             .absolute()

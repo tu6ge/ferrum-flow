@@ -440,7 +440,7 @@ impl Plugin for ContextMenuPlugin {
             if ev.button == MouseButton::Right {
                 let world = ctx.screen_to_world(ev.position);
                 let actions = if let Some(nid) = ctx.hit_node(world) {
-                    if !ctx.graph.selected_node.contains(&nid) {
+                    if !ctx.graph.selected_node().contains(&nid) {
                         ctx.clear_selected_edge();
                         ctx.clear_selected_node();
                         ctx.add_selected_node(nid, false);

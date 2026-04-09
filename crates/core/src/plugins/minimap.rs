@@ -289,14 +289,14 @@ impl Plugin for MinimapPlugin {
 
         let edges: Vec<_> = ctx
             .graph
-            .edges
+            .edges()
             .values()
             .filter(|e| ctx.is_edge_visible(e))
             .filter_map(|e| {
-                let s = ctx.graph.ports.get(&e.source_port)?;
-                let t = ctx.graph.ports.get(&e.target_port)?;
-                let sn = ctx.graph.nodes.get(&s.node_id)?;
-                let tn = ctx.graph.nodes.get(&t.node_id)?;
+                let s = ctx.graph.get_port(&e.source_port)?;
+                let t = ctx.graph.get_port(&e.target_port)?;
+                let sn = ctx.graph.get_node(&s.node_id)?;
+                let tn = ctx.graph.get_node(&t.node_id)?;
                 let sx: f32 = f32::from(sn.x) + f32::from(sn.size.width) * 0.5;
                 let sy: f32 = f32::from(sn.y) + f32::from(sn.size.height) * 0.5;
                 let tx: f32 = f32::from(tn.x) + f32::from(tn.size.width) * 0.5;

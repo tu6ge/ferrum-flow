@@ -17,7 +17,7 @@ pub(crate) fn graph_fingerprint(g: &ferrum_flow::Graph) -> u64 {
     use std::collections::hash_map::DefaultHasher;
     let mut h = DefaultHasher::new();
     g.nodes().len().hash(&mut h);
-    g.edges.len().hash(&mut h);
+    g.edges().len().hash(&mut h);
     for id in g.node_order() {
         let Some(n) = g.get_node(id) else {
             continue;
@@ -28,7 +28,7 @@ pub(crate) fn graph_fingerprint(g: &ferrum_flow::Graph) -> u64 {
         xf.to_bits().hash(&mut h);
         yf.to_bits().hash(&mut h);
     }
-    for e in g.edges.values() {
+    for e in g.edges_values() {
         e.source_port.hash(&mut h);
         e.target_port.hash(&mut h);
     }

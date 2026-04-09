@@ -18,8 +18,8 @@ impl SelecteNodeCommand {
             node_id,
             shift,
             old_node_order: ctx.graph.node_order().clone(),
-            old_selected_edge: ctx.graph.selected_edge.clone(),
-            old_selected_node: ctx.graph.selected_node.clone(),
+            old_selected_edge: ctx.graph.selected_edge().clone(),
+            old_selected_node: ctx.graph.selected_node().clone(),
         }
     }
 }
@@ -36,8 +36,8 @@ impl Command for SelecteNodeCommand {
         ctx.bring_node_to_front(self.node_id);
     }
     fn undo(&mut self, ctx: &mut crate::canvas::CommandContext) {
-        ctx.graph.selected_node = self.old_selected_node.clone();
-        ctx.graph.selected_edge = self.old_selected_edge.clone();
+        ctx.graph.set_selected_node(self.old_selected_node.clone());
+        ctx.graph.set_selected_edge(self.old_selected_edge.clone());
         let a = ctx.graph.node_order_mut();
         *a = self.old_node_order.clone();
     }
@@ -140,8 +140,8 @@ mod command_interop_tests {
         let _n2 = base.create_node("b").position(50.0, 0.0).build(&mut base);
 
         let old_node_order = base.node_order().to_vec();
-        let old_selected_edge = base.selected_edge.clone();
-        let old_selected_node = base.selected_node.clone();
+        let old_selected_edge = base.selected_edge().clone();
+        let old_selected_node = base.selected_node().clone();
 
         assert_command_interop(
             &base,

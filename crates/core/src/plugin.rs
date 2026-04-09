@@ -203,7 +203,7 @@ impl<'a, 'b> InitPluginContext<'a, 'b> {
     /// Like [`Self::port_screen_center`], resolving the port from [`Graph::ports`].
     /// *warning*: this is using port offset cache, so it will not be accurate if the port offset is not cached.
     pub fn port_screen_center_by_port_id(&self, port_id: PortId) -> Option<Point<Pixels>> {
-        let port = self.graph.ports.get(&port_id)?;
+        let port = self.graph.get_port(&port_id)?;
         let node = self.get_node(&port.node_id)?;
         self.port_screen_center(node, port_id)
     }
@@ -506,7 +506,7 @@ impl<'a> PluginContext<'a> {
     /// Like [`Self::port_screen_center`], resolving the port from [`Graph::ports`].
     /// *warning*: this is using port offset cache, so it will not be accurate if the port offset is not cached.
     pub fn port_screen_center_by_port_id(&self, port_id: PortId) -> Option<Point<Pixels>> {
-        let port = self.graph.ports.get(&port_id)?;
+        let port = self.graph.get_port(&port_id)?;
         let node = self.get_node(&port.node_id)?;
         self.port_screen_center(node, port_id)
     }
@@ -725,7 +725,7 @@ impl<'a> RenderContext<'a> {
     /// Like [`Self::port_screen_center`], resolving the port from [`Graph::ports`].
     /// *warning*: this is using port offset cache, so it will not be accurate if the port offset is not cached.
     pub fn port_screen_center_by_port_id(&self, port_id: PortId) -> Option<Point<Pixels>> {
-        let port = self.graph.ports.get(&port_id)?;
+        let port = self.graph.get_port(&port_id)?;
         let node = self.get_node(&port.node_id)?;
         self.port_screen_center(node, port_id)
     }
