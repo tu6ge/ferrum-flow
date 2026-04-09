@@ -277,21 +277,18 @@ impl Render for FlowCanvas {
             (0..RenderLayer::ALL.len()).map(|_| Vec::new()).collect();
 
         for plugin in self.plugins_registry.plugins.iter_mut() {
-            let layer = plugin.render_layer();
-
             let mut ctx = RenderContext::new(
                 graph,
                 port_offset_cache,
                 viewport,
                 renderder,
                 window,
-                layer,
                 theme,
                 shared_state,
             );
 
             if let Some(el) = plugin.render(&mut ctx) {
-                layers[layer.index()].push(el);
+                layers[plugin.render_layer().index()].push(el);
             }
         }
 
@@ -302,7 +299,6 @@ impl Render for FlowCanvas {
                 viewport,
                 renderder,
                 window,
-                RenderLayer::Interaction,
                 theme,
                 shared_state,
             );
@@ -319,7 +315,6 @@ impl Render for FlowCanvas {
                 viewport,
                 renderder,
                 window,
-                RenderLayer::Overlay,
                 theme,
                 shared_state,
             );
