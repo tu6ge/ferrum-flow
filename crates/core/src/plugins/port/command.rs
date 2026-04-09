@@ -81,3 +81,78 @@ impl Command for CreatePort {
         ctx.port_offset_cache.clear_node(&node_id);
     }
 }
+
+#[cfg(test)]
+mod command_interop_tests {
+    use serde_json::json;
+
+    use gpui::Size;
+
+    use crate::{
+        CreateEdge, CreateNode, CreatePort, Graph, Port, PortKind, PortPosition,
+        command_interop::assert_command_interop,
+    };
+
+    #[test]
+    fn create_node_command_interop() {
+        let base = Graph::new();
+        let (node, _ports) = base
+            .create_node("x")
+            .position(100.0, 80.0)
+            .data(json!({ "k": "v" }))
+            .only_build(&base);
+
+        assert_command_interop(
+            &base,
+            || Box::new(CreateNode::new(node.clone())),
+            "CreateNode",
+        );
+    }
+
+    #[test]
+    fn create_port_command_interop() {
+        let mut base = Graph::new();
+        let node_id = base.create_node("x").position(0.0, 0.0).build(&mut base);
+        let port = Port {
+            id: base.next_port_id(),
+            kind: PortKind::Output,
+            index: 0,
+            node_id,
+            position: PortPosition::Right,
+            size: Size::new(gpui::px(12.0), gpui::px(12.0)),
+        };
+
+        assert_command_interop(
+            &base,
+            || Box::new(CreatePort::new(port.clone())),
+            "CreatePort",
+        );
+    }
+
+    #[test]
+    fn create_edge_command_interop() {
+        let mut base = Graph::new();
+        let n1 = base
+            .create_node("a")
+            .position(0.0, 0.0)
+            .output()
+            .build(&mut base);
+        let n2 = base
+            .create_node("b")
+            .position(100.0, 0.0)
+            .input()
+            .build(&mut base);
+        let n1_node = base.get_node(&n1).expect("source node exists");
+        let n2_node = base.get_node(&n2).expect("target node exists");
+        let edge = base
+            .new_edge()
+            .source(n1_node.outputs[0])
+            .target(n2_node.inputs[0]);
+
+        assert_command_interop(
+            &base,
+            || Box::new(CreateEdge::new(edge.clone())),
+            "CreateEdge",
+        );
+    }
+}

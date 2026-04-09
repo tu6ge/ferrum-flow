@@ -155,6 +155,7 @@ impl Graph {
 
     pub fn remove_edge(&mut self, edge_id: EdgeId) {
         self.edges.remove(&edge_id);
+        self.selected_edge.remove(&edge_id);
     }
 
     pub fn get_node(&self, id: &NodeId) -> Option<&Node> {
@@ -173,6 +174,7 @@ impl Graph {
         port_ids.extend(node.outputs.clone());
 
         self.nodes.remove(id);
+        self.selected_node.remove(id);
         let index = self.node_order.iter().position(|v| *v == *id);
         if let Some(index) = index {
             self.node_order.remove(index);
@@ -185,6 +187,7 @@ impl Graph {
                 .find(|(_, edge)| edge.source_port == *port_id);
             if let Some((&edge_id, _)) = edge1 {
                 self.edges.remove(&edge_id);
+                self.selected_edge.remove(&edge_id);
             }
 
             let edge2 = self
@@ -193,6 +196,7 @@ impl Graph {
                 .find(|(_, edge)| edge.target_port == *port_id);
             if let Some((&edge_id, _)) = edge2 {
                 self.edges.remove(&edge_id);
+                self.selected_edge.remove(&edge_id);
             }
 
             self.ports.remove(port_id);

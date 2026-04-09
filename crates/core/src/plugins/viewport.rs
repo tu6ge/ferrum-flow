@@ -123,3 +123,31 @@ impl Command for PanningCommand {
         vec![]
     }
 }
+
+#[cfg(test)]
+mod command_interop_tests {
+    use gpui::{Point, px};
+
+    use crate::{Graph, command_interop::assert_command_interop};
+
+    use super::PanningCommand;
+
+    #[test]
+    fn panning_command_interop() {
+        let base = Graph::new();
+        let cmd = PanningCommand {
+            from: Point::new(px(0.0), px(0.0)),
+            to: Point::new(px(12.0), px(34.0)),
+        };
+        assert_command_interop(
+            &base,
+            || {
+                Box::new(PanningCommand {
+                    from: cmd.from,
+                    to: cmd.to,
+                })
+            },
+            "PanningCommand",
+        );
+    }
+}

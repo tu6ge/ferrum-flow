@@ -129,6 +129,38 @@ impl Command for ViewportZoomCommand {
     }
 }
 
+#[cfg(test)]
+mod command_interop_tests {
+    use gpui::{Point, px};
+
+    use crate::{Graph, command_interop::assert_command_interop};
+
+    use super::ViewportZoomCommand;
+
+    #[test]
+    fn viewport_zoom_command_interop() {
+        let base = Graph::new();
+        let cmd = ViewportZoomCommand {
+            from_zoom: 1.0,
+            from_offset: Point::new(px(0.0), px(0.0)),
+            to_zoom: 1.25,
+            to_offset: Point::new(px(5.0), px(6.0)),
+        };
+        assert_command_interop(
+            &base,
+            || {
+                Box::new(ViewportZoomCommand {
+                    from_zoom: cmd.from_zoom,
+                    from_offset: cmd.from_offset,
+                    to_zoom: cmd.to_zoom,
+                    to_offset: cmd.to_offset,
+                })
+            },
+            "ViewportZoomCommand",
+        );
+    }
+}
+
 fn apply_zoom(ctx: &mut PluginContext, anchor_screen: Point<Pixels>, to_zoom: f32) {
     let to_zoom = to_zoom.clamp(ZOOM_MIN, ZOOM_MAX);
     let from_zoom = ctx.viewport.zoom;
