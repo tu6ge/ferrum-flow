@@ -1,7 +1,6 @@
-use crate::{
-    Edge, EdgeId, NodeId,
-    plugin::{FlowEvent, Plugin, PluginContext, primary_platform_modifier},
-};
+use std::collections::HashSet;
+
+use crate::plugin::{FlowEvent, Plugin, PluginContext, primary_platform_modifier};
 
 /// Select every node and edge that intersects the current window viewport (⌘A / Ctrl+A).
 pub struct SelectAllViewportPlugin;
@@ -13,28 +12,23 @@ impl SelectAllViewportPlugin {
 }
 
 fn select_visible(ctx: &mut PluginContext) {
-    let order: Vec<NodeId> = ctx.graph.node_order().to_vec();
-    let visible_nodes: Vec<NodeId> = order
-        .into_iter()
+    let visible_nodes: HashSet<_> = ctx
+        .graph
+        .node_order()
+        .iter()
         .filter(|id| ctx.is_node_visible(id))
+        .copied()
         .collect();
 
-    let edges: Vec<Edge> = ctx.graph.edges_values().cloned().collect();
-    let visible_edges: Vec<EdgeId> = edges
-        .into_iter()
+    let visible_edges: HashSet<_> = ctx
+        .graph
+        .edges_values()
         .filter(|e| ctx.is_edge_visible(e))
         .map(|e| e.id)
         .collect();
 
-    ctx.clear_selected_node();
-    ctx.clear_selected_edge();
-
-    for id in visible_nodes.iter() {
-        ctx.add_selected_node(*id, true);
-    }
-    for id in visible_edges.iter() {
-        ctx.add_selected_edge(*id, true);
-    }
+    ctx.graph.set_selected_node(visible_nodes);
+    ctx.graph.set_selected_edge(visible_edges);
 }
 
 pub(crate) fn select_all_in_viewport(ctx: &mut PluginContext) {

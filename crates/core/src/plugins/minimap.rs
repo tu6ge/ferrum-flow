@@ -287,8 +287,7 @@ impl Plugin for MinimapPlugin {
 
         let edges: Vec<_> = ctx
             .graph
-            .edges()
-            .values()
+            .edges_values()
             .filter(|e| ctx.is_edge_visible(e))
             .filter_map(|e| {
                 let s = ctx.graph.get_port(&e.source_port)?;

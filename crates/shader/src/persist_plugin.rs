@@ -5,8 +5,8 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use ferrum_flow::{
-    EventResult, FlowEvent, InitPluginContext, InputEvent, Plugin, PluginContext,
-    RenderContext, RenderLayer, primary_platform_modifier,
+    EventResult, FlowEvent, InitPluginContext, InputEvent, Plugin, PluginContext, RenderContext,
+    RenderLayer, primary_platform_modifier,
 };
 use gpui::{
     AsyncApp, FontWeight, IntoElement as _, ParentElement as _, Styled as _, Task, WeakEntity, div,
@@ -138,17 +138,13 @@ impl Plugin for ShaderGraphFilePlugin {
             .text_color(rgb(fg))
             .child(toast.title.clone());
 
-        let detail_els: Vec<_> = toast
-            .detail
-            .iter()
-            .map(|line| {
-                div()
-                    .text_xs()
-                    .text_color(rgb(muted))
-                    .child(format!("· {line}"))
-                    .into_any_element()
-            })
-            .collect();
+        let detail_els = toast.detail.iter().map(|line| {
+            div()
+                .text_xs()
+                .text_color(rgb(muted))
+                .child(format!("· {line}"))
+                .into_any_element()
+        });
 
         let panel = div()
             .max_w(px(440.0))
@@ -222,13 +218,7 @@ impl Plugin for ShaderGraphFilePlugin {
                 Ok(()) => {
                     let mut detail = vec![format!("{}", self.path.display())];
                     detail.extend(notes);
-                    Self::push_toast(
-                        &self.toast,
-                        ctx,
-                        ToastKind::Success,
-                        "Saved",
-                        detail,
-                    );
+                    Self::push_toast(&self.toast, ctx, ToastKind::Success, "Saved", detail);
                 }
                 Err(e) => {
                     Self::push_toast(&self.toast, ctx, ToastKind::Error, "Save failed", vec![e]);

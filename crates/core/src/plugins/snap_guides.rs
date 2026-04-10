@@ -79,7 +79,7 @@ pub(crate) fn compute_alignment_guides(
     ctx: &PluginContext,
     dragged_ids: &[NodeId],
 ) -> Option<AlignmentGuides> {
-    let dragged_set: HashSet<NodeId> = dragged_ids.iter().copied().collect();
+    let dragged_set: HashSet<&NodeId> = dragged_ids.iter().collect();
     let thr = ctx.screen_length_to_world(px(SNAP_SCREEN_PX));
     let union = union_drag_bounds(ctx.graph, dragged_ids)?;
     let dl = union.origin.x;

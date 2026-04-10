@@ -155,21 +155,18 @@ impl Plugin for PortInteractionPlugin {
                 .filter(|(_, node)| ctx.is_node_visible_node(node))
                 .map(|(id, _)| *id)
                 .collect();
-            let visible_ports: Vec<(PortId, PortPosition)> = ctx
+            let candidate_ports: Vec<PortHitCandidate> = ctx
                 .graph
                 .ports()
                 .iter()
                 .filter(|(_, port)| visible_nodes.contains(&port.node_id))
                 .map(|(_, port)| (port.id, port.position))
-                .collect();
-            let candidate_ports: Vec<PortHitCandidate> = visible_ports
-                .iter()
                 .filter_map(|(id, position)| {
-                    let bounds = port_screen_bounds(*id, ctx)?;
-                    let big_bounds = port_screen_big_bounds(*id, ctx)?;
+                    let bounds = port_screen_bounds(id, ctx)?;
+                    let big_bounds = port_screen_big_bounds(id, ctx)?;
                     Some(PortHitCandidate {
-                        id: *id,
-                        position: *position,
+                        id,
+                        position,
                         bounds,
                         big_bounds,
                     })

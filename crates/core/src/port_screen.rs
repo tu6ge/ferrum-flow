@@ -1,6 +1,6 @@
 //! Screen-space port layout for canvas rendering ([`PortScreenFrame`]).
 
-use gpui::{Div, Point, Pixels, Size, Styled as _, div};
+use gpui::{Div, Pixels, Point, Size, Styled as _, div};
 
 /// Screen-space layout for one port after the viewport transform.
 ///
@@ -34,7 +34,10 @@ impl PortScreenFrame {
     /// Top-left of the axis-aligned rectangle centered on [`Self::center`].
     pub fn origin(&self) -> Point<Pixels> {
         let s = self.scaled_size();
-        Point::new(self.center.x - s.width / 2.0, self.center.y - s.height / 2.0)
+        Point::new(
+            self.center.x - s.width / 2.0,
+            self.center.y - s.height / 2.0,
+        )
     }
 
     /// `absolute` container covering the default port hit box; chain GPUI styles and children.
