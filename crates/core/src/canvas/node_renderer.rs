@@ -24,12 +24,10 @@ pub trait NodeRenderer: Send + Sync {
     /// computing the position of port relative to node
     /// built-in Node Plugin is cached this.
     fn port_offset(&self, node: &Node, port: &Port, graph: &Graph) -> Point<Pixels> {
-        let ports: Vec<&Port> = graph
+        let total = graph
             .ports_values()
             .filter(|p| p.node_id == node.id && p.kind == port.kind && p.position == port.position)
-            .collect();
-
-        let total = ports.len() as f32;
+            .count() as f32;
         let index = port.index as f32;
         let size = node.size;
 
