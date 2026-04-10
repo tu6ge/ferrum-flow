@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::edge::{Edge, EdgeId};
 use crate::node::{Node, NodeId, Port, PortId};
-use crate::{EdgeBuilder, NodeBuilder, PortKind, PortPosition};
+use crate::{EdgeBuilder, NodeBuilder, PortKind, PortPosition, Viewport};
 
 mod store;
 
@@ -353,9 +353,10 @@ impl Graph {
             .collect()
     }
 
-    pub fn hit_node(&self, mouse: Point<Pixels>) -> Option<NodeId> {
+    pub fn hit_node(&self, mouse: Point<Pixels>, viewport: &Viewport) -> Option<NodeId> {
         self.nodes
             .iter()
+            .filter(|(_, node)| viewport.is_node_visible(node))
             .find(|(_, n)| n.bounds().contains(&mouse))
             .map(|(id, _)| *id)
     }
