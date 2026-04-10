@@ -7,7 +7,7 @@ use gpui::{
 };
 
 use crate::{
-    FlowTheme, Graph, Node, NodeId,
+    FlowTheme, NodeId,
     canvas::{Interaction, InteractionResult},
     plugin::{
         EventResult, FlowEvent, InputEvent, Plugin, PluginContext, RenderContext, RenderLayer,
@@ -184,10 +184,8 @@ impl Interaction for SelectionInteraction {
                         .map(|t| now.duration_since(t) >= DRAG_COMMAND_INTERVAL)
                         .unwrap_or(true);
                     if should_command {
-                        let start_position: Vec<_> = nodes
-                            .iter()
-                            .map(|(id, point)| (id.clone(), point.clone()))
-                            .collect();
+                        let start_position: Vec<_> =
+                            nodes.iter().map(|(id, point)| (*id, *point)).collect();
                         ctx.execute_command(super::node::DragNodesCommand::new(
                             &start_position,
                             &ctx,
@@ -211,28 +209,31 @@ impl Interaction for SelectionInteraction {
             SelectionState::Selecting { start, end } => {
                 let rect = normalize_rect(*start, *end);
 
-                let mut selected = HashMap::new();
-
                 ctx.clear_selected_node();
 
-                for node in ctx.graph.nodes().values() {
-                    let bounds = node_world_bounds(node);
+                let nodes: HashMap<NodeId, (Pixels, Pixels, Point<Pixels>)> = ctx
+                    .graph
+                    .nodes()
+                    .values()
+                    .filter(|node| ctx.is_node_visible_node(&node))
+                    .filter(|node| rect.intersects(&node.bounds()))
+                    .map(|node| (node.id, (node.x, node.y, node.point())))
+                    .collect();
 
-                    if rect.intersects(&bounds) {
-                        selected.insert(node.id, node.point());
-                    }
-                }
+                nodes
+                    .keys()
+                    .copied()
+                    .for_each(|id| ctx.add_selected_node(id, true));
 
-                for (id, _) in selected.iter() {
-                    ctx.add_selected_node(*id, true);
-                }
-
-                let bounds = compute_nodes_bounds(&selected, ctx.graph);
+                let bounds = compute_nodes_bounds(&nodes);
 
                 ctx.cancel_interaction();
                 ctx.emit(FlowEvent::custom(SelectedEvent {
                     bounds,
-                    nodes: selected,
+                    nodes: nodes
+                        .iter()
+                        .map(|(id, (_, _, point))| (*id, *point))
+                        .collect(),
                 }));
 
                 return InteractionResult::End;
@@ -244,15 +245,13 @@ impl Interaction for SelectionInteraction {
                 let mut new_nodes = HashMap::new();
                 for (id, _) in nodes.iter() {
                     ctx.add_selected_node(*id, true);
-                    if let Some(node) = ctx.graph.nodes().get(id) {
-                        new_nodes.insert(id.clone(), node.point());
+                    if let Some(node) = ctx.get_node(id) {
+                        new_nodes.insert(*id, node.point());
                     }
                 }
 
-                let start_position: Vec<_> = nodes
-                    .iter()
-                    .map(|(id, point)| (id.clone(), point.clone()))
-                    .collect();
+                let start_position: Vec<_> =
+                    nodes.iter().map(|(id, point)| (*id, *point)).collect();
 
                 ctx.execute_command(super::node::DragNodesCommand::new(&start_position, ctx));
 
@@ -318,26 +317,20 @@ fn render_rect(bounds: Bounds<Pixels>, theme: &FlowTheme) -> AnyElement {
         .into_any()
 }
 
-fn node_world_bounds(node: &Node) -> Bounds<Pixels> {
-    Bounds::new(Point::new(node.x, node.y), node.size)
-}
-
-fn compute_nodes_bounds(nodes: &HashMap<NodeId, Point<Pixels>>, graph: &Graph) -> Bounds<Pixels> {
+fn compute_nodes_bounds(
+    nodes: &HashMap<NodeId, (Pixels, Pixels, Point<Pixels>)>,
+) -> Bounds<Pixels> {
     let mut min_x = f32::MAX;
     let mut min_y = f32::MAX;
     let mut max_x = f32::MIN;
     let mut max_y = f32::MIN;
 
-    for id in nodes.keys() {
-        let Some(node) = &graph.nodes().get(id) else {
-            continue;
-        };
+    for (x, y, size) in nodes.values() {
+        min_x = min_x.min(x.into());
+        min_y = min_y.min(y.into());
 
-        min_x = min_x.min(node.x.into());
-        min_y = min_y.min(node.y.into());
-
-        max_x = max_x.max((node.x + node.size.width).into());
-        max_y = max_y.max((node.y + node.size.height).into());
+        max_x = max_x.max((*x + size.x).into());
+        max_y = max_y.max((*y + size.y).into());
     }
 
     Bounds::new(

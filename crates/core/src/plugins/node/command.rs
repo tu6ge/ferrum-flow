@@ -68,15 +68,15 @@ pub struct DragNodesCommand {
 }
 
 impl DragNodesCommand {
-    pub fn new(start_positions: &Vec<(NodeId, Point<Pixels>)>, ctx: &PluginContext) -> Self {
+    pub fn new(start_positions: &[(NodeId, Point<Pixels>)], ctx: &PluginContext) -> Self {
         let mut to = Vec::new();
-        for (node_id, _) in start_positions.iter() {
+        for (node_id, _) in start_positions {
             if let Some(node) = ctx.get_node(node_id) {
                 to.push((*node_id, node.point()));
             }
         }
         Self {
-            from: start_positions.clone(),
+            from: start_positions.to_vec(),
             to,
         }
     }
