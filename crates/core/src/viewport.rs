@@ -10,7 +10,7 @@ pub struct Viewport {
 }
 
 impl Viewport {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             zoom: 1.0,
             offset: Point::new(px(0.0), px(0.0)),
