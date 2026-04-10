@@ -1,9 +1,11 @@
 //! Overview minimap: full-graph bounds in world space, current viewport indicator, click-to-center.
 
+use std::collections::HashMap;
+
 use gpui::{Bounds, Element, MouseButton, PathBuilder, Pixels, Point, Size, canvas, px, rgb};
 
 use crate::{
-    Viewport,
+    NodeId, Viewport,
     canvas::{Command, CommandContext},
     plugin::{
         EventResult, FlowEvent, InputEvent, Plugin, PluginContext, RenderContext, RenderLayer,
@@ -15,6 +17,10 @@ const MAP_H: f32 = 140.0;
 const OUTER_MARGIN: f32 = 16.0;
 const INNER_INSET: f32 = 3.0;
 const WORLD_PAD: f32 = 96.0;
+
+/// Warm-start capacity for the viewport-visible node map; typical sessions stay in low hundreds.
+/// Capped by total node count so tiny graphs do not over-allocate.
+const VISIBLE_NODE_MAP_CAPACITY_HINT: usize = 128;
 
 /// Last-computed layout for hit-testing (updated each [`MinimapPlugin::render`]).
 #[derive(Clone)]
@@ -271,34 +277,36 @@ impl Plugin for MinimapPlugin {
 
         let inner = layout.inner;
 
+        // One visibility pass: rects for node quads, and world-space centers for edges (no second
+        // `get_node` per endpoint).
+        let map_cap = VISIBLE_NODE_MAP_CAPACITY_HINT.min(ctx.graph.nodes().len());
+        let mut visible_centers = HashMap::<NodeId, (f32, f32)>::with_capacity(map_cap);
         let nodes: Vec<_> = ctx
             .graph
             .nodes()
             .values()
-            .filter(|n| ctx.is_node_visible(&n.id))
-            .map(|n| {
+            .filter_map(|n| {
+                if !ctx.is_node_visible(&n.id) {
+                    return None;
+                }
                 let x: f32 = n.x.into();
                 let y: f32 = n.y.into();
                 let w: f32 = n.size.width.into();
                 let h: f32 = n.size.height.into();
-                (x, y, w, h)
+                visible_centers.insert(n.id, (x + w * 0.5, y + h * 0.5));
+                Some((x, y, w, h))
             })
             .collect();
 
         let edges: Vec<_> = ctx
             .graph
             .edges_values()
-            .filter(|e| ctx.is_edge_visible(e))
             .filter_map(|e| {
                 let s = ctx.graph.get_port(&e.source_port)?;
                 let t = ctx.graph.get_port(&e.target_port)?;
-                let sn = ctx.graph.get_node(&s.node_id)?;
-                let tn = ctx.graph.get_node(&t.node_id)?;
-                let sx: f32 = f32::from(sn.x) + f32::from(sn.size.width) * 0.5;
-                let sy: f32 = f32::from(sn.y) + f32::from(sn.size.height) * 0.5;
-                let tx: f32 = f32::from(tn.x) + f32::from(tn.size.width) * 0.5;
-                let ty: f32 = f32::from(tn.y) + f32::from(tn.size.height) * 0.5;
-                Some((sx, sy, tx, ty))
+                let (sx, sy) = visible_centers.get(&s.node_id)?;
+                let (tx, ty) = visible_centers.get(&t.node_id)?;
+                Some((*sx, *sy, *tx, *ty))
             })
             .collect();
 
