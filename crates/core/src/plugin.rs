@@ -185,7 +185,7 @@ impl<'a, 'b> InitPluginContext<'a, 'b> {
     }
 
     pub fn hit_node(&self, mouse: Point<Pixels>) -> Option<NodeId> {
-        self.graph.hit_node(mouse)
+        self.graph.hit_node(mouse, &self.viewport)
     }
 
     pub fn bring_node_to_front(&mut self, node_id: NodeId) {
@@ -559,7 +559,7 @@ impl<'a> PluginContext<'a> {
     }
 
     pub fn hit_node(&self, mouse: Point<Pixels>) -> Option<NodeId> {
-        self.graph.hit_node(mouse)
+        self.graph.hit_node(mouse, &self.viewport)
     }
 
     pub fn bring_node_to_front(&mut self, node_id: NodeId) {
@@ -819,7 +819,7 @@ impl<'a> RenderContext<'a> {
     }
 
     pub fn hit_node(&self, mouse: Point<Pixels>) -> Option<NodeId> {
-        self.graph.hit_node(mouse)
+        self.graph.hit_node(mouse, &self.viewport)
     }
 
     // ---- Viewport shortcuts ----
