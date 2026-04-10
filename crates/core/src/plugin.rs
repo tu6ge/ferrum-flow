@@ -20,9 +20,8 @@ mod utils;
 pub use sync::SyncPlugin;
 
 pub use utils::{
-    cache_all_node_port_offset, cache_node_port_offset, cache_port_offset_with_edge,
-    cache_port_offset_with_port, invalidate_port_layout_cache_for_graph_change, is_edge_visible,
-    is_node_visible, port_offset_cached, primary_platform_modifier,
+    invalidate_port_layout_cache_for_graph_change, is_edge_visible, is_node_visible,
+    primary_platform_modifier,
 };
 
 /// Chrome for [`RenderContext::node_card_shell`]. [`NodeCardVariant::Default`] and
@@ -274,7 +273,7 @@ impl<'a, 'b> InitPluginContext<'a, 'b> {
     }
 
     pub fn port_offset_cached(&self, node_id: &NodeId, port_id: &PortId) -> Option<Point<Pixels>> {
-        port_offset_cached(self.port_offset_cache, node_id, port_id)
+        self.port_offset_cache.get_offset(node_id, port_id)
     }
 
     /// Port center in screen pixels when you already have the owning [`Node`].
@@ -310,15 +309,18 @@ impl<'a, 'b> InitPluginContext<'a, 'b> {
     }
 
     pub fn cache_port_offset_with_edge(&mut self, edge_id: &EdgeId) {
-        cache_port_offset_with_edge(self.graph, self.renderers, self.port_offset_cache, edge_id)
+        self.port_offset_cache
+            .ensure_edge_ports(self.graph, self.renderers, edge_id);
     }
 
     pub fn cache_port_offset_with_port(&mut self, port_id: &PortId) {
-        cache_port_offset_with_port(self.graph, self.renderers, self.port_offset_cache, port_id)
+        self.port_offset_cache
+            .ensure_node_ports_for_port(self.graph, self.renderers, port_id);
     }
 
     fn cache_node_port_offset(&mut self, node_id: &NodeId) {
-        cache_node_port_offset(self.graph, self.renderers, self.port_offset_cache, node_id);
+        self.port_offset_cache
+            .ensure_node_ports(self.graph, self.renderers, node_id);
     }
 }
 
@@ -645,7 +647,7 @@ impl<'a> PluginContext<'a> {
     }
 
     pub fn port_offset_cached(&self, node_id: &NodeId, port_id: &PortId) -> Option<Point<Pixels>> {
-        port_offset_cached(self.port_offset_cache, node_id, port_id)
+        self.port_offset_cache.get_offset(node_id, port_id)
     }
 
     pub fn port_offset_cache_clear_all(&mut self) {
@@ -679,7 +681,8 @@ impl<'a> PluginContext<'a> {
     }
 
     pub fn cache_all_node_port_offset(&mut self) {
-        cache_all_node_port_offset(self.graph, self.renderers, self.port_offset_cache);
+        self.port_offset_cache
+            .ensure_all_nodes_ports(self.graph, self.renderers);
     }
 
     pub fn cache_port_offset_with_node(&mut self, node_ids: &Vec<NodeId>) {
@@ -689,15 +692,18 @@ impl<'a> PluginContext<'a> {
     }
 
     pub fn cache_port_offset_with_edge(&mut self, edge_id: &EdgeId) {
-        cache_port_offset_with_edge(self.graph, self.renderers, self.port_offset_cache, edge_id)
+        self.port_offset_cache
+            .ensure_edge_ports(self.graph, self.renderers, edge_id);
     }
 
     pub fn cache_port_offset_with_port(&mut self, port_id: &PortId) {
-        cache_port_offset_with_port(self.graph, self.renderers, self.port_offset_cache, port_id)
+        self.port_offset_cache
+            .ensure_node_ports_for_port(self.graph, self.renderers, port_id);
     }
 
     fn cache_node_port_offset(&mut self, node_id: &NodeId) {
-        cache_node_port_offset(self.graph, self.renderers, self.port_offset_cache, node_id);
+        self.port_offset_cache
+            .ensure_node_ports(self.graph, self.renderers, node_id);
     }
 }
 
@@ -913,7 +919,7 @@ impl<'a> RenderContext<'a> {
     }
 
     pub fn port_offset_cached(&self, node_id: &NodeId, port_id: &PortId) -> Option<Point<Pixels>> {
-        port_offset_cached(self.port_offset_cache, node_id, port_id)
+        self.port_offset_cache.get_offset(node_id, port_id)
     }
 
     /// Port center in screen pixels when you already have the owning [`Node`].
@@ -943,9 +949,8 @@ impl<'a> RenderContext<'a> {
     }
 
     pub fn cache_all_node_port_offset(&mut self) {
-        for (node_id, _) in self.graph.nodes() {
-            self.cache_node_port_offset(node_id);
-        }
+        self.port_offset_cache
+            .ensure_all_nodes_ports(self.graph, self.renderers);
     }
 
     pub fn cache_port_offset_with_nodes(&mut self, node_ids: &Vec<NodeId>) {
@@ -955,15 +960,18 @@ impl<'a> RenderContext<'a> {
     }
 
     pub fn cache_port_offset_with_edge(&mut self, edge_id: &EdgeId) {
-        cache_port_offset_with_edge(self.graph, self.renderers, self.port_offset_cache, edge_id)
+        self.port_offset_cache
+            .ensure_edge_ports(self.graph, self.renderers, edge_id);
     }
 
     pub fn cache_port_offset_with_port(&mut self, port_id: &PortId) {
-        cache_port_offset_with_port(self.graph, self.renderers, self.port_offset_cache, port_id)
+        self.port_offset_cache
+            .ensure_node_ports_for_port(self.graph, self.renderers, port_id);
     }
 
     fn cache_node_port_offset(&mut self, node_id: &NodeId) {
-        cache_node_port_offset(self.graph, self.renderers, self.port_offset_cache, node_id);
+        self.port_offset_cache
+            .ensure_node_ports(self.graph, self.renderers, node_id);
     }
 
     pub fn get_shared_state<T: Any + Send + 'static>(&self) -> Option<&T> {

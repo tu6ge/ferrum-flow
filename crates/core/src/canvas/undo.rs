@@ -6,10 +6,7 @@ use crate::{
     Edge, EdgeBuilder, EdgeId, Graph, GraphOp, Node, NodeBuilder, NodeId, Port, PortId,
     RendererRegistry, SharedState, Viewport,
     canvas::PortLayoutCache,
-    plugin::{
-        cache_all_node_port_offset, cache_node_port_offset, is_edge_visible, is_node_visible,
-        port_offset_cached,
-    },
+    plugin::{is_edge_visible, is_node_visible},
 };
 
 pub trait Command {
@@ -317,15 +314,17 @@ impl<'a> CommandContext<'a> {
     }
 
     pub fn port_offset_cached(&self, node_id: &NodeId, port_id: &PortId) -> Option<Point<Pixels>> {
-        port_offset_cached(self.port_offset_cache, node_id, port_id)
+        self.port_offset_cache.get_offset(node_id, port_id)
     }
 
     pub fn cache_all_node_port_offset(&mut self) {
-        cache_all_node_port_offset(self.graph, self.renderers, self.port_offset_cache)
+        self.port_offset_cache
+            .ensure_all_nodes_ports(self.graph, self.renderers);
     }
 
     pub fn cache_node_port_offset(&mut self, node_id: &NodeId) {
-        cache_node_port_offset(self.graph, self.renderers, self.port_offset_cache, node_id);
+        self.port_offset_cache
+            .ensure_node_ports(self.graph, self.renderers, node_id);
     }
 
     pub fn notify(&mut self) {
