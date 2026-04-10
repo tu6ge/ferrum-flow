@@ -3,11 +3,11 @@ use gpui::{AnyElement, MouseMoveEvent, MouseUpEvent};
 use crate::plugin::{PluginContext, RenderContext};
 
 pub struct InteractionState {
-    pub handler: Option<Box<dyn Interaction>>,
+    pub(crate) handler: Option<Box<dyn Interaction>>,
 }
 
 impl InteractionState {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self { handler: None }
     }
 
