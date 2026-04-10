@@ -1,9 +1,7 @@
-use std::collections::HashMap;
-
-use gpui::{KeyDownEvent, Pixels, Point};
+use gpui::KeyDownEvent;
 
 use crate::{
-    Edge, EdgeId, Graph, GraphChangeKind, NodeId, Port, PortId, RendererRegistry, Viewport,
+    Edge, Graph, GraphChangeKind, NodeId, Port, Viewport,
     canvas::PortLayoutCache,
 };
 
@@ -85,77 +83,4 @@ pub fn is_edge_visible(graph: &Graph, viewport: &Viewport, edge: &Edge) -> bool 
         .unwrap_or(false);
 
     node1_visible || node2_visible
-}
-
-pub fn port_offset_cached(
-    cache: &PortLayoutCache,
-    node_id: &NodeId,
-    port_id: &PortId,
-) -> Option<Point<Pixels>> {
-    cache.map.get(node_id)?.get(port_id).copied()
-}
-
-pub fn cache_node_port_offset(
-    graph: &Graph,
-    renderers: &RendererRegistry,
-    cache: &mut PortLayoutCache,
-    node_id: &NodeId,
-) {
-    if cache.map.contains_key(node_id) {
-        return;
-    }
-
-    let Some(node) = graph.get_node(node_id) else {
-        return;
-    };
-
-    let renderer = renderers.get(&node.node_type);
-
-    let mut result = HashMap::new();
-
-    for port in graph.ports_values().filter(|p| p.node_id == node.id) {
-        let pos = renderer.port_offset(node, port, graph);
-        result.insert(port.id, pos);
-    }
-
-    cache.map.insert(node.id, result);
-}
-
-pub fn cache_all_node_port_offset(
-    graph: &Graph,
-    renderers: &RendererRegistry,
-    cache: &mut PortLayoutCache,
-) {
-    let node_ids: Vec<NodeId> = graph.nodes().iter().map(|(id, _)| *id).collect();
-
-    for node_id in node_ids {
-        cache_node_port_offset(graph, renderers, cache, &node_id);
-    }
-}
-
-pub fn cache_port_offset_with_edge(
-    graph: &Graph,
-    renderers: &RendererRegistry,
-    cache: &mut PortLayoutCache,
-    edge_id: &EdgeId,
-) {
-    let Some(edge) = graph.get_edge(edge_id) else {
-        return;
-    };
-
-    cache_port_offset_with_port(graph, renderers, cache, &edge.source_port);
-    cache_port_offset_with_port(graph, renderers, cache, &edge.target_port);
-}
-
-pub fn cache_port_offset_with_port(
-    graph: &Graph,
-    renderers: &RendererRegistry,
-    cache: &mut PortLayoutCache,
-    port_id: &PortId,
-) {
-    let Some(port) = graph.get_port(port_id) else {
-        return;
-    };
-
-    cache_node_port_offset(graph, renderers, cache, &port.node_id);
 }

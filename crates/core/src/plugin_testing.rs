@@ -14,7 +14,7 @@ use gpui::{AnyElement, Context, Pixels, Size, Window, px};
 
 use crate::{
     EventResult, FlowCanvas, FlowEvent, FlowTheme, Graph, LocalHistory, Plugin, PluginContext,
-    RenderContext, RenderLayer, RendererRegistry, SharedState, SyncPlugin, Viewport,
+    RenderContext, RendererRegistry, SharedState, SyncPlugin, Viewport,
     canvas::{InteractionState, PortLayoutCache},
     plugin::InitPluginContext,
 };
