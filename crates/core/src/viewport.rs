@@ -25,9 +25,9 @@ impl Viewport {
     /// global space and can be larger than the content viewport.
     pub fn sync_drawable_bounds(&mut self, window: &Window) {
         let vs = window.viewport_size();
-        let unchanged = self.window_bounds.is_some_and(|b| {
-            b.size.width == vs.width && b.size.height == vs.height
-        });
+        let unchanged = self
+            .window_bounds
+            .is_some_and(|b| b.size.width == vs.width && b.size.height == vs.height);
         if !unchanged {
             self.window_bounds = Some(Bounds::new(
                 Point::new(px(0.0), px(0.0)),

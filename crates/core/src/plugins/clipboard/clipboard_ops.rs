@@ -128,13 +128,13 @@ pub(crate) fn paste_subgraph(ctx: &mut PluginContext, sub: &CopiedSubgraph) {
         composite.push(CreateEdge::new(edge));
     }
 
-    let pasted_ids: Vec<NodeId> = sub.nodes.iter().map(|n| node_map[&n.id]).collect();
+    let pasted_ids = sub.nodes.iter().map(|n| node_map[&n.id]);
 
     ctx.execute_command(composite);
     ctx.clear_selected_edge();
     ctx.clear_selected_node();
-    for (i, nid) in pasted_ids.iter().enumerate() {
-        ctx.add_selected_node(*nid, i != 0);
+    for nid in pasted_ids {
+        ctx.add_selected_node(nid, true);
     }
     ctx.cache_port_offset_with_node(&new_node_ids);
 }

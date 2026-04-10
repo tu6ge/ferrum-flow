@@ -1,9 +1,6 @@
 use gpui::KeyDownEvent;
 
-use crate::{
-    Edge, Graph, GraphChangeKind, NodeId, Port, Viewport,
-    canvas::PortLayoutCache,
-};
+use crate::{Edge, Graph, GraphChangeKind, NodeId, Port, Viewport, canvas::PortLayoutCache};
 
 /// Clears [`PortLayoutCache`] entries affected by an incoming graph change. Call **before**
 /// [`Graph::apply`](crate::graph::Graph::apply) so `PortRemoved` can still resolve `node_id`.

@@ -95,7 +95,7 @@ impl Plugin for EdgePlugin {
             .map(|(k, v)| (*k, edge_geometry2(v, &ctx)))
             .collect();
 
-        let edge_ids: Vec<_> = edges.iter().map(|(id, _)| *id).collect();
+        let edge_ids = edges.iter().map(|(id, _)| *id);
         for edge_id in edge_ids {
             ctx.cache_port_offset_with_edge(&edge_id);
         }

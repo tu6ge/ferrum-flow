@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use gpui::{
-    IntoElement as _, MouseButton, ParentElement as _, Point, Pixels, SharedString, Styled as _,
+    IntoElement as _, MouseButton, ParentElement as _, Pixels, Point, SharedString, Styled as _,
     div, px, rgb,
 };
 
@@ -153,7 +153,9 @@ impl ContextMenuPlugin {
         on_select: impl for<'a> Fn(&mut PluginContext<'a>, Point<Pixels>) + Send + Sync + 'static,
     ) -> Self {
         self.canvas_extras
-            .push(ContextMenuCanvasExtra::with_shortcut(label, shortcut, on_select));
+            .push(ContextMenuCanvasExtra::with_shortcut(
+                label, shortcut, on_select,
+            ));
         self
     }
 
@@ -309,85 +311,74 @@ impl Plugin for ContextMenuPlugin {
         let shortcut_text = ctx.theme.context_menu_shortcut_text;
         let separator = ctx.theme.context_menu_separator;
 
-        let rows: Vec<_> = open
-            .actions
-            .iter()
-            .map(|a| match a {
-                MenuItem::Separator => div()
+        let rows = open.actions.iter().map(|a| match a {
+            MenuItem::Separator => div()
+                .w_full()
+                .h(px(SEP_H))
+                .flex()
+                .items_center()
+                .px_2()
+                .child(div().w_full().h(px(1.0)).bg(rgb(separator)))
+                .into_any_element(),
+            MenuItem::Builtin(b) => {
+                let label = div()
+                    .flex_1()
+                    .min_w(px(0.))
+                    .overflow_hidden()
+                    .text_ellipsis()
+                    .child(ContextMenuPlugin::label_builtin(*b));
+                let shortcut = ContextMenuPlugin::shortcut_hint_builtin(*b).map(|h| {
+                    div()
+                        .flex_shrink_0()
+                        .ml_2()
+                        .text_xs()
+                        .text_color(rgb(shortcut_text))
+                        .child(h)
+                });
+                div()
                     .w_full()
-                    .h(px(SEP_H))
+                    .h(px(ROW_H))
                     .flex()
+                    .flex_row()
                     .items_center()
                     .px_2()
-                    .child(
-                        div()
-                            .w_full()
-                            .h(px(1.0))
-                            .bg(rgb(separator)),
-                    )
-                    .into_any_element(),
-                MenuItem::Builtin(b) => {
-                    let label = div()
-                        .flex_1()
-                        .min_w(px(0.))
-                        .overflow_hidden()
-                        .text_ellipsis()
-                        .child(ContextMenuPlugin::label_builtin(*b));
-                    let shortcut = ContextMenuPlugin::shortcut_hint_builtin(*b).map(|h| {
-                        div()
-                            .flex_shrink_0()
-                            .ml_2()
-                            .text_xs()
-                            .text_color(rgb(shortcut_text))
-                            .child(h)
-                    });
+                    .text_sm()
+                    .text_color(rgb(row_text))
+                    .child(label)
+                    .children(shortcut)
+                    .into_any_element()
+            }
+            MenuItem::Custom {
+                label, shortcut, ..
+            } => {
+                let label_el = div()
+                    .flex_1()
+                    .min_w(px(0.))
+                    .overflow_hidden()
+                    .text_ellipsis()
+                    .child(label.clone());
+                let shortcut_el = shortcut.as_ref().map(|h| {
                     div()
-                        .w_full()
-                        .h(px(ROW_H))
-                        .flex()
-                        .flex_row()
-                        .items_center()
-                        .px_2()
-                        .text_sm()
-                        .text_color(rgb(row_text))
-                        .child(label)
-                        .children(shortcut)
-                        .into_any_element()
-                }
-                MenuItem::Custom {
-                    label,
-                    shortcut,
-                    ..
-                } => {
-                    let label_el = div()
-                        .flex_1()
-                        .min_w(px(0.))
-                        .overflow_hidden()
-                        .text_ellipsis()
-                        .child(label.clone());
-                    let shortcut_el = shortcut.as_ref().map(|h| {
-                        div()
-                            .flex_shrink_0()
-                            .ml_2()
-                            .text_xs()
-                            .text_color(rgb(shortcut_text))
-                            .child(h.clone())
-                    });
-                    div()
-                        .w_full()
-                        .h(px(ROW_H))
-                        .flex()
-                        .flex_row()
-                        .items_center()
-                        .px_2()
-                        .text_sm()
-                        .text_color(rgb(row_text))
-                        .child(label_el)
-                        .children(shortcut_el)
-                        .into_any_element()
-                }
-            })
-            .collect();
+                        .flex_shrink_0()
+                        .ml_2()
+                        .text_xs()
+                        .text_color(rgb(shortcut_text))
+                        .child(h.clone())
+                });
+                div()
+                    .w_full()
+                    .h(px(ROW_H))
+                    .flex()
+                    .flex_row()
+                    .items_center()
+                    .px_2()
+                    .text_sm()
+                    .text_color(rgb(row_text))
+                    .child(label_el)
+                    .children(shortcut_el)
+                    .into_any_element()
+            }
+        });
 
         Some(
             div()

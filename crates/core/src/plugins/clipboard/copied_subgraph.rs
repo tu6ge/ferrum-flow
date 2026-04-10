@@ -6,4 +6,3 @@ pub struct CopiedSubgraph {
     pub(crate) ports: Vec<Port>,
     pub(crate) edges: Vec<Edge>,
 }
-

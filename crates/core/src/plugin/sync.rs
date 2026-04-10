@@ -1,5 +1,5 @@
 use futures::channel::mpsc::UnboundedSender;
-use gpui::{AnyElement, MouseMoveEvent, Point, Pixels};
+use gpui::{AnyElement, MouseMoveEvent, Pixels, Point};
 
 use crate::{GraphChange, GraphOp, RenderContext};
 

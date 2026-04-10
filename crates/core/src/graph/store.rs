@@ -57,22 +57,41 @@ pub enum ChangeSource {
 pub enum GraphChangeKind {
     // --- Node ---
     NodeAdded(Node),
-    NodeRemoved { id: NodeId },
-    NodeMoved { id: NodeId, x: f32, y: f32 },
-    NodeSetWidthed { id: NodeId, width: f32 },
-    NodeSetHeighted { id: NodeId, height: f32 },
-    NodeDataUpdated { id: NodeId, data: serde_json::Value },
+    NodeRemoved {
+        id: NodeId,
+    },
+    NodeMoved {
+        id: NodeId,
+        x: f32,
+        y: f32,
+    },
+    NodeSetWidthed {
+        id: NodeId,
+        width: f32,
+    },
+    NodeSetHeighted {
+        id: NodeId,
+        height: f32,
+    },
+    NodeDataUpdated {
+        id: NodeId,
+        data: serde_json::Value,
+    },
 
     // --- node_order ---
     NodeOrderUpdate(Vec<NodeId>),
 
     // --- Port ---
     PortAdded(Port),
-    PortRemoved { id: PortId },
+    PortRemoved {
+        id: PortId,
+    },
 
     // --- Edge ---
     EdgeAdded(Edge),
-    EdgeRemoved { id: EdgeId },
+    EdgeRemoved {
+        id: EdgeId,
+    },
 
     /// No graph mutation; used to request a frame repaint (e.g. after remote awareness updates).
     RedrawRequested,

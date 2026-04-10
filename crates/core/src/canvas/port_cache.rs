@@ -68,12 +68,8 @@ impl PortLayoutCache {
     }
 
     /// Fill port layout for every node if not already cached.
-    pub fn ensure_all_nodes_ports(
-        &mut self,
-        graph: &Graph,
-        renderers: &RendererRegistry,
-    ) {
-        let node_ids: Vec<NodeId> = graph.nodes().iter().map(|(id, _)| *id).collect();
+    pub fn ensure_all_nodes_ports(&mut self, graph: &Graph, renderers: &RendererRegistry) {
+        let node_ids = graph.nodes().iter().map(|(id, _)| *id);
 
         for node_id in node_ids {
             self.ensure_node_ports(graph, renderers, &node_id);

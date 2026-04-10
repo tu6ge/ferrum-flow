@@ -52,4 +52,3 @@ impl Plugin for ClipboardPlugin {
         crate::plugin::EventResult::Continue
     }
 }
-
