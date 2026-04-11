@@ -62,10 +62,14 @@ impl Plugin for SelectionPlugin {
                 return EventResult::Stop;
             }
         } else if let Some(SelectedEvent { bounds, nodes }) = event.as_custom() {
-            self.selected = Some(Selected {
-                bounds: *bounds,
-                nodes: nodes.clone(),
-            });
+            self.selected = if nodes.is_empty() {
+                None
+            } else {
+                Some(Selected {
+                    bounds: *bounds,
+                    nodes: nodes.clone(),
+                })
+            };
             return EventResult::Stop;
         }
 
@@ -211,30 +215,41 @@ impl Interaction for SelectionInteraction {
 
                 ctx.clear_selected_node();
 
-                let nodes: HashMap<NodeId, (Pixels, Pixels, Point<Pixels>)> = ctx
+                let mut nodes: HashMap<NodeId, Point<Pixels>> = HashMap::new();
+                let mut min_x = f32::MAX;
+                let mut min_y = f32::MAX;
+                let mut max_x = f32::MIN;
+                let mut max_y = f32::MIN;
+
+                for node in ctx
                     .graph
                     .nodes()
                     .values()
-                    .filter(|node| ctx.is_node_visible_node(&node))
+                    .filter(|node| ctx.is_node_visible_node(node))
                     .filter(|node| rect.intersects(&node.bounds()))
-                    .map(|node| (node.id, (node.x, node.y, node.point())))
-                    .collect();
+                {
+                    nodes.insert(node.id, node.point());
+                    min_x = min_x.min(node.x.into());
+                    min_y = min_y.min(node.y.into());
+                    max_x = max_x.max((node.x + node.size.width).into());
+                    max_y = max_y.max((node.y + node.size.height).into());
+                }
 
-                nodes
-                    .keys()
-                    .copied()
-                    .for_each(|id| ctx.add_selected_node(id, true));
+                for id in nodes.keys().copied() {
+                    ctx.add_selected_node(id, true);
+                }
 
-                let bounds = compute_nodes_bounds(&nodes);
+                let bounds = if nodes.is_empty() {
+                    rect
+                } else {
+                    Bounds::new(
+                        Point::new(px(min_x), px(min_y)),
+                        Size::new(px(max_x - min_x), px(max_y - min_y)),
+                    )
+                };
 
                 ctx.cancel_interaction();
-                ctx.emit(FlowEvent::custom(SelectedEvent {
-                    bounds,
-                    nodes: nodes
-                        .iter()
-                        .map(|(id, (_, _, point))| (*id, *point))
-                        .collect(),
-                }));
+                ctx.emit(FlowEvent::custom(SelectedEvent { bounds, nodes }));
 
                 return InteractionResult::End;
             }
@@ -315,26 +330,4 @@ fn render_rect(bounds: Bounds<Pixels>, theme: &FlowTheme) -> AnyElement {
         .border_color(rgb(theme.selection_rect_border))
         .bg(rgba(theme.selection_rect_fill_rgba))
         .into_any()
-}
-
-fn compute_nodes_bounds(
-    nodes: &HashMap<NodeId, (Pixels, Pixels, Point<Pixels>)>,
-) -> Bounds<Pixels> {
-    let mut min_x = f32::MAX;
-    let mut min_y = f32::MAX;
-    let mut max_x = f32::MIN;
-    let mut max_y = f32::MIN;
-
-    for (x, y, size) in nodes.values() {
-        min_x = min_x.min(x.into());
-        min_y = min_y.min(y.into());
-
-        max_x = max_x.max((*x + size.x).into());
-        max_y = max_y.max((*y + size.y).into());
-    }
-
-    Bounds::new(
-        Point::new(px(min_x), px(min_y)),
-        Size::new(px(max_x - min_x), px(max_y - min_y)),
-    )
 }
