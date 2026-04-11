@@ -207,24 +207,6 @@ Designed to scale to large graphs:
 - Performance-first rendering
 - Composable architecture
 
-### Roadmap
-
-- Edge rendering improvements
-- Connection (drag-to-connect)
-- Spatial indexing (Quadtree/Grid)
-- Interaction priority & conflict resolution
-- Collaboration support
-
-## Contributing
-
-Contributions are welcome!
-
-Feel free to open issues or PRs for:
-
-- New plugins
-- Performance improvements
-- API design suggestions
-
 ## License
 
 Apache2.0
