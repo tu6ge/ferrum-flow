@@ -104,62 +104,77 @@ impl FlowCanvas {
         }
     }
 
-    pub fn handle_event(&mut self, event: FlowEvent, cx: &mut Context<Self>) {
+    /// If there is an active [`Interaction`], deliver `MouseMove` / `MouseUp` only to it and return
+    /// `true` so the plugin chain is skipped for this dispatch (avoids duplicate handling and keeps
+    /// drag ownership consistent, including for [`Self::process_event_queue`]).
+    fn dispatch_interaction_pointer(&mut self, event: &FlowEvent, cx: &mut Context<Self>) -> bool {
         let event_queue = &mut self.event_queue;
-
-        let mut emit = |event: FlowEvent| {
-            event_queue.push(event);
-        };
-
-        let mut notify = || {
-            cx.notify();
-        };
-
-        // if has interaction
-        if let Some(mut handler) = self.interaction.handler.take() {
-            let mut ctx = PluginContext::new(
-                &mut self.graph,
-                &mut self.port_offset_cache,
-                &mut self.viewport,
-                &mut self.interaction,
-                &mut self.renderers,
-                &mut self.sync_plugin,
-                self.history.as_mut(),
-                &mut self.theme,
-                &mut self.shared_state,
-                &mut emit,
-                &mut notify,
-            );
-            let mut fast_return = false;
-            let result = match &event {
-                FlowEvent::Input(InputEvent::MouseMove(ev)) => {
-                    fast_return = true;
-                    handler.on_mouse_move(ev, &mut ctx)
-                }
-
-                FlowEvent::Input(InputEvent::MouseUp(ev)) => {
-                    fast_return = true;
-                    handler.on_mouse_up(ev, &mut ctx)
-                }
-
-                _ => InteractionResult::Continue,
-            };
-
-            if fast_return {
+        let mut emit = |e| event_queue.push(e);
+        let mut notify = || cx.notify();
+        match event {
+            FlowEvent::Input(InputEvent::MouseMove(ev)) => {
+                let Some(mut handler) = self.interaction.handler.take() else {
+                    return false;
+                };
+                let mut ctx = PluginContext::new(
+                    &mut self.graph,
+                    &mut self.port_offset_cache,
+                    &mut self.viewport,
+                    &mut self.interaction,
+                    &mut self.renderers,
+                    &mut self.sync_plugin,
+                    self.history.as_mut(),
+                    &mut self.theme,
+                    &mut self.shared_state,
+                    &mut emit,
+                    &mut notify,
+                );
+                let result = handler.on_mouse_move(ev, &mut ctx);
                 match result {
                     InteractionResult::Continue => self.interaction.handler = Some(handler),
-
-                    InteractionResult::End => {
-                        self.interaction.handler = None;
-                    }
-
-                    InteractionResult::Replace(h) => {
-                        self.interaction.handler = Some(h);
-                    }
+                    InteractionResult::End => self.interaction.handler = None,
+                    InteractionResult::Replace(h) => self.interaction.handler = Some(h),
                 }
-                return;
+                true
             }
+            FlowEvent::Input(InputEvent::MouseUp(ev)) => {
+                let Some(mut handler) = self.interaction.handler.take() else {
+                    return false;
+                };
+                let mut ctx = PluginContext::new(
+                    &mut self.graph,
+                    &mut self.port_offset_cache,
+                    &mut self.viewport,
+                    &mut self.interaction,
+                    &mut self.renderers,
+                    &mut self.sync_plugin,
+                    self.history.as_mut(),
+                    &mut self.theme,
+                    &mut self.shared_state,
+                    &mut emit,
+                    &mut notify,
+                );
+                let result = handler.on_mouse_up(ev, &mut ctx);
+                match result {
+                    InteractionResult::Continue => self.interaction.handler = Some(handler),
+                    InteractionResult::End => self.interaction.handler = None,
+                    InteractionResult::Replace(h) => self.interaction.handler = Some(h),
+                }
+                true
+            }
+            _ => false,
         }
+    }
+
+    pub fn handle_event(&mut self, event: FlowEvent, cx: &mut Context<Self>) {
+        // Pointer stream is owned by the active [`Interaction`]; do not also give Move/Up to plugins.
+        if self.dispatch_interaction_pointer(&event, cx) {
+            return;
+        }
+
+        let event_queue = &mut self.event_queue;
+        let mut emit = |e| event_queue.push(e);
+        let mut notify = || cx.notify();
 
         let mut ctx = PluginContext::new(
             &mut self.graph,
@@ -186,11 +201,13 @@ impl FlowCanvas {
 
     fn process_event_queue(&mut self, cx: &mut Context<Self>) {
         while let Some(event) = self.event_queue.pop() {
-            let mut emit = |e| self.event_queue.push(e);
+            if self.dispatch_interaction_pointer(&event, cx) {
+                continue;
+            }
 
-            let mut notify = || {
-                cx.notify();
-            };
+            let event_queue = &mut self.event_queue;
+            let mut emit = |e| event_queue.push(e);
+            let mut notify = || cx.notify();
 
             let mut ctx = PluginContext::new(
                 &mut self.graph,
