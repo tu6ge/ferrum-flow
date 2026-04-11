@@ -7,6 +7,11 @@ authors = ["tu6ge"]
 repository = "https://github.com/tu6ge/ferrum-flow"
 description = "A high-performance node-based editor framework built with Rust and GPUI."
 
+[features]
+default = []
+## Sample WebSocket relay (`run_dev_ws_relay`) for local demos; enables `tokio/net`.
+dev-ws-relay = ["tokio/net"]
+
 [dependencies]
 ferrum-flow = { workspace = true }
 tokio = { version = "1.50.0", features = [
@@ -27,3 +32,11 @@ serde = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
 tokio = { version = "1.50.0", features = ["full"] }
+
+[[example]]
+name = "server"
+required-features = ["dev-ws-relay"]
+
+[[example]]
+name = "collab_two_windows"
+required-features = ["dev-ws-relay"]

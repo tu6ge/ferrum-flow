@@ -8,6 +8,7 @@ A **ferrum-flow** collaboration plugin built on [Yjs / yrs](https://github.com/y
 - Uses the **y-sync** protocol (`DefaultProtocol`) to exchange updates with the server; local edits are distinguished from remote updates through `UndoManager` origins.
 - **Awareness**: cursor positions in **canvas (world) coordinates**; leaving the canvas clears local presence so peers stop drawing your cursor.
 - Bundled **`Assets`** (`rust-embed`): remote cursors use `assets/cursor.png`; examples load it with `Application::with_assets(Assets)`.
+- Optional Cargo feature **`dev-ws-relay`**: compiles the sample WebSocket relay (`run_dev_ws_relay`, `tokio/net`). Off by default so the library surface stays client-focused.
 
 ## Requirements
 
@@ -16,19 +17,38 @@ A **ferrum-flow** collaboration plugin built on [Yjs / yrs](https://github.com/y
 
 ## Quick try
 
-1. **Run the sample server** (default `127.0.0.1:9001`):
+### One command — two GPUI clients (recommended)
+
+Starts the sample WebSocket relay on `127.0.0.1:9001` in a background thread, then opens **two** windows that share the same Yjs document (graph + awareness cursors):
+
+```bash
+cargo run -p ferrum-flow-sync-plugin --features dev-ws-relay --example collab_two_windows
+```
+
+- **Left** window (`client A`): by default supplies the same **seed graph** as `IS_INIT=1` in `basic` (three nodes), so you immediately see content to edit and can watch the **right** window catch up.
+- **Right** window (`client B`): starts from an **empty** `YrsSyncPlugin` seed and syncs from the relay.
+
+To start **both** windows from an empty graph (same idea as running `basic` without `IS_INIT`):
+
+```bash
+IS_INIT=0 cargo run -p ferrum-flow-sync-plugin --features dev-ws-relay --example collab_two_windows
+```
+
+### Manual two-process workflow
+
+1. **Relay only** (default `127.0.0.1:9001`):
 
    ```bash
-   cargo run -p ferrum-flow-sync-plugin --example server
+   cargo run -p ferrum-flow-sync-plugin --features dev-ws-relay --example server
    ```
 
-2. **Run the client** (same protocol as the server; register assets so the cursor image resolves):
+2. **One client per process** (assets are registered so remote cursor `cursor.png` resolves):
 
    ```bash
    cargo run -p ferrum-flow-sync-plugin --example basic
    ```
 
-   Open several `basic` windows to test together. To seed the Y.Doc from a **locally built graph on the first client**, set (matches the example):
+   Open several `basic` windows to test together. To seed the Y.Doc from a **locally built graph on that client**, set:
 
    ```bash
    IS_INIT=1 cargo run -p ferrum-flow-sync-plugin --example basic
@@ -61,10 +81,11 @@ WebSocket connect uses retries with exponential backoff (defaults: 10 attempts, 
 | `YrsSyncPlugin` | Implements `ferrum_flow::SyncPlugin` |
 | `WsSyncConfig` | Retry / backoff / reconnect delay for the sync WebSocket thread |
 | `Assets` | GPUI `AssetSource` embedding `cursor.png` |
+| `run_dev_ws_relay` | *(feature `dev-ws-relay`)* Async entry point for the **sample** y-sync WebSocket relay (`127.0.0.1:9001`); used by `examples/server` and `examples/collab_two_windows` |
 
 ## Server notes
 
-The `server` example uses a shared **Y.Doc + Awareness** for the handshake and broadcasts document deltas and **awareness** frames to other clients. In production you can use any **y-sync**-compatible relay or backend, but it must forward **Sync updates** and **Awareness** messages; otherwise remote cursors will not work.
+The `server` example (and `run_dev_ws_relay` when feature **`dev-ws-relay`** is enabled) use a shared **Y.Doc + Awareness** for the handshake and broadcast document deltas and **awareness** frames to other clients. In production you can use any **y-sync**-compatible relay or backend, but it must forward **Sync updates** and **Awareness** messages; otherwise remote cursors will not work.
 
 ## License
 
