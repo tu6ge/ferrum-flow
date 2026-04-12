@@ -74,7 +74,13 @@ async fn run_ws(
             }
         };
 
-        run_one_session(ws, Arc::clone(&awareness), undo_origin.clone(), repaint_tx.clone()).await;
+        run_one_session(
+            ws,
+            Arc::clone(&awareness),
+            undo_origin.clone(),
+            repaint_tx.clone(),
+        )
+        .await;
 
         sleep(config.reconnect_delay).await;
     }

@@ -22,11 +22,7 @@ impl Plugin for AgentHudPlugin {
 
     fn setup(&mut self, _ctx: &mut InitPluginContext) {}
 
-    fn on_event(
-        &mut self,
-        _event: &FlowEvent,
-        _ctx: &mut PluginContext,
-    ) -> EventResult {
+    fn on_event(&mut self, _event: &FlowEvent, _ctx: &mut PluginContext) -> EventResult {
         EventResult::Continue
     }
 

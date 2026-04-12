@@ -1,6 +1,4 @@
-use ferrum_flow::{
-    Node, NodeCardVariant, NodeRenderer, Port, RenderContext, default_node_caption,
-};
+use ferrum_flow::{Node, NodeCardVariant, NodeRenderer, Port, RenderContext, default_node_caption};
 use gpui::{
     AnyElement, Element, FontWeight, ParentElement, Styled, div, prelude::FluentBuilder, px, rgb,
     rgba,
@@ -85,13 +83,7 @@ impl NodeRenderer for ShaderNodeRenderer {
                     .gap(px(4.0))
                     .px_2()
                     .when_some(badge_el, |this, b| {
-                        this.child(
-                            div()
-                                .w_full()
-                                .flex()
-                                .justify_start()
-                                .child(b),
-                        )
+                        this.child(div().w_full().flex().justify_start().child(b))
                     })
                     .child(
                         div()

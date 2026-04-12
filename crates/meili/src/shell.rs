@@ -159,9 +159,8 @@ impl MeiliShell {
     pub fn new(canvas: Entity<FlowCanvas>, window: &mut Window, cx: &mut Context<Self>) -> Self {
         let node_select = cx.new(|cx| SelectState::new(node_pick_items(), None, window, cx));
 
-        let add_node_label = cx.new(|cx| {
-            InputState::new(window, cx).placeholder("Node display name…")
-        });
+        let add_node_label =
+            cx.new(|cx| InputState::new(window, cx).placeholder("Node display name…"));
 
         let add_node_kind = cx.new(|cx| {
             let mut state = SelectState::new(node_pick_items(), None, window, cx).searchable(true);
@@ -191,14 +190,12 @@ impl MeiliShell {
         let canvas_enter = canvas.clone();
         let input_enter = add_node_label.clone();
         let kind_enter = add_node_kind.clone();
-        let add_node_enter_sub = cx.subscribe(
-            &add_node_label,
-            move |_shell, _, event: &InputEvent, cx| {
+        let add_node_enter_sub =
+            cx.subscribe(&add_node_label, move |_shell, _, event: &InputEvent, cx| {
                 if matches!(event, InputEvent::PressEnter { .. }) {
                     flush_add_node_shell_ctx(&canvas_enter, &input_enter, &kind_enter, cx);
                 }
-            },
-        );
+            });
 
         Self {
             canvas,

@@ -22,5 +22,8 @@ pub fn pending_set(p: Option<PickNodeTypeForPendingLink>) {
 }
 
 pub fn pending_take() -> Option<PickNodeTypeForPendingLink> {
-    MEILI_PENDING_NODE_PICK.lock().ok().and_then(|mut g| g.take())
+    MEILI_PENDING_NODE_PICK
+        .lock()
+        .ok()
+        .and_then(|mut g| g.take())
 }
