@@ -207,6 +207,31 @@ Designed to scale to large graphs:
 - Performance-first rendering
 - Composable architecture
 
+### Feature parity & gap analysis (TODO)
+
+We want an explicit, maintained view of **supported vs partial vs missing** relative to React Flow’s documented capabilities (nodes, edges, handles, selection, keyboard, minimap, controls, snapping, grouping/subflows, accessibility, etc.):
+
+- [ ] **Audit** — Walk the React Flow feature list and map each item to FerrumFlow (plugin, core graph, or N/A by design).
+- [ ] **Gap list** — For every row, mark *done*, *partial*, *missing*, or *different by design* (short rationale).
+- [ ] **Surface in this README** — Add a compact table or bullet matrix here (or link to `docs/react-flow-parity.md` if it grows large).
+
+Contributions welcome: propose a matrix in an issue or open a PR that extends this section.
+
+### Mid-term design goals
+
+Foundation work that unlocks most other extensions:
+
+- [ ] **Separate data, logic, and rendering** — Clear boundaries between graph/state, interaction and commands, and GPUI (or future) paint so features can grow without entangling layers.
+- [ ] **Large-graph performance** — Investigate **arena-style** allocation for nodes/edges and **ID-based references** instead of pointer-heavy graphs to improve locality and scale.
+
+### Long-term / directional
+
+No active schedule; keep these in mind when designing APIs above.
+
+- **Abstract / pluggable render backend** — Allow FerrumFlow to sit inside **existing render systems** (similar in spirit to graph editors embedded in tools like Blender or Unreal: the host owns the surface; the library supplies model + interaction contracts).
+- **WASM target** — When the stack allows, support **Web** deployment paths.
+- **Predictive rendering for collaboration** — Reduce **felt latency** in multi-user editing (optimistic / speculative UI reconciled with synced state, e.g. CRDT-backed updates).
+
 ## Contributing
 
 Contributions are welcome!
