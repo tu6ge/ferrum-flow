@@ -158,10 +158,7 @@ fn main() {
                         .plugin(DeletePlugin::new())
                         .plugin(HistoryPlugin::new())
                         .node_renderer("sync", SyncBasicNodeRenderer)
-                        .sync_plugin(YrsSyncPlugin::new(
-                            sync_seed,
-                            "ws://127.0.0.1:9001",
-                        ))
+                        .sync_plugin(YrsSyncPlugin::new(sync_seed, "ws://127.0.0.1:9001"))
                         .build()
                 })
             }

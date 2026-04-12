@@ -18,11 +18,8 @@ fn node_label(graph: &Graph, id: &ferrum_flow::NodeId) -> String {
 pub fn graph_validation_notes(graph: &Graph) -> Vec<String> {
     let mut notes = Vec::new();
 
-    let targets: HashSet<ferrum_flow::PortId> = graph
-        .edges()
-        .values()
-        .map(|e| e.target_port)
-        .collect();
+    let targets: HashSet<ferrum_flow::PortId> =
+        graph.edges().values().map(|e| e.target_port).collect();
 
     for (id, node) in graph.nodes() {
         let label = node_label(graph, id);

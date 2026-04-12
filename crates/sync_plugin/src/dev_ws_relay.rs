@@ -52,7 +52,10 @@ async fn handle_client(
     let ws = match accept_async(stream).await {
         Ok(ws) => ws,
         Err(e) => {
-            eprintln!("[dev_ws_relay] ws handshake failed for {}: {}", client_id, e);
+            eprintln!(
+                "[dev_ws_relay] ws handshake failed for {}: {}",
+                client_id, e
+            );
             return;
         }
     };

@@ -60,9 +60,10 @@ impl GraphExecutor {
             }
         }
 
-        let handler = self.registry.get(&node.execute_type).ok_or_else(|| {
-            anyhow::anyhow!("No handler for node type: {}", node.execute_type)
-        })?;
+        let handler = self
+            .registry
+            .get(&node.execute_type)
+            .ok_or_else(|| anyhow::anyhow!("No handler for node type: {}", node.execute_type))?;
 
         let output = handler.execute(node, ctx)?;
 
