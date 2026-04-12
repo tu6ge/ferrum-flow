@@ -8,10 +8,12 @@ use gpui::{
     Element as _, MouseMoveEvent, ParentElement, Pixels, Point, Size, Styled as _, div, px,
 };
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use uuid::Uuid;
 use yrs::{
     Any, Array as _, ArrayRef, DeepObservable, Doc, Map, MapPrelim, MapRef, Observable as _,
     Origin, Out, ReadTxn, Transact, TransactionMut,
+    encoding::serde::{from_any, to_any},
     sync::Awareness,
     types::{DefaultPrelim, EntryChange, PathSegment},
     undo::Options,
@@ -379,6 +381,11 @@ fn write_port_to_map(txn: &mut TransactionMut, port_map: &MapRef, port: &Port) {
     port_map.insert(txn, "position", port.position.to_string());
     port_map.insert(txn, "width", Into::<f32>::into(port.size.width));
     port_map.insert(txn, "height", Into::<f32>::into(port.size.height));
+    port_map.insert(
+        txn,
+        "port_type",
+        to_any(&port.port_type).unwrap_or_else(|_| Any::Null),
+    );
 }
 
 /// Resolve node id for a [MapEvent]. For nested maps (per-node YMap), `MapEvent::path()` is often
@@ -566,7 +573,10 @@ fn read_port_from_map(txn: &yrs::TransactionMut, node_map: &MapRef, id: PortId) 
     let position: String = node_map.get_as(txn, "position").unwrap_or_default();
     let width: f32 = node_map.get_as(txn, "width").unwrap_or_default();
     let height: f32 = node_map.get_as(txn, "height").unwrap_or_default();
-
+    let port_type = match node_map.get_as::<_, Any>(txn, "port_type") {
+        Ok(any) => from_any::<Value>(&any).unwrap_or(Value::Null),
+        Err(_) => Value::Null,
+    };
     Port {
         id,
         kind: if kind == "input" {
@@ -578,6 +588,7 @@ fn read_port_from_map(txn: &yrs::TransactionMut, node_map: &MapRef, id: PortId) 
         node_id: NodeId::from_uuid(node_id.parse().unwrap_or_default()),
         position: PortPosition::from_str(&position).unwrap_or(PortPosition::Left),
         size: Size::new(px(width), px(height)),
+        port_type,
     }
 }
 

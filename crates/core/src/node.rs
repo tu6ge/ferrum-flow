@@ -145,6 +145,7 @@ pub struct Port {
     pub node_id: NodeId,
     pub position: PortPosition,
     pub size: Size<Pixels>,
+    pub port_type: serde_json::Value,
 }
 
 impl ToString for PortKind {
@@ -193,6 +194,7 @@ pub struct NodeBuilder {
 struct PortSpec {
     position: PortPosition,
     size: Size<Pixels>,
+    port_type: serde_json::Value,
 }
 
 const DEFAULT_PORT_SIZE: Size<Pixels> = Size {
@@ -240,6 +242,7 @@ impl NodeBuilder {
         self.inputs.push(PortSpec {
             position: PortPosition::Left,
             size: DEFAULT_PORT_SIZE,
+            port_type: serde_json::Value::Null,
         });
         self
     }
@@ -248,6 +251,7 @@ impl NodeBuilder {
         self.outputs.push(PortSpec {
             position: PortPosition::Right,
             size: DEFAULT_PORT_SIZE,
+            port_type: serde_json::Value::Null,
         });
         self
     }
@@ -256,6 +260,7 @@ impl NodeBuilder {
         self.inputs.push(PortSpec {
             position: pos,
             size: DEFAULT_PORT_SIZE,
+            port_type: serde_json::Value::Null,
         });
         self
     }
@@ -264,6 +269,7 @@ impl NodeBuilder {
         self.outputs.push(PortSpec {
             position: pos,
             size: DEFAULT_PORT_SIZE,
+            port_type: serde_json::Value::Null,
         });
         self
     }
@@ -272,6 +278,7 @@ impl NodeBuilder {
         self.inputs.push(PortSpec {
             position: pos,
             size,
+            port_type: serde_json::Value::Null,
         });
         self
     }
@@ -280,6 +287,35 @@ impl NodeBuilder {
         self.outputs.push(PortSpec {
             position: pos,
             size,
+            port_type: serde_json::Value::Null,
+        });
+        self
+    }
+
+    pub fn input_with_type(
+        mut self,
+        pos: PortPosition,
+        size: Size<Pixels>,
+        port_type: serde_json::Value,
+    ) -> Self {
+        self.inputs.push(PortSpec {
+            position: pos,
+            size,
+            port_type,
+        });
+        self
+    }
+
+    pub fn output_with_type(
+        mut self,
+        pos: PortPosition,
+        size: Size<Pixels>,
+        port_type: serde_json::Value,
+    ) -> Self {
+        self.outputs.push(PortSpec {
+            position: pos,
+            size,
+            port_type,
         });
         self
     }
@@ -313,6 +349,7 @@ impl NodeBuilder {
                 node_id,
                 position: spec.position,
                 size: spec.size,
+                port_type: spec.port_type,
             });
 
             inputs.push(port_id);
@@ -335,6 +372,7 @@ impl NodeBuilder {
                 node_id,
                 position: spec.position,
                 size: spec.size,
+                port_type: spec.port_type,
             });
 
             outputs.push(port_id);

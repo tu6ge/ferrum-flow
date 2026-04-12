@@ -115,6 +115,7 @@ pub(crate) fn paste_subgraph(ctx: &mut PluginContext, sub: &CopiedSubgraph) {
             node_id: node_map[&old.node_id],
             position: old.position,
             size: old.size,
+            port_type: old.port_type.clone(),
         };
         composite.push(CreatePort::new(port));
     }

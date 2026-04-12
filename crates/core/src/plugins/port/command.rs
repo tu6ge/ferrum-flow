@@ -120,6 +120,7 @@ mod command_interop_tests {
             node_id,
             position: PortPosition::Right,
             size: Size::new(gpui::px(12.0), gpui::px(12.0)),
+            port_type: serde_json::Value::Null,
         };
 
         assert_command_interop(
