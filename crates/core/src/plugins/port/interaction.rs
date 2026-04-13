@@ -1,9 +1,9 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, sync::Arc};
 
 use gpui::{Bounds, Element, MouseButton, Pixels, Point, canvas, px, rgb};
 
 use crate::{
-    PortId, PortKind, PortPosition,
+    DefaultEdgeValidator, EdgeValidator, PortId, PortKind, PortPosition,
     canvas::Interaction,
     plugin::{FlowEvent, InputEvent, Plugin, RenderContext},
     plugins::port::{edge_bezier, filled_disc_path, port_screen_big_bounds, port_screen_bounds},
@@ -31,11 +31,20 @@ pub struct PortPreviewActive(pub bool);
 
 pub struct PortInteractionPlugin {
     pending: Option<PendingPortLink>,
+    validator: Arc<dyn EdgeValidator>,
 }
 
 impl PortInteractionPlugin {
     pub fn new() -> Self {
-        Self { pending: None }
+        Self {
+            pending: None,
+            validator: Arc::new(DefaultEdgeValidator),
+        }
+    }
+
+    pub fn validator(mut self, validator: impl EdgeValidator + 'static) -> Self {
+        self.validator = Arc::new(validator);
+        self
     }
 
     fn facing_position(p: PortPosition) -> PortPosition {
@@ -188,6 +197,9 @@ impl Plugin for PortInteractionPlugin {
                     target_position: PortPosition::Left,
                     candidate_ports,
                     mouse: Some(ev.position),
+                    validator: self.validator.clone(),
+                    validation_error: None,
+                    hovered_port: None,
                 });
                 return crate::plugin::EventResult::Stop;
             }
@@ -236,6 +248,11 @@ struct PortConnecting {
     candidate_ports: Vec<PortHitCandidate>,
     /// Cursor in **screen** space (matches port screen center / bezier end).
     mouse: Option<Point<Pixels>>,
+    validator: Arc<dyn EdgeValidator>,
+    /// Validation state for current drag target. `Some(Err)` means invalid link preview.
+    validation_error: Option<()>,
+    /// Candidate port currently hovered by cursor (if any).
+    hovered_port: Option<PortId>,
 }
 
 #[derive(Clone, Copy)]
@@ -254,6 +271,8 @@ impl Interaction for PortConnecting {
     ) -> crate::canvas::InteractionResult {
         self.mouse = Some(event.position);
         let mouse_world = ctx.screen_to_world(event.position);
+        self.validation_error = None;
+        self.hovered_port = None;
         if let Some(candidate) = self
             .candidate_ports
             .iter()
@@ -262,6 +281,28 @@ impl Interaction for PortConnecting {
             let port_id = candidate.id;
             if port_id != self.port_id {
                 self.target_position = candidate.position;
+                self.hovered_port = Some(port_id);
+
+                let Some(source_port) = ctx.graph.get_port(&self.port_id) else {
+                    ctx.notify();
+                    return crate::canvas::InteractionResult::Continue;
+                };
+                let Some(target_port) = ctx.graph.get_port(&port_id) else {
+                    ctx.notify();
+                    return crate::canvas::InteractionResult::Continue;
+                };
+
+                let (source_port, target_port) = match source_port.kind {
+                    PortKind::Output => (source_port, target_port),
+                    PortKind::Input => (target_port, source_port),
+                };
+                if self
+                    .validator
+                    .validate(source_port, target_port, ctx)
+                    .is_err()
+                {
+                    self.validation_error = Some(());
+                }
             }
         }
         ctx.notify();
@@ -279,43 +320,32 @@ impl Interaction for PortConnecting {
             .find(|c| c.bounds.contains(&mouse_world))
         {
             let port_id = candidate.id;
-            let Some(target_port) = ctx.graph.get_port(&port_id).cloned() else {
+            let Some(target_port) = ctx.graph.get_port(&port_id) else {
                 ctx.emit(FlowEvent::custom(PortPreviewActive(false)));
                 return crate::canvas::InteractionResult::End;
             };
-            let Some(soruce_port) = ctx.graph.get_port(&self.port_id).cloned() else {
+            let Some(soruce_port) = ctx.graph.get_port(&self.port_id) else {
                 ctx.emit(FlowEvent::custom(PortPreviewActive(false)));
                 return crate::canvas::InteractionResult::End;
-            };
-            if target_port.node_id == soruce_port.node_id {
-                ctx.emit(FlowEvent::custom(PortPreviewActive(false)));
-                ctx.cancel_interaction();
-                ctx.notify();
-                return crate::canvas::InteractionResult::End;
-            }
-            if soruce_port.kind == target_port.kind {
-                ctx.emit(FlowEvent::custom(PortPreviewActive(false)));
-                ctx.cancel_interaction();
-                ctx.notify();
-                return crate::canvas::InteractionResult::End;
-            }
-            let edge = match (soruce_port.kind, target_port.kind) {
-                (PortKind::Output, PortKind::Input) => {
-                    ctx.new_edge().source(self.port_id).target(port_id)
-                }
-                (PortKind::Input, PortKind::Output) => {
-                    ctx.new_edge().source(port_id).target(self.port_id)
-                }
-                _ => {
-                    ctx.emit(FlowEvent::custom(PortPreviewActive(false)));
-                    ctx.cancel_interaction();
-                    ctx.notify();
-                    return crate::canvas::InteractionResult::End;
-                }
             };
 
-            ctx.emit(FlowEvent::custom(PortPreviewActive(false)));
-            ctx.execute_command(CreateEdge::new(edge));
+            let (soruce_port, target_port) = match soruce_port.kind {
+                PortKind::Output => (soruce_port, target_port),
+                PortKind::Input => (target_port, soruce_port),
+            };
+
+            match self.validator.validate(&soruce_port, &target_port, ctx) {
+                Ok(_) => {
+                    let edge = ctx.new_edge().source(soruce_port.id).target(target_port.id);
+                    ctx.emit(FlowEvent::custom(PortPreviewActive(false)));
+                    ctx.execute_command(CreateEdge::new(edge));
+                }
+                Err(_) => {
+                    ctx.emit(FlowEvent::custom(PortPreviewActive(false)));
+                    // TODO: emit message/toast event when message plugin is ready.
+                }
+            }
+
             return crate::canvas::InteractionResult::End;
         }
 
@@ -332,13 +362,43 @@ impl Interaction for PortConnecting {
         let position = self.position;
         let target_position = self.target_position;
         let viewport = ctx.viewport().clone();
-        let line_rgb = ctx.theme.port_preview_line;
-        let dot_rgb = ctx.theme.port_preview_dot;
+        let has_validation_error = self.validation_error.is_some();
+        let line_rgb = if has_validation_error {
+            0x00FF1744
+        } else {
+            ctx.theme.port_preview_line
+        };
+        let dot_rgb = if has_validation_error {
+            0x00FF1744
+        } else {
+            ctx.theme.port_preview_dot
+        };
+        let target_highlight = if has_validation_error {
+            self.hovered_port.and_then(|port_id| {
+                let port = ctx.graph.get_port(&port_id)?;
+                let center = ctx.port_screen_center_by_port_id(port_id)?;
+                let width: f32 = (port.size.width * ctx.viewport().zoom()).into();
+                let height: f32 = (port.size.height * ctx.viewport().zoom()).into();
+                let radius = px(width.min(height) / 2.0);
+                Some((center, radius))
+            })
+        } else {
+            None
+        };
 
         Some(
             canvas(
-                move |_, _, _| (position, target_position, viewport, line_rgb, dot_rgb),
-                move |_, (position, target_position, viewport, lr, dr), win, _| {
+                move |_, _, _| {
+                    (
+                        position,
+                        target_position,
+                        viewport,
+                        line_rgb,
+                        dot_rgb,
+                        target_highlight,
+                    )
+                },
+                move |_, (position, target_position, viewport, lr, dr, th), win, _| {
                     PortInteractionPlugin::paint_wire_and_dot(
                         win,
                         start,
@@ -349,6 +409,11 @@ impl Interaction for PortConnecting {
                         lr,
                         dr,
                     );
+                    if let Some((center, radius)) = th {
+                        if let Ok(dot) = filled_disc_path(center, radius) {
+                            win.paint_path(dot, rgb(lr));
+                        }
+                    }
                 },
             )
             .into_any(),
