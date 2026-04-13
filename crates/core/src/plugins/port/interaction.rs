@@ -3,7 +3,7 @@ use std::{collections::HashSet, sync::Arc};
 use gpui::{Bounds, Element, MouseButton, Pixels, Point, canvas, px, rgb};
 
 use crate::{
-    DefaultEdgeValidator, EdgeValidator, PortId, PortKind, PortPosition,
+    DefaultEdgeValidator, EdgeValidator, PortId, PortKind, PortPosition, ToastMessage,
     canvas::Interaction,
     plugin::{FlowEvent, InputEvent, Plugin, RenderContext},
     plugins::port::{edge_bezier, filled_disc_path, port_screen_big_bounds, port_screen_bounds},
@@ -340,9 +340,11 @@ impl Interaction for PortConnecting {
                     ctx.emit(FlowEvent::custom(PortPreviewActive(false)));
                     ctx.execute_command(CreateEdge::new(edge));
                 }
-                Err(_) => {
+                Err(err) => {
                     ctx.emit(FlowEvent::custom(PortPreviewActive(false)));
-                    // TODO: emit message/toast event when message plugin is ready.
+                    ctx.emit(FlowEvent::custom(ToastMessage::error(
+                        err.message().to_string(),
+                    )));
                 }
             }
 

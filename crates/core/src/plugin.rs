@@ -1,4 +1,4 @@
-use std::{any::Any, collections::HashMap};
+use std::{any::Any, collections::HashMap, time::Duration};
 
 use gpui::{
     AnyElement, Bounds, Context, Div, KeyDownEvent, KeyUpEvent, MouseDownEvent, MouseMoveEvent,
@@ -340,6 +340,7 @@ pub struct PluginContext<'a> {
     pub shared_state: &'a mut SharedState,
     emit: &'a mut dyn FnMut(FlowEvent),
     notify: &'a mut dyn FnMut(),
+    schedule_after: &'a mut dyn FnMut(Duration),
 }
 
 pub enum EventResult {
@@ -360,6 +361,7 @@ impl<'a> PluginContext<'a> {
         shared_state: &'a mut SharedState,
         emit: &'a mut dyn FnMut(FlowEvent),
         notify: &'a mut dyn FnMut(),
+        schedule_after: &'a mut dyn FnMut(Duration),
     ) -> Self {
         Self {
             graph,
@@ -373,6 +375,7 @@ impl<'a> PluginContext<'a> {
             shared_state,
             emit,
             notify,
+            schedule_after,
         }
     }
 
@@ -391,6 +394,11 @@ impl<'a> PluginContext<'a> {
     /// Tell GPUI that this entity has changed and observers of it should be notified.
     pub fn notify(&mut self) {
         (self.notify)();
+    }
+
+    /// Schedule a future canvas refresh after a delay.
+    pub fn schedule_after(&mut self, delay: Duration) {
+        (self.schedule_after)(delay);
     }
 
     pub fn emit(&mut self, event: FlowEvent) {

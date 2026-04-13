@@ -13,6 +13,7 @@ mod port;
 mod select_all_viewport;
 mod selection;
 mod snap_guides;
+mod toast;
 mod viewport;
 mod viewport_frame;
 mod zoom_controls;
@@ -36,5 +37,6 @@ pub use port::{
 pub use select_all_viewport::SelectAllViewportPlugin;
 pub use selection::SelectionPlugin;
 pub use snap_guides::{AlignmentGuides, SetAlignmentGuides, SnapGuidesPlugin};
+pub use toast::{ToastLevel, ToastMessage, ToastPlugin};
 pub use viewport::ViewportPlugin;
 pub use zoom_controls::ZoomControlsPlugin;
