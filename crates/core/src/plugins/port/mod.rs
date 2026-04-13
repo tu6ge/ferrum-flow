@@ -4,8 +4,12 @@ mod utils;
 pub use interaction::{PortInteractionPlugin, PortPreviewActive};
 
 mod command;
+mod validator;
 
 pub use command::{CreateEdge, CreateNode, CreatePort};
+pub use validator::{
+    DefaultEdgeValidator, EdgeValidationError, EdgeValidationErrorCode, EdgeValidator,
+};
 
 #[allow(deprecated, unused_imports)]
 pub use utils::port_screen_position;
