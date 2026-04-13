@@ -1,5 +1,6 @@
 use futures::{StreamExt, channel::mpsc};
 use gpui::*;
+use std::time::Duration;
 
 use crate::{
     BackgroundPlugin, DeletePlugin, EdgePlugin, FlowTheme, GraphChange, HistoryPlugin,
@@ -53,6 +54,7 @@ pub struct FlowCanvas {
 
     /// Type-erased map for cross-plugin data on this canvas instance.
     pub shared_state: SharedState,
+    delayed_notify_tx: mpsc::UnboundedSender<()>,
 }
 
 // // TODO
@@ -70,9 +72,23 @@ pub struct FlowCanvas {
 // }
 
 impl FlowCanvas {
+    fn init_delayed_notify_channel(&mut self, cx: &mut Context<Self>) {
+        let (tx, mut rx) = mpsc::unbounded::<()>();
+        self.delayed_notify_tx = tx;
+        cx.spawn(async move |this, ctx| {
+            while rx.next().await.is_some() {
+                let _ = this.update(ctx, |_, cx| {
+                    cx.notify();
+                });
+            }
+        })
+        .detach();
+    }
+
     pub fn new(graph: Graph, cx: &mut Context<Self>) -> Self {
         let focus_handle = cx.focus_handle();
-        Self {
+        let (delayed_notify_tx, _rx) = mpsc::unbounded::<()>();
+        let mut canvas = Self {
             graph,
             viewport: Viewport::new(),
             plugins_registry: PluginRegistry::new(),
@@ -85,7 +101,10 @@ impl FlowCanvas {
             port_offset_cache: PortLayoutCache::new(),
             theme: FlowTheme::default(),
             shared_state: SharedState::new(),
-        }
+            delayed_notify_tx,
+        };
+        canvas.init_delayed_notify_channel(cx);
+        canvas
     }
 
     pub fn builder<'a, 'b>(
@@ -111,6 +130,14 @@ impl FlowCanvas {
         let event_queue = &mut self.event_queue;
         let mut emit = |e| event_queue.push(e);
         let mut notify = || cx.notify();
+        let delayed_notify_tx = self.delayed_notify_tx.clone();
+        let mut schedule_after = move |delay: Duration| {
+            let tx = delayed_notify_tx.clone();
+            std::thread::spawn(move || {
+                std::thread::sleep(delay);
+                let _ = tx.unbounded_send(());
+            });
+        };
         match event {
             FlowEvent::Input(InputEvent::MouseMove(ev)) => {
                 let Some(mut handler) = self.interaction.handler.take() else {
@@ -128,6 +155,7 @@ impl FlowCanvas {
                     &mut self.shared_state,
                     &mut emit,
                     &mut notify,
+                    &mut schedule_after,
                 );
                 let result = handler.on_mouse_move(ev, &mut ctx);
                 match result {
@@ -153,6 +181,7 @@ impl FlowCanvas {
                     &mut self.shared_state,
                     &mut emit,
                     &mut notify,
+                    &mut schedule_after,
                 );
                 let result = handler.on_mouse_up(ev, &mut ctx);
                 match result {
@@ -175,6 +204,14 @@ impl FlowCanvas {
         let event_queue = &mut self.event_queue;
         let mut emit = |e| event_queue.push(e);
         let mut notify = || cx.notify();
+        let delayed_notify_tx = self.delayed_notify_tx.clone();
+        let mut schedule_after = move |delay: Duration| {
+            let tx = delayed_notify_tx.clone();
+            std::thread::spawn(move || {
+                std::thread::sleep(delay);
+                let _ = tx.unbounded_send(());
+            });
+        };
 
         let mut ctx = PluginContext::new(
             &mut self.graph,
@@ -188,6 +225,7 @@ impl FlowCanvas {
             &mut self.shared_state,
             &mut emit,
             &mut notify,
+            &mut schedule_after,
         );
 
         for plugin in self.plugins_registry.iter_mut() {
@@ -208,6 +246,14 @@ impl FlowCanvas {
             let event_queue = &mut self.event_queue;
             let mut emit = |e| event_queue.push(e);
             let mut notify = || cx.notify();
+            let delayed_notify_tx = self.delayed_notify_tx.clone();
+            let mut schedule_after = |delay: Duration| {
+                let tx = delayed_notify_tx.clone();
+                std::thread::spawn(move || {
+                    std::thread::sleep(delay);
+                    let _ = tx.unbounded_send(());
+                });
+            };
 
             let mut ctx = PluginContext::new(
                 &mut self.graph,
@@ -221,6 +267,7 @@ impl FlowCanvas {
                 &mut self.shared_state,
                 &mut emit,
                 &mut notify,
+                &mut schedule_after,
             );
 
             for plugin in self.plugins_registry.iter_mut() {
@@ -458,6 +505,7 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
     pub fn build(self) -> FlowCanvas {
         let focus_handle = self.ctx.focus_handle();
         let drawable_size = self.window.viewport_size();
+        let (delayed_notify_tx, _rx) = mpsc::unbounded::<()>();
 
         let mut canvas = FlowCanvas {
             graph: self.graph,
@@ -472,7 +520,9 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
             port_offset_cache: PortLayoutCache::new(),
             theme: self.theme,
             shared_state: SharedState::new(),
+            delayed_notify_tx,
         };
+        canvas.init_delayed_notify_channel(self.ctx);
 
         if let Some(sync_plugin) = &mut canvas.sync_plugin {
             let (change_sender, mut change_receiver) = mpsc::unbounded::<GraphChange>();

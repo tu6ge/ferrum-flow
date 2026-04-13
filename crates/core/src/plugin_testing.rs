@@ -11,6 +11,7 @@
 //! not public.
 
 use gpui::{AnyElement, Context, Pixels, Size, Window, px};
+use std::time::Duration;
 
 use crate::{
     EventResult, FlowCanvas, FlowEvent, FlowTheme, Graph, LocalHistory, Plugin, PluginContext,
@@ -84,6 +85,7 @@ impl PluginTestHarness {
         let mut notify = || {
             *notify_count += 1;
         };
+        let mut schedule_after = |_delay: Duration| {};
         let mut ctx = PluginContext::new(
             &mut self.graph,
             &mut self.port_offset_cache,
@@ -96,6 +98,7 @@ impl PluginTestHarness {
             &mut self.shared_state,
             &mut emit,
             &mut notify,
+            &mut schedule_after,
         );
         plugin.on_event(&event, &mut ctx)
     }
