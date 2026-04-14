@@ -2,7 +2,7 @@ use std::{collections::HashMap, fmt::Display, str::FromStr};
 
 use gpui::{Bounds, Pixels, Point, Size, px};
 use serde::{Deserialize, Serialize};
-use serde_json::json;
+use serde_json::{Value, json};
 use uuid::Uuid;
 
 use crate::Graph;
@@ -191,10 +191,38 @@ pub struct NodeBuilder {
 }
 
 #[derive(Clone)]
-struct PortSpec {
+pub struct PortSpec {
     position: PortPosition,
     size: Size<Pixels>,
     port_type: serde_json::Value,
+}
+
+impl PortSpec {
+    pub fn input(position: PortPosition) -> Self {
+        Self {
+            position,
+            size: DEFAULT_PORT_SIZE,
+            port_type: serde_json::Value::Null,
+        }
+    }
+
+    pub fn output(position: PortPosition) -> Self {
+        Self {
+            position,
+            size: DEFAULT_PORT_SIZE,
+            port_type: serde_json::Value::Null,
+        }
+    }
+
+    pub fn with_size(mut self, size: Size<Pixels>) -> Self {
+        self.size = size;
+        self
+    }
+
+    pub fn with_type(mut self, port_type: impl Into<Value>) -> Self {
+        self.port_type = port_type.into();
+        self
+    }
 }
 
 const DEFAULT_PORT_SIZE: Size<Pixels> = Size {
@@ -238,85 +266,51 @@ impl NodeBuilder {
         self
     }
 
+    fn push_input_spec(&mut self, spec: PortSpec) {
+        self.inputs.push(spec);
+    }
+
+    fn push_output_spec(&mut self, spec: PortSpec) {
+        self.outputs.push(spec);
+    }
+
     pub fn input(mut self) -> Self {
-        self.inputs.push(PortSpec {
-            position: PortPosition::Left,
-            size: DEFAULT_PORT_SIZE,
-            port_type: serde_json::Value::Null,
-        });
+        self.push_input_spec(PortSpec::input(PortPosition::Left));
         self
     }
 
     pub fn output(mut self) -> Self {
-        self.outputs.push(PortSpec {
-            position: PortPosition::Right,
-            size: DEFAULT_PORT_SIZE,
-            port_type: serde_json::Value::Null,
-        });
+        self.push_output_spec(PortSpec::output(PortPosition::Right));
         self
     }
 
     pub fn input_at(mut self, pos: PortPosition) -> Self {
-        self.inputs.push(PortSpec {
-            position: pos,
-            size: DEFAULT_PORT_SIZE,
-            port_type: serde_json::Value::Null,
-        });
+        self.push_input_spec(PortSpec::input(pos));
         self
     }
 
     pub fn output_at(mut self, pos: PortPosition) -> Self {
-        self.outputs.push(PortSpec {
-            position: pos,
-            size: DEFAULT_PORT_SIZE,
-            port_type: serde_json::Value::Null,
-        });
+        self.push_output_spec(PortSpec::output(pos));
         self
     }
 
     pub fn input_with(mut self, pos: PortPosition, size: Size<Pixels>) -> Self {
-        self.inputs.push(PortSpec {
-            position: pos,
-            size,
-            port_type: serde_json::Value::Null,
-        });
+        self.push_input_spec(PortSpec::input(pos).with_size(size));
         self
     }
 
     pub fn output_with(mut self, pos: PortPosition, size: Size<Pixels>) -> Self {
-        self.outputs.push(PortSpec {
-            position: pos,
-            size,
-            port_type: serde_json::Value::Null,
-        });
+        self.push_output_spec(PortSpec::output(pos).with_size(size));
         self
     }
 
-    pub fn input_with_type(
-        mut self,
-        pos: PortPosition,
-        size: Size<Pixels>,
-        port_type: serde_json::Value,
-    ) -> Self {
-        self.inputs.push(PortSpec {
-            position: pos,
-            size,
-            port_type,
-        });
+    pub fn input_port(mut self, spec: PortSpec) -> Self {
+        self.push_input_spec(spec);
         self
     }
 
-    pub fn output_with_type(
-        mut self,
-        pos: PortPosition,
-        size: Size<Pixels>,
-        port_type: serde_json::Value,
-    ) -> Self {
-        self.outputs.push(PortSpec {
-            position: pos,
-            size,
-            port_type,
-        });
+    pub fn output_port(mut self, spec: PortSpec) -> Self {
+        self.push_output_spec(spec);
         self
     }
 
