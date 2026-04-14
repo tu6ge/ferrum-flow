@@ -83,7 +83,7 @@ impl PortInteractionPlugin {
             PortKind::Input => builder.output(),
         };
 
-        let (new_node, new_ports) = builder.only_build(ctx.graph);
+        let (new_node, new_ports) = builder.only_build();
 
         let edge = match source.kind {
             PortKind::Output => {
