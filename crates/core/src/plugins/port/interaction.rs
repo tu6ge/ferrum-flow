@@ -83,7 +83,7 @@ impl PortInteractionPlugin {
             PortKind::Input => builder.output(),
         };
 
-        let (new_node, new_ports) = builder.only_build();
+        let (new_node, new_ports) = builder.build_raw();
 
         let edge = match source.kind {
             PortKind::Output => {

@@ -100,7 +100,7 @@ mod command_interop_tests {
             .create_node("x")
             .position(100.0, 80.0)
             .data(json!({ "k": "v" }))
-            .only_build();
+            .build_raw();
 
         assert_command_interop(
             &base,
