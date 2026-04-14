@@ -319,7 +319,7 @@ impl NodeBuilder {
         self
     }
 
-    pub fn only_build(self) -> (Node, Vec<Port>) {
+    pub fn build_raw(self) -> (Node, Vec<Port>) {
         let node_id = NodeId::new();
 
         let mut inputs = Vec::new();
@@ -389,7 +389,7 @@ impl NodeBuilder {
     }
 
     pub fn build(self, graph: &mut Graph) -> NodeId {
-        let (node, ports) = self.only_build();
+        let (node, ports) = self.build_raw();
         graph.add_node(node.clone());
         for port in ports {
             graph.add_port(port);
