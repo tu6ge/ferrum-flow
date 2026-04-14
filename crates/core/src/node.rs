@@ -243,7 +243,7 @@ impl NodeBuilder {
             },
             inputs: vec![],
             outputs: vec![],
-            data: serde_json::Value::Null,
+            data: json!({}),
         }
     }
 
@@ -319,8 +319,8 @@ impl NodeBuilder {
         self
     }
 
-    pub fn only_build(self, graph: &Graph) -> (Node, Vec<Port>) {
-        let node_id = graph.next_node_id();
+    pub fn only_build(self) -> (Node, Vec<Port>) {
+        let node_id = NodeId::new();
 
         let mut inputs = Vec::new();
         let mut outputs = Vec::new();
@@ -330,7 +330,7 @@ impl NodeBuilder {
         // Create input ports
         let mut ports = vec![];
         for spec in self.inputs {
-            let port_id = graph.next_port_id();
+            let port_id = PortId::new();
 
             let index = input_counters.entry(spec.position).or_insert(0);
             let current_index = *index;
@@ -353,7 +353,7 @@ impl NodeBuilder {
 
         // Create output ports
         for spec in self.outputs {
-            let port_id = graph.next_port_id();
+            let port_id = PortId::new();
 
             let index = output_counters.entry(spec.position).or_insert(0);
             let current_index = *index;
@@ -389,7 +389,7 @@ impl NodeBuilder {
     }
 
     pub fn build(self, graph: &mut Graph) -> NodeId {
-        let (node, ports) = self.only_build(graph);
+        let (node, ports) = self.only_build();
         graph.add_node(node.clone());
         for port in ports {
             graph.add_port(port);
