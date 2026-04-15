@@ -38,6 +38,8 @@ impl NodeId {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Node {
+    // Transitional API: these fields stay public for compatibility in this release.
+    // Prefer using methods on `Node`; fields will become private in a future release.
     pub id: NodeId,
     pub node_type: String,
     pub execute_type: String,
@@ -71,6 +73,63 @@ impl Node {
     pub fn node_type(mut self, ty: impl Into<String>) -> Self {
         self.node_type = ty.into();
         self
+    }
+
+    pub fn id(&self) -> NodeId {
+        self.id
+    }
+
+    pub fn node_type_ref(&self) -> &str {
+        &self.node_type
+    }
+
+    pub fn execute_type_ref(&self) -> &str {
+        &self.execute_type
+    }
+
+    pub fn position(&self) -> (Pixels, Pixels) {
+        (self.x, self.y)
+    }
+
+    pub fn size_ref(&self) -> &Size<Pixels> {
+        &self.size
+    }
+
+    pub fn inputs(&self) -> &[PortId] {
+        &self.inputs
+    }
+
+    pub fn outputs(&self) -> &[PortId] {
+        &self.outputs
+    }
+
+    pub fn data_ref(&self) -> &serde_json::Value {
+        &self.data
+    }
+
+    pub fn data_mut(&mut self) -> &mut serde_json::Value {
+        &mut self.data
+    }
+
+    pub fn set_position(&mut self, x: Pixels, y: Pixels) {
+        self.x = x;
+        self.y = y;
+    }
+
+    pub fn set_size_mut(&mut self, size: Size<Pixels>) {
+        self.size = size;
+    }
+
+    pub fn set_data(&mut self, data: serde_json::Value) {
+        self.data = data;
+    }
+
+    pub fn push_input(&mut self, id: PortId) {
+        self.inputs.push(id);
+    }
+
+    pub fn push_output(&mut self, id: PortId) {
+        self.outputs.push(id);
     }
 
     pub fn point(&self) -> Point<Pixels> {
@@ -139,6 +198,8 @@ pub enum PortPosition {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Port {
+    // Transitional API: these fields stay public for compatibility in this release.
+    // Prefer using methods on `Port`; fields will become private in a future release.
     pub id: PortId,
     pub kind: PortKind,
     pub index: usize,
@@ -146,6 +207,73 @@ pub struct Port {
     pub position: PortPosition,
     pub size: Size<Pixels>,
     pub port_type: serde_json::Value,
+}
+
+impl Port {
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        id: PortId,
+        kind: PortKind,
+        index: usize,
+        node_id: NodeId,
+        position: PortPosition,
+        size: Size<Pixels>,
+        port_type: serde_json::Value,
+    ) -> Self {
+        Self {
+            id,
+            kind,
+            index,
+            node_id,
+            position,
+            size,
+            port_type,
+        }
+    }
+
+    pub fn id(&self) -> PortId {
+        self.id
+    }
+
+    pub fn kind(&self) -> PortKind {
+        self.kind
+    }
+
+    pub fn index(&self) -> usize {
+        self.index
+    }
+
+    pub fn node_id(&self) -> NodeId {
+        self.node_id
+    }
+
+    pub fn position(&self) -> PortPosition {
+        self.position
+    }
+
+    pub fn size_ref(&self) -> &Size<Pixels> {
+        &self.size
+    }
+
+    pub fn port_type_ref(&self) -> &serde_json::Value {
+        &self.port_type
+    }
+
+    pub fn port_type_mut(&mut self) -> &mut serde_json::Value {
+        &mut self.port_type
+    }
+
+    pub fn set_size(&mut self, size: Size<Pixels>) {
+        self.size = size;
+    }
+
+    pub fn set_index(&mut self, index: usize) {
+        self.index = index;
+    }
+
+    pub fn set_position(&mut self, position: PortPosition) {
+        self.position = position;
+    }
 }
 
 impl ToString for PortKind {
