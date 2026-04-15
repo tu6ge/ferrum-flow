@@ -48,7 +48,7 @@ impl Plugin for NodePlugin {
 
         let list = node_ids.iter().filter_map(|node_id| {
             let node = ctx.graph.nodes().get(node_id)?;
-            let render = ctx.renderers.get(&node.node_type);
+            let render = ctx.renderers.get(node.node_type_ref());
 
             let node_render = render.render(node, ctx);
 
@@ -56,7 +56,7 @@ impl Plugin for NodePlugin {
                 .graph
                 .ports()
                 .iter()
-                .filter(|(_, port)| port.node_id == *node_id)
+                .filter(|(_, port)| port.node_id() == *node_id)
                 .filter_map(|(_, port)| render.port_render(node, port, ctx));
 
             Some(div().child(node_render).children(ports))

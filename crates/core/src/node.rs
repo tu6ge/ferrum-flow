@@ -116,8 +116,21 @@ impl Node {
         self.y = y;
     }
 
+    pub fn set_position_with_point(&mut self, point: Point<Pixels>) {
+        self.x = point.x;
+        self.y = point.y;
+    }
+
     pub fn set_size_mut(&mut self, size: Size<Pixels>) {
         self.size = size;
+    }
+
+    pub fn set_size_width(&mut self, width: Pixels) {
+        self.size.width = width;
+    }
+
+    pub fn set_size_height(&mut self, height: Pixels) {
+        self.size.height = height;
     }
 
     pub fn set_data(&mut self, data: serde_json::Value) {
@@ -522,6 +535,6 @@ impl NodeBuilder {
         for port in ports {
             graph.add_port(port);
         }
-        node.id
+        node.id()
     }
 }

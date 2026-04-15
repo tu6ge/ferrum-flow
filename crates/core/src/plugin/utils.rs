@@ -1,6 +1,6 @@
 use gpui::KeyDownEvent;
 
-use crate::{Edge, Graph, GraphChangeKind, NodeId, Port, Viewport, canvas::PortLayoutCache};
+use crate::{Edge, Graph, GraphChangeKind, NodeId, Viewport, canvas::PortLayoutCache};
 
 /// Clears [`PortLayoutCache`] entries affected by an incoming graph change. Call **before**
 /// [`Graph::apply`](crate::graph::Graph::apply) so `PortRemoved` can still resolve `node_id`.
@@ -11,14 +11,14 @@ pub fn invalidate_port_layout_cache_for_graph_change(
 ) {
     match kind {
         GraphChangeKind::NodeRemoved { id } => cache.clear_node(id),
-        GraphChangeKind::NodeAdded(node) => cache.clear_node(&node.id),
+        GraphChangeKind::NodeAdded(node) => cache.clear_node(&node.id()),
         GraphChangeKind::NodeSetWidthed { id, .. }
         | GraphChangeKind::NodeSetHeighted { id, .. }
         | GraphChangeKind::NodeDataUpdated { id, .. } => cache.clear_node(id),
-        GraphChangeKind::PortAdded(port) => cache.clear_node(&port.node_id),
+        GraphChangeKind::PortAdded(port) => cache.clear_node(&port.node_id()),
         GraphChangeKind::PortRemoved { id } => {
             if let Some(p) = graph.get_port(id) {
-                cache.clear_node(&p.node_id);
+                cache.clear_node(&p.node_id());
             }
         }
         GraphChangeKind::NodeMoved { .. }
@@ -61,13 +61,15 @@ pub fn is_edge_visible(graph: &Graph, viewport: &Viewport, edge: &Edge) -> bool 
         ..
     } = edge;
 
-    let Some(Port { node_id: n1, .. }) = graph.get_port(source_port) else {
+    let Some(port) = graph.get_port(source_port) else {
         return false;
     };
+    let n1 = port.node_id();
 
-    let Some(Port { node_id: n2, .. }) = graph.get_port(target_port) else {
+    let Some(port) = graph.get_port(target_port) else {
         return false;
     };
+    let n2 = port.node_id();
 
     let node1_visible = graph
         .get_node(&n1)

@@ -136,10 +136,11 @@ impl Viewport {
         };
 
         let screen = self.world_to_screen(node.point());
+        let size = *node.size_ref();
 
-        screen.x + self.world_length_to_screen(node.size.width) > px(0.0)
+        screen.x + self.world_length_to_screen(size.width) > px(0.0)
             && screen.x < window_bounds.size.width
-            && screen.y + self.world_length_to_screen(node.size.height) > px(0.0)
+            && screen.y + self.world_length_to_screen(size.height) > px(0.0)
             && screen.y < window_bounds.size.height
     }
 }

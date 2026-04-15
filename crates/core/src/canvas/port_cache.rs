@@ -55,16 +55,16 @@ impl PortLayoutCache {
             return;
         };
 
-        let renderer = renderers.get(&node.node_type);
+        let renderer = renderers.get(node.node_type_ref());
 
         let mut result = HashMap::new();
 
-        for port in graph.ports_values().filter(|p| p.node_id == node.id) {
+        for port in graph.ports_values().filter(|p| p.node_id() == node.id()) {
             let pos = renderer.port_offset(node, port, graph);
-            result.insert(port.id, pos);
+            result.insert(port.id(), pos);
         }
 
-        self.replace_node_offsets(node.id, result);
+        self.replace_node_offsets(node.id(), result);
     }
 
     /// Fill port layout for every node if not already cached.
@@ -102,6 +102,6 @@ impl PortLayoutCache {
             return;
         };
 
-        self.ensure_node_ports(graph, renderers, &port.node_id);
+        self.ensure_node_ports(graph, renderers, &port.node_id());
     }
 }

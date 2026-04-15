@@ -26,12 +26,16 @@ pub trait NodeRenderer: Send + Sync {
     fn port_offset(&self, node: &Node, port: &Port, graph: &Graph) -> Point<Pixels> {
         let total = graph
             .ports_values()
-            .filter(|p| p.node_id == node.id && p.kind == port.kind && p.position == port.position)
+            .filter(|p| {
+                p.node_id() == node.id()
+                    && p.kind() == port.kind()
+                    && p.position() == port.position()
+            })
             .count() as f32;
-        let index = port.index as f32;
-        let size = node.size;
+        let index = port.index() as f32;
+        let size = *node.size_ref();
 
-        match port.position {
+        match port.position() {
             PortPosition::Left => {
                 let spacing = size.height / (total + 1.0);
                 Point::new(px(0.0), spacing * (index + 1.0))
@@ -94,7 +98,7 @@ struct DefaultNodeRenderer;
 
 impl NodeRenderer for DefaultNodeRenderer {
     fn render(&self, node: &Node, ctx: &mut RenderContext) -> AnyElement {
-        let node_id = node.id;
+        let node_id = node.id();
         let selected = ctx
             .graph
             .selected_node()
@@ -160,18 +164,18 @@ fn data_title(data: &serde_json::Value) -> Option<String> {
 /// Label for [`DefaultNodeRenderer`]: user-facing title from `data`, else `node_type`, else a generic word.
 /// UUID stays off-canvas; use debug/inspector/tooltip if operators need the id.
 pub fn default_node_caption(node: &Node) -> String {
-    if let Some(s) = data_title(&node.data) {
+    if let Some(s) = data_title(node.data_ref()) {
         return s;
     }
-    if !node.node_type.is_empty() {
-        return node.node_type.clone();
+    if !node.node_type_ref().is_empty() {
+        return node.node_type_ref().to_string();
     }
     "Node".to_string()
 }
 
 fn undefined_node_caption(node: &Node) -> String {
-    if !node.node_type.is_empty() {
-        return format!("Unknown type: {}", node.node_type);
+    if !node.node_type_ref().is_empty() {
+        return format!("Unknown type: {}", node.node_type_ref());
     }
     "Unknown node type".to_string()
 }

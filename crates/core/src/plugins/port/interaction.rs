@@ -78,22 +78,22 @@ impl PortInteractionPlugin {
 
         let mut builder = ctx.create_node("");
         builder = builder.position(x, y);
-        builder = match source.kind {
+        builder = match source.kind() {
             PortKind::Output => builder.input(),
             PortKind::Input => builder.output(),
         };
 
         let (new_node, new_ports) = builder.build_raw();
 
-        let edge = match source.kind {
+        let edge = match source.kind() {
             PortKind::Output => {
-                let Some(in_port) = new_node.inputs.first().copied() else {
+                let Some(in_port) = new_node.inputs().first().copied() else {
                     return;
                 };
                 ctx.new_edge().source(p.source_port).target(in_port)
             }
             PortKind::Input => {
-                let Some(out_port) = new_node.outputs.first().copied() else {
+                let Some(out_port) = new_node.outputs().first().copied() else {
                     return;
                 };
                 ctx.new_edge().source(out_port).target(p.source_port)
@@ -168,8 +168,8 @@ impl Plugin for PortInteractionPlugin {
                 .graph
                 .ports()
                 .iter()
-                .filter(|(_, port)| visible_nodes.contains(&port.node_id))
-                .map(|(_, port)| (port.id, port.position))
+                .filter(|(_, port)| visible_nodes.contains(&port.node_id()))
+                .map(|(_, port)| (port.id(), port.position()))
                 .filter_map(|(id, position)| {
                     let bounds = port_screen_bounds(id, ctx)?;
                     let big_bounds = port_screen_big_bounds(id, ctx)?;
@@ -219,7 +219,7 @@ impl Plugin for PortInteractionPlugin {
         let start = ctx.port_screen_center_by_port_id(p.source_port)?;
         let end = ctx.world_to_screen(p.end_world);
         let source_port = ctx.graph.get_port(&p.source_port)?;
-        let start_position = source_port.position;
+        let start_position = source_port.position();
         let target_position = Self::facing_position(start_position);
         let viewport = ctx.viewport().clone();
         let line_rgb = ctx.theme.port_preview_line;
@@ -292,7 +292,7 @@ impl Interaction for PortConnecting {
                     return crate::canvas::InteractionResult::Continue;
                 };
 
-                let (source_port, target_port) = match source_port.kind {
+                let (source_port, target_port) = match source_port.kind() {
                     PortKind::Output => (source_port, target_port),
                     PortKind::Input => (target_port, source_port),
                 };
@@ -329,14 +329,17 @@ impl Interaction for PortConnecting {
                 return crate::canvas::InteractionResult::End;
             };
 
-            let (soruce_port, target_port) = match soruce_port.kind {
+            let (soruce_port, target_port) = match soruce_port.kind() {
                 PortKind::Output => (soruce_port, target_port),
                 PortKind::Input => (target_port, soruce_port),
             };
 
             match self.validator.validate(&soruce_port, &target_port, ctx) {
                 Ok(_) => {
-                    let edge = ctx.new_edge().source(soruce_port.id).target(target_port.id);
+                    let edge = ctx
+                        .new_edge()
+                        .source(soruce_port.id())
+                        .target(target_port.id());
                     ctx.emit(FlowEvent::custom(PortPreviewActive(false)));
                     ctx.execute_command(CreateEdge::new(edge));
                 }
@@ -379,8 +382,9 @@ impl Interaction for PortConnecting {
             self.hovered_port.and_then(|port_id| {
                 let port = ctx.graph.get_port(&port_id)?;
                 let center = ctx.port_screen_center_by_port_id(port_id)?;
-                let width: f32 = (port.size.width * ctx.viewport().zoom()).into();
-                let height: f32 = (port.size.height * ctx.viewport().zoom()).into();
+                let size = *port.size_ref();
+                let width: f32 = (size.width * ctx.viewport().zoom()).into();
+                let height: f32 = (size.height * ctx.viewport().zoom()).into();
                 let radius = px(width.min(height) / 2.0);
                 Some((center, radius))
             })

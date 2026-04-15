@@ -97,16 +97,14 @@ impl Command for DragNodesCommand {
     fn execute(&mut self, ctx: &mut crate::canvas::CommandContext) {
         for (id, point) in self.to.iter() {
             if let Some(node) = ctx.get_node_mut(id) {
-                node.x = point.x;
-                node.y = point.y;
+                node.set_position_with_point(*point);
             }
         }
     }
     fn undo(&mut self, ctx: &mut crate::canvas::CommandContext) {
         for (id, point) in self.from.iter() {
             if let Some(node) = ctx.get_node_mut(id) {
-                node.x = point.x;
-                node.y = point.y;
+                node.set_position_with_point(*point);
             }
         }
     }

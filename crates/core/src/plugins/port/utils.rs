@@ -13,15 +13,16 @@ pub fn port_screen_bounds(
     ctx: &crate::plugin::PluginContext,
 ) -> Option<Bounds<Pixels>> {
     let port = &ctx.graph.get_port(&port_id)?;
-    let node = &ctx.nodes().get(&port.node_id)?;
+    let node = &ctx.nodes().get(&port.node_id())?;
 
     let node_pos = node.point();
 
-    let offset = ctx.port_offset_cached(&port.node_id, &port_id)?;
+    let offset = ctx.port_offset_cached(&port.node_id(), &port_id)?;
+    let size = *port.size_ref();
 
     Some(Bounds::new(
-        node_pos + offset - Point::new(port.size.width / 2.0, port.size.height / 2.0),
-        port.size,
+        node_pos + offset - Point::new(size.width / 2.0, size.height / 2.0),
+        size,
     ))
 }
 

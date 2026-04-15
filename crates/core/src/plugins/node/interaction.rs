@@ -166,8 +166,7 @@ impl Interaction for NodeDragInteraction {
                 let dy = ctx.screen_length_to_world(ev.position.y - start_mouse.y);
                 for (id, point) in start_positions.iter() {
                     if let Some(node) = ctx.get_node_mut(id) {
-                        node.x = point.x + dx;
-                        node.y = point.y + dy;
+                        node.set_position(point.x + dx, point.y + dy);
                     }
                 }
 

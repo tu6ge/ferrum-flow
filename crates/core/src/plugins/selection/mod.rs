@@ -175,8 +175,7 @@ impl Interaction for SelectionInteraction {
 
                 for (id, start_pos) in nodes.iter() {
                     if let Some(node) = ctx.get_node_mut(id) {
-                        node.x = start_pos.x + delta.x;
-                        node.y = start_pos.y + delta.y;
+                        node.set_position(start_pos.x + delta.x, start_pos.y + delta.y);
                     }
                 }
                 *bounds = Bounds::new(start_bounds.origin + delta, start_bounds.size);
@@ -228,11 +227,13 @@ impl Interaction for SelectionInteraction {
                     .filter(|node| ctx.is_node_visible_node(node))
                     .filter(|node| rect.intersects(&node.bounds()))
                 {
-                    nodes.insert(node.id, node.point());
-                    min_x = min_x.min(node.x.into());
-                    min_y = min_y.min(node.y.into());
-                    max_x = max_x.max((node.x + node.size.width).into());
-                    max_y = max_y.max((node.y + node.size.height).into());
+                    let (x, y) = node.position();
+                    let size = *node.size_ref();
+                    nodes.insert(node.id(), node.point());
+                    min_x = min_x.min(x.into());
+                    min_y = min_y.min(y.into());
+                    max_x = max_x.max((x + size.width).into());
+                    max_y = max_y.max((y + size.height).into());
                 }
 
                 for id in nodes.keys().copied() {
