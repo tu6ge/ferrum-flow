@@ -28,10 +28,12 @@ fn graph_world_bounds_graph<'a>(
     let mut any = false;
 
     for n in nodes {
-        let x: f32 = n.x.into();
-        let y: f32 = n.y.into();
-        let w: f32 = n.size.width.into();
-        let h: f32 = n.size.height.into();
+        let (nx, ny) = n.position();
+        let size = *n.size_ref();
+        let x: f32 = nx.into();
+        let y: f32 = ny.into();
+        let w: f32 = size.width.into();
+        let h: f32 = size.height.into();
         min_x = min_x.min(x);
         min_y = min_y.min(y);
         max_x = max_x.max(x + w);

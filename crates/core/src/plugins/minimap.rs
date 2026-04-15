@@ -69,10 +69,12 @@ fn graph_world_extent(ctx: &RenderContext) -> (f32, f32, f32, f32) {
     let mut max_x = f32::MIN;
     let mut max_y = f32::MIN;
     for n in nodes {
-        let x: f32 = n.x.into();
-        let y: f32 = n.y.into();
-        let w: f32 = n.size.width.into();
-        let h: f32 = n.size.height.into();
+        let (nx, ny) = n.position();
+        let size = *n.size_ref();
+        let x: f32 = nx.into();
+        let y: f32 = ny.into();
+        let w: f32 = size.width.into();
+        let h: f32 = size.height.into();
         min_x = min_x.min(x);
         min_y = min_y.min(y);
         max_x = max_x.max(x + w);
@@ -286,14 +288,16 @@ impl Plugin for MinimapPlugin {
             .nodes()
             .values()
             .filter_map(|n| {
-                if !ctx.is_node_visible(&n.id) {
+                if !ctx.is_node_visible(&n.id()) {
                     return None;
                 }
-                let x: f32 = n.x.into();
-                let y: f32 = n.y.into();
-                let w: f32 = n.size.width.into();
-                let h: f32 = n.size.height.into();
-                visible_centers.insert(n.id, (x + w * 0.5, y + h * 0.5));
+                let (nx, ny) = n.position();
+                let size = *n.size_ref();
+                let x: f32 = nx.into();
+                let y: f32 = ny.into();
+                let w: f32 = size.width.into();
+                let h: f32 = size.height.into();
+                visible_centers.insert(n.id(), (x + w * 0.5, y + h * 0.5));
                 Some((x, y, w, h))
             })
             .collect();
@@ -304,8 +308,8 @@ impl Plugin for MinimapPlugin {
             .filter_map(|e| {
                 let s = ctx.graph.get_port(&e.source_port)?;
                 let t = ctx.graph.get_port(&e.target_port)?;
-                let (sx, sy) = visible_centers.get(&s.node_id)?;
-                let (tx, ty) = visible_centers.get(&t.node_id)?;
+                let (sx, sy) = visible_centers.get(&s.node_id())?;
+                let (tx, ty) = visible_centers.get(&t.node_id())?;
                 Some((*sx, *sy, *tx, *ty))
             })
             .collect();

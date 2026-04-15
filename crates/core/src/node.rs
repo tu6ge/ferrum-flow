@@ -104,6 +104,11 @@ impl Node {
     }
 
     #[allow(deprecated)]
+    pub(crate) fn set_id(&mut self, id: NodeId) {
+        self.id = id;
+    }
+
+    #[allow(deprecated)]
     pub fn renderer_key(&self) -> &str {
         &self.node_type
     }
