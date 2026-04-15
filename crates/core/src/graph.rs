@@ -60,23 +60,22 @@ impl Graph {
             GraphChangeKind::NodeRemoved { id } => self.remove_node(&id),
             GraphChangeKind::NodeMoved { id, x, y } => {
                 if let Some(node) = self.nodes.get_mut(&id) {
-                    node.x = px(x);
-                    node.y = px(y);
+                    node.set_position(px(x), px(y));
                 }
             }
             GraphChangeKind::NodeSetWidthed { id, width } => {
                 if let Some(node) = self.nodes.get_mut(&id) {
-                    node.size.width = px(width);
+                    node.set_size_width(px(width));
                 }
             }
             GraphChangeKind::NodeSetHeighted { id, height } => {
                 if let Some(node) = self.nodes.get_mut(&id) {
-                    node.size.height = px(height);
+                    node.set_size_height(px(height));
                 }
             }
             GraphChangeKind::NodeDataUpdated { id, data } => {
                 if let Some(node) = self.nodes.get_mut(&id) {
-                    node.data = data;
+                    node.set_data(data);
                 }
             }
             GraphChangeKind::NodeOrderUpdate(vec) => {
@@ -123,18 +122,18 @@ impl Graph {
     }
 
     pub fn add_node(&mut self, node: Node) {
-        let node_id = node.id;
-        self.nodes.insert(node.id, node);
+        let node_id = node.id();
+        self.nodes.insert(node.id(), node);
         self.node_order.push(node_id);
     }
     #[cfg(any(test, feature = "testing"))]
     pub(crate) fn add_node_without_order(&mut self, node: Node) {
-        self.nodes.insert(node.id, node);
+        self.nodes.insert(node.id(), node);
     }
 
     pub fn add_port(&mut self, port: Port) {
         let ref mut map = self.ports;
-        map.insert(port.id, port);
+        map.insert(port.id(), port);
     }
 
     pub fn remove_port(&mut self, id: &PortId) {
@@ -216,8 +215,8 @@ impl Graph {
         let Some(node) = &self.nodes.get(id) else {
             return;
         };
-        let mut port_ids = node.inputs.clone();
-        port_ids.extend(node.outputs.clone());
+        let mut port_ids = node.inputs().to_vec();
+        port_ids.extend(node.outputs().iter().copied());
 
         self.nodes.remove(id);
         self.selected_node.remove(id);
@@ -323,12 +322,14 @@ impl Graph {
 
         for id in &self.selected_node {
             let node = &self.nodes.get(id)?;
+            let (x, y) = node.position();
+            let size = *node.size_ref();
 
-            min_x = min_x.min(node.x.into());
-            min_y = min_y.min(node.y.into());
+            min_x = min_x.min(x.into());
+            min_y = min_y.min(y.into());
 
-            max_x = max_x.max((node.x + node.size.width).into());
-            max_y = max_y.max((node.y + node.size.height).into());
+            max_x = max_x.max((x + size.width).into());
+            max_y = max_y.max((y + size.height).into());
 
             found = true;
         }
@@ -375,7 +376,7 @@ impl Graph {
     ) -> Vec<&Port> {
         self.ports
             .values()
-            .filter(|p| p.node_id == node_id && p.kind == kind && p.position == position)
+            .filter(|p| p.node_id() == node_id && p.kind() == kind && p.position() == position)
             .collect()
     }
 }

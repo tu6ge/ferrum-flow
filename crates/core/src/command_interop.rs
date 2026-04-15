@@ -50,18 +50,17 @@ fn apply_graph_op(graph: &mut Graph, op: GraphOp) {
         GraphOp::RemoveNode { id } => graph.remove_node(&id),
         GraphOp::MoveNode { id, x, y } => {
             if let Some(node) = graph.get_node_mut(&id) {
-                node.x = x.into();
-                node.y = y.into();
+                node.set_position(x.into(), y.into());
             }
         }
         GraphOp::ResizeNode { id, size } => {
             if let Some(node) = graph.get_node_mut(&id) {
-                node.size = size;
+                node.set_size_mut(size);
             }
         }
         GraphOp::UpdateNodeData { id, data } => {
             if let Some(node) = graph.get_node_mut(&id) {
-                node.data = data;
+                node.set_data(data);
             }
         }
         GraphOp::NodeOrderInsert { id } => graph.node_order_mut().push(id),
@@ -91,12 +90,12 @@ pub fn graph_snapshot(graph: &Graph) -> Value {
             (
                 id.to_string(),
                 json!({
-                    "x": f32::from(n.x),
-                    "y": f32::from(n.y),
-                    "w": f32::from(n.size.width),
-                    "h": f32::from(n.size.height),
-                    "inputs": n.inputs.iter().map(ToString::to_string).collect::<Vec<_>>(),
-                    "outputs": n.outputs.iter().map(ToString::to_string).collect::<Vec<_>>(),
+                    "x": f32::from(n.position().0),
+                    "y": f32::from(n.position().1),
+                    "w": f32::from(n.size_ref().width),
+                    "h": f32::from(n.size_ref().height),
+                    "inputs": n.inputs().iter().map(ToString::to_string).collect::<Vec<_>>(),
+                    "outputs": n.outputs().iter().map(ToString::to_string).collect::<Vec<_>>(),
                 }),
             )
         })
@@ -110,12 +109,12 @@ pub fn graph_snapshot(graph: &Graph) -> Value {
             (
                 id.to_string(),
                 json!({
-                    "node_id": p.node_id.to_string(),
-                    "kind": format!("{:?}", p.kind),
-                    "position": format!("{:?}", p.position),
-                    "index": p.index,
-                    "w": f32::from(p.size.width),
-                    "h": f32::from(p.size.height),
+                    "node_id": p.node_id().to_string(),
+                    "kind": p.kind().to_string(),
+                    "position": p.position().to_string(),
+                    "index": p.index(),
+                    "w": f32::from(p.size_ref().width),
+                    "h": f32::from(p.size_ref().height),
                 }),
             )
         })

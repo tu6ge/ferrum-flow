@@ -89,8 +89,8 @@ impl Plugin for EdgePlugin {
                     return false;
                 };
 
-                visible_nodes.contains(&source_port.node_id)
-                    || visible_nodes.contains(&target_port.node_id)
+                visible_nodes.contains(&source_port.node_id())
+                    || visible_nodes.contains(&target_port.node_id())
             })
             .map(|(k, v)| (*k, edge_geometry2(v, &ctx)))
             .collect();
@@ -149,8 +149,8 @@ fn edge_geometry(edge: &Edge, ctx: &PluginContext) -> Option<EdgeGeometry> {
     let source_port = ctx.graph.get_port(source_id)?;
     let target_port = ctx.graph.get_port(target_id)?;
 
-    let c1 = ctx.edge_control_point(start, source_port.position);
-    let c2 = ctx.edge_control_point(end, target_port.position);
+    let c1 = ctx.edge_control_point(start, source_port.position());
+    let c2 = ctx.edge_control_point(end, target_port.position());
 
     Some(EdgeGeometry { start, c1, c2, end })
 }
@@ -168,8 +168,8 @@ fn edge_geometry2(edge: &Edge, ctx: &RenderContext) -> Option<EdgeGeometry> {
     let source_port = ctx.graph.get_port(source_id)?;
     let target_port = ctx.graph.get_port(target_id)?;
 
-    let c1 = ctx.edge_control_point(start, source_port.position);
-    let c2 = ctx.edge_control_point(end, target_port.position);
+    let c1 = ctx.edge_control_point(start, source_port.position());
+    let c2 = ctx.edge_control_point(end, target_port.position());
 
     Some(EdgeGeometry { start, c1, c2, end })
 }
@@ -191,7 +191,8 @@ fn hit_test_get_edge(mouse: Point<Pixels>, ctx: &PluginContext) -> Option<EdgeId
             return false;
         };
 
-        visible_nodes.contains(&source_port.node_id) || visible_nodes.contains(&target_port.node_id)
+        visible_nodes.contains(&source_port.node_id())
+            || visible_nodes.contains(&target_port.node_id())
     });
     for edge in edges {
         let Some(geom) = edge_geometry(edge, ctx) else {

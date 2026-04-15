@@ -62,7 +62,7 @@ impl DeleteCommand {
                 .selected_node()
                 .iter()
                 .filter_map(|node_id| ctx.get_node(node_id))
-                .flat_map(|node| node.inputs.iter().chain(node.outputs.iter()))
+                .flat_map(|node| node.inputs().iter().chain(node.outputs().iter()))
                 .filter_map(|port_id| ctx.graph.get_port(port_id).cloned())
                 .collect(),
         }
@@ -80,7 +80,7 @@ impl Command for DeleteCommand {
     fn undo(&mut self, ctx: &mut crate::canvas::CommandContext) {
         for node in &self.selected_node {
             ctx.add_node(node.clone());
-            ctx.add_selected_node(node.id, true);
+            ctx.add_selected_node(node.id(), true);
         }
 
         for port in &self.selected_port {
@@ -96,11 +96,11 @@ impl Command for DeleteCommand {
     fn to_ops(&self, ctx: &mut crate::CommandContext) -> Vec<crate::GraphOp> {
         let mut list = vec![];
         for node in &self.selected_node {
-            list.push(GraphOp::RemoveNode { id: node.id });
-            let mut port_ids = node.inputs.clone();
-            port_ids.extend(node.outputs.clone());
+            list.push(GraphOp::RemoveNode { id: node.id() });
+            let mut port_ids = node.inputs().to_vec();
+            port_ids.extend(node.outputs().iter().copied());
 
-            let index = ctx.graph.node_order().iter().position(|v| *v == node.id);
+            let index = ctx.graph.node_order().iter().position(|v| *v == node.id());
             if let Some(index) = index {
                 list.push(GraphOp::NodeOrderRemove { index })
             }
@@ -157,7 +157,7 @@ mod command_interop_tests {
             .selected_node()
             .iter()
             .filter_map(|node_id| graph.get_node(node_id))
-            .flat_map(|node| node.inputs.iter().chain(node.outputs.iter()))
+            .flat_map(|node| node.inputs().iter().chain(node.outputs().iter()))
             .filter_map(|port_id| graph.get_port(port_id).cloned())
             .collect();
         DeleteCommand {

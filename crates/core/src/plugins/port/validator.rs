@@ -90,14 +90,14 @@ impl EdgeValidator for DefaultEdgeValidator {
         to: &Port,
         _ctx: &PluginContext,
     ) -> Result<(), EdgeValidationError> {
-        if from.node_id == to.node_id {
+        if from.node_id() == to.node_id() {
             return Err(EdgeValidationError::same_node(
                 "Cannot connect two ports on the same node.".into(),
             ));
         }
 
         let one_output_one_input = matches!(
-            (from.kind, to.kind),
+            (from.kind(), to.kind()),
             (PortKind::Output, PortKind::Input) | (PortKind::Input, PortKind::Output)
         );
         if !one_output_one_input {

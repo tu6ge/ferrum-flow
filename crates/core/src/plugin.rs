@@ -280,7 +280,7 @@ impl<'a, 'b> InitPluginContext<'a, 'b> {
     /// *warning*: this is using port offset cache, so it will not be accurate if the port offset is not cached.
     pub fn port_screen_center(&self, node: &Node, port_id: PortId) -> Option<Point<Pixels>> {
         let node_pos = node.point();
-        let offset = self.port_offset_cached(&node.id, &port_id)?;
+        let offset = self.port_offset_cached(&node.id(), &port_id)?;
         Some(self.viewport.world_to_screen(node_pos + offset))
     }
 
@@ -288,7 +288,7 @@ impl<'a, 'b> InitPluginContext<'a, 'b> {
     /// *warning*: this is using port offset cache, so it will not be accurate if the port offset is not cached.
     pub fn port_screen_center_by_port_id(&self, port_id: PortId) -> Option<Point<Pixels>> {
         let port = self.graph.get_port(&port_id)?;
-        let node = self.get_node(&port.node_id)?;
+        let node = self.get_node(&port.node_id())?;
         self.port_screen_center(node, port_id)
     }
 
@@ -296,8 +296,8 @@ impl<'a, 'b> InitPluginContext<'a, 'b> {
     /// *warning*: this is using port offset cache, so it will not be accurate if the port offset is not cached.
     pub fn port_screen_frame(&self, node: &Node, port: &Port) -> Option<PortScreenFrame> {
         Some(PortScreenFrame {
-            center: self.port_screen_center(node, port.id)?,
-            size: port.size,
+            center: self.port_screen_center(node, port.id())?,
+            size: *port.size_ref(),
             zoom: self.viewport.zoom(),
         })
     }
@@ -509,7 +509,7 @@ impl<'a> PluginContext<'a> {
     pub fn get_node_render(&self, id: &NodeId) -> Option<&dyn NodeRenderer> {
         let node = self.get_node(id)?;
 
-        Some(self.renderers.get(&node.node_type))
+        Some(self.renderers.get(node.node_type_ref()))
     }
 
     pub fn get_node_mut(&mut self, id: &NodeId) -> Option<&mut Node> {
@@ -666,7 +666,7 @@ impl<'a> PluginContext<'a> {
     /// *warning*: this is using port offset cache, so it will not be accurate if the port offset is not cached.
     pub fn port_screen_center(&self, node: &Node, port_id: PortId) -> Option<Point<Pixels>> {
         let node_pos = node.point();
-        let offset = self.port_offset_cached(&node.id, &port_id)?;
+        let offset = self.port_offset_cached(&node.id(), &port_id)?;
         Some(self.viewport.world_to_screen(node_pos + offset))
     }
 
@@ -674,7 +674,7 @@ impl<'a> PluginContext<'a> {
     /// *warning*: this is using port offset cache, so it will not be accurate if the port offset is not cached.
     pub fn port_screen_center_by_port_id(&self, port_id: PortId) -> Option<Point<Pixels>> {
         let port = self.graph.get_port(&port_id)?;
-        let node = self.get_node(&port.node_id)?;
+        let node = self.get_node(&port.node_id())?;
         self.port_screen_center(node, port_id)
     }
 
@@ -682,8 +682,8 @@ impl<'a> PluginContext<'a> {
     /// *warning*: this is using port offset cache, so it will not be accurate if the port offset is not cached.
     pub fn port_screen_frame(&self, node: &Node, port: &Port) -> Option<PortScreenFrame> {
         Some(PortScreenFrame {
-            center: self.port_screen_center(node, port.id)?,
-            size: port.size,
+            center: self.port_screen_center(node, port.id())?,
+            size: *port.size_ref(),
             zoom: self.viewport.zoom(),
         })
     }
@@ -804,7 +804,7 @@ impl<'a> RenderContext<'a> {
     pub fn get_node_render(&self, id: &NodeId) -> Option<&dyn NodeRenderer> {
         let node = self.get_node(id)?;
 
-        Some(self.renderers.get(&node.node_type))
+        Some(self.renderers.get(node.node_type_ref()))
     }
 
     pub fn nodes(&self) -> &HashMap<NodeId, Node> {
@@ -882,8 +882,8 @@ impl<'a> RenderContext<'a> {
             .absolute()
             .left(screen.x)
             .top(screen.y)
-            .w(node.size.width * z)
-            .h(node.size.height * z)
+            .w(node.size_ref().width * z)
+            .h(node.size_ref().height * z)
             .rounded(px(6.0))
             .border(px(1.5));
         let t = self.theme;
@@ -934,7 +934,7 @@ impl<'a> RenderContext<'a> {
     /// *warning*: this is using port offset cache, so it will not be accurate if the port offset is not cached.
     pub fn port_screen_center(&self, node: &Node, port_id: PortId) -> Option<Point<Pixels>> {
         let node_pos = node.point();
-        let offset = self.port_offset_cached(&node.id, &port_id)?;
+        let offset = self.port_offset_cached(&node.id(), &port_id)?;
         Some(self.viewport.world_to_screen(node_pos + offset))
     }
 
@@ -942,7 +942,7 @@ impl<'a> RenderContext<'a> {
     /// *warning*: this is using port offset cache, so it will not be accurate if the port offset is not cached.
     pub fn port_screen_center_by_port_id(&self, port_id: PortId) -> Option<Point<Pixels>> {
         let port = self.graph.get_port(&port_id)?;
-        let node = self.get_node(&port.node_id)?;
+        let node = self.get_node(&port.node_id())?;
         self.port_screen_center(node, port_id)
     }
 
@@ -950,8 +950,8 @@ impl<'a> RenderContext<'a> {
     /// *warning*: this is using port offset cache, so it will not be accurate if the port offset is not cached.
     pub fn port_screen_frame(&self, node: &Node, port: &Port) -> Option<PortScreenFrame> {
         Some(PortScreenFrame {
-            center: self.port_screen_center(node, port.id)?,
-            size: port.size,
+            center: self.port_screen_center(node, port.id())?,
+            size: *port.size_ref(),
             zoom: self.viewport.zoom(),
         })
     }
