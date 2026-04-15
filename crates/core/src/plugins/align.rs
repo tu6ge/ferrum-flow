@@ -62,10 +62,12 @@ fn build_aligned_positions(
 
     for id in &ids {
         let n = ctx.get_node(id)?;
-        let x = px_to_f32(n.x);
-        let y = px_to_f32(n.y);
-        let w = px_to_f32(n.size.width);
-        let h = px_to_f32(n.size.height);
+        let (nx, ny) = n.position();
+        let size = *n.size_ref();
+        let x = px_to_f32(nx);
+        let y = px_to_f32(ny);
+        let w = px_to_f32(size.width);
+        let h = px_to_f32(size.height);
         min_left = min_left.min(x);
         max_right = max_right.max(x + w);
         min_top = min_top.min(y);
@@ -83,10 +85,12 @@ fn build_aligned_positions(
         let p = n.point();
         from.push((id, p));
 
-        let x = px_to_f32(n.x);
-        let y = px_to_f32(n.y);
-        let w = px_to_f32(n.size.width);
-        let h = px_to_f32(n.size.height);
+        let (nx, ny) = n.position();
+        let size = *n.size_ref();
+        let x = px_to_f32(nx);
+        let y = px_to_f32(ny);
+        let w = px_to_f32(size.width);
+        let h = px_to_f32(size.height);
 
         let (nx, ny) = match kind {
             AlignKind::Left => (min_left, y),

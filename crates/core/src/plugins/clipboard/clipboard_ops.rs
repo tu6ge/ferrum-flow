@@ -43,7 +43,7 @@ pub(crate) fn extract_subgraph(graph: &Graph) -> Option<CopiedSubgraph> {
     let mut nodes = Vec::new();
     for nid in &node_ids {
         let n = graph.get_node(nid)?.clone();
-        for pid in n.inputs.iter().chain(n.outputs.iter()) {
+        for pid in n.inputs().iter().chain(n.outputs().iter()) {
             port_ids.insert(*pid);
         }
         nodes.push(n);
@@ -52,7 +52,7 @@ pub(crate) fn extract_subgraph(graph: &Graph) -> Option<CopiedSubgraph> {
     let mut ports = Vec::new();
     for nid in &node_ids {
         let n = graph.get_node(nid)?;
-        for pid in n.inputs.iter().chain(n.outputs.iter()) {
+        for pid in n.inputs().iter().chain(n.outputs().iter()) {
             if let Some(p) = graph.get_port(pid) {
                 ports.push(p.clone());
             }
@@ -79,11 +79,11 @@ pub(crate) fn paste_subgraph(ctx: &mut PluginContext, sub: &CopiedSubgraph) {
 
     let mut node_map = HashMap::new();
     for n in &sub.nodes {
-        node_map.insert(n.id, ctx.graph.next_node_id());
+        node_map.insert(n.id(), ctx.graph.next_node_id());
     }
     let mut port_map = HashMap::new();
     for p in &sub.ports {
-        port_map.insert(p.id, ctx.graph.next_port_id());
+        port_map.insert(p.id(), ctx.graph.next_port_id());
     }
 
     let mut composite = CompositeCommand::new();
@@ -91,32 +91,38 @@ pub(crate) fn paste_subgraph(ctx: &mut PluginContext, sub: &CopiedSubgraph) {
     let mut new_node_ids = Vec::new();
 
     for old in &sub.nodes {
-        let new_id = node_map[&old.id];
-        let node = Node {
-            id: new_id,
-            node_type: old.node_type.clone(),
-            execute_type: old.execute_type.clone(),
-            x: old.x + offset,
-            y: old.y + offset,
-            size: old.size,
-            inputs: old.inputs.iter().map(|p| port_map[p]).collect(),
-            outputs: old.outputs.iter().map(|p| port_map[p]).collect(),
-            data: old.data.clone(),
-        };
+        let new_id = node_map[&old.id()];
+        let (x, y) = old.position();
+        let mut node = Node::new((x + offset).into(), (y + offset).into());
+        node.set_renderer_key(old.renderer_key());
+        node.set_execute_type(old.execute_type_ref());
+        node.set_size_mut(*old.size_ref());
+        node.set_data(old.data_ref().clone());
+        node.set_id(new_id);
+
+        // TODO review
+        for pid in old.inputs() {
+            node.push_input(port_map[pid]);
+        }
+        for pid in old.outputs() {
+            node.push_output(port_map[pid]);
+        }
         new_node_ids.push(new_id);
         composite.push(CreateNode::new(node));
     }
 
     for old in &sub.ports {
-        let port = Port {
-            id: port_map[&old.id],
-            kind: old.kind,
-            index: old.index,
-            node_id: node_map[&old.node_id],
-            position: old.position,
-            size: old.size,
-            port_type: old.port_type.clone(),
-        };
+        let port = Port::new(
+            // TODO review
+            port_map[&old.id()],
+            old.kind(),
+            old.index(),
+            // TODO review
+            node_map[&old.node_id()],
+            old.position(),
+            *old.size_ref(),
+            old.port_type_ref().clone(),
+        );
         composite.push(CreatePort::new(port));
     }
 
@@ -129,7 +135,7 @@ pub(crate) fn paste_subgraph(ctx: &mut PluginContext, sub: &CopiedSubgraph) {
         composite.push(CreateEdge::new(edge));
     }
 
-    let pasted_ids = sub.nodes.iter().map(|n| node_map[&n.id]);
+    let pasted_ids = sub.nodes.iter().map(|n| node_map[&n.id()]);
 
     ctx.execute_command(composite);
     ctx.clear_selected_edge();
