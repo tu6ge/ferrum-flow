@@ -40,15 +40,34 @@ impl NodeId {
 pub struct Node {
     // Transitional API: these fields stay public for compatibility in this release.
     // Prefer using methods on `Node`; fields will become private in a future release.
+    #[deprecated(note = "Use `Node::id()` instead; fields will be private in next release.")]
     pub id: NodeId,
+    #[deprecated(
+        note = "Use `Node::renderer_key()` / `Node::set_renderer_key()` instead; fields will be private in next release."
+    )]
     pub node_type: String,
+    #[deprecated(
+        note = "Use `Node::execute_type_ref()` / `Node::set_execute_type()` instead; fields will be private in next release."
+    )]
     pub execute_type: String,
+    #[deprecated(
+        note = "Use `Node::position()` / `Node::set_position()` instead; fields will be private in next release."
+    )]
     pub x: Pixels,
+    #[deprecated(
+        note = "Use `Node::position()` / `Node::set_position()` instead; fields will be private in next release."
+    )]
     pub y: Pixels,
+    #[deprecated(
+        note = "Use `Node::size_ref()` / `Node::set_size_mut()` instead; fields will be private in next release."
+    )]
     pub size: Size<Pixels>,
 
+    #[deprecated(note = "Use `Node::inputs()` / `Node::push_input()` instead; fields will be private in next release.")]
     pub inputs: Vec<PortId>,
+    #[deprecated(note = "Use `Node::outputs()` / `Node::push_output()` instead; fields will be private in next release.")]
     pub outputs: Vec<PortId>,
+    #[deprecated(note = "Use `Node::data_ref()` / `Node::data_mut()` / `Node::set_data()` instead; fields will be private in next release.")]
     pub data: serde_json::Value,
 }
 
@@ -79,12 +98,20 @@ impl Node {
         self.id
     }
 
-    pub fn node_type_ref(&self) -> &str {
+    pub fn renderer_key(&self) -> &str {
         &self.node_type
     }
 
     pub fn execute_type_ref(&self) -> &str {
         &self.execute_type
+    }
+
+    pub fn set_renderer_key(&mut self, node_type: impl Into<String>) {
+        self.node_type = node_type.into();
+    }
+
+    pub fn set_execute_type(&mut self, execute_type: impl Into<String>) {
+        self.execute_type = execute_type.into();
     }
 
     pub fn position(&self) -> (Pixels, Pixels) {
@@ -213,12 +240,19 @@ pub enum PortPosition {
 pub struct Port {
     // Transitional API: these fields stay public for compatibility in this release.
     // Prefer using methods on `Port`; fields will become private in a future release.
+    #[deprecated(note = "Use `Port::id()` instead; fields will be private in next release.")]
     pub id: PortId,
+    #[deprecated(note = "Use `Port::kind()` instead; fields will be private in next release.")]
     pub kind: PortKind,
+    #[deprecated(note = "Use `Port::index()` / `Port::set_index()` instead; fields will be private in next release.")]
     pub index: usize,
+    #[deprecated(note = "Use `Port::node_id()` instead; fields will be private in next release.")]
     pub node_id: NodeId,
+    #[deprecated(note = "Use `Port::position()` / `Port::set_position()` instead; fields will be private in next release.")]
     pub position: PortPosition,
+    #[deprecated(note = "Use `Port::size_ref()` / `Port::set_size()` instead; fields will be private in next release.")]
     pub size: Size<Pixels>,
+    #[deprecated(note = "Use `Port::port_type_ref()` / `Port::port_type_mut()` instead; fields will be private in next release.")]
     pub port_type: serde_json::Value,
 }
 

@@ -55,7 +55,7 @@ impl PortLayoutCache {
             return;
         };
 
-        let renderer = renderers.get(node.node_type_ref());
+        let renderer = renderers.get(node.renderer_key());
 
         let mut result = HashMap::new();
 
