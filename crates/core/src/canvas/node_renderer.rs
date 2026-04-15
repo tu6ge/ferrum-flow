@@ -167,15 +167,15 @@ pub fn default_node_caption(node: &Node) -> String {
     if let Some(s) = data_title(node.data_ref()) {
         return s;
     }
-    if !node.node_type_ref().is_empty() {
-        return node.node_type_ref().to_string();
+    if !node.renderer_key().is_empty() {
+        return node.renderer_key().to_string();
     }
     "Node".to_string()
 }
 
 fn undefined_node_caption(node: &Node) -> String {
-    if !node.node_type_ref().is_empty() {
-        return format!("Unknown type: {}", node.node_type_ref());
+    if !node.renderer_key().is_empty() {
+        return format!("Unknown type: {}", node.renderer_key());
     }
     "Unknown node type".to_string()
 }

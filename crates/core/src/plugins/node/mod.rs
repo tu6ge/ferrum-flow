@@ -48,7 +48,7 @@ impl Plugin for NodePlugin {
 
         let list = node_ids.iter().filter_map(|node_id| {
             let node = ctx.graph.nodes().get(node_id)?;
-            let render = ctx.renderers.get(node.node_type_ref());
+            let render = ctx.renderers.get(node.renderer_key());
 
             let node_render = render.render(node, ctx);
 

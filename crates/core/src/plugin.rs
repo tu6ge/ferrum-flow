@@ -509,7 +509,7 @@ impl<'a> PluginContext<'a> {
     pub fn get_node_render(&self, id: &NodeId) -> Option<&dyn NodeRenderer> {
         let node = self.get_node(id)?;
 
-        Some(self.renderers.get(node.node_type_ref()))
+        Some(self.renderers.get(node.renderer_key()))
     }
 
     pub fn get_node_mut(&mut self, id: &NodeId) -> Option<&mut Node> {
@@ -804,7 +804,7 @@ impl<'a> RenderContext<'a> {
     pub fn get_node_render(&self, id: &NodeId) -> Option<&dyn NodeRenderer> {
         let node = self.get_node(id)?;
 
-        Some(self.renderers.get(node.node_type_ref()))
+        Some(self.renderers.get(node.renderer_key()))
     }
 
     pub fn nodes(&self) -> &HashMap<NodeId, Node> {
