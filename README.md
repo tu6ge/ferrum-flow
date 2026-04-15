@@ -223,6 +223,7 @@ Foundation work that unlocks most other extensions:
 
 - [ ] **Separate data, logic, and rendering** — Clear boundaries between graph/state, interaction and commands, and GPUI (or future) paint so features can grow without entangling layers.
 - [ ] **Large-graph performance** — Investigate **arena-style** allocation for nodes/edges and **ID-based references** instead of pointer-heavy graphs to improve locality and scale.
+- [ ] **Encapsulate graph model fields** — Make transitional public fields on `Node` / `Port` private in the next release after migration APIs settle.
 
 ### Long-term / directional
 
