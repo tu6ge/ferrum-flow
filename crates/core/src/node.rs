@@ -72,6 +72,9 @@ pub struct Node {
 }
 
 impl Node {
+    // Transitional period: `Node` fields are deprecated for external callers,
+    // but internal constructors/methods still need to read/write those fields.
+    #[allow(deprecated)]
     pub fn new(x: f32, y: f32) -> Self {
         Self {
             id: NodeId::new(),
@@ -89,107 +92,132 @@ impl Node {
         }
     }
 
+    #[allow(deprecated)]
     pub fn node_type(mut self, ty: impl Into<String>) -> Self {
         self.node_type = ty.into();
         self
     }
 
+    #[allow(deprecated)]
     pub fn id(&self) -> NodeId {
         self.id
     }
 
+    #[allow(deprecated)]
     pub fn renderer_key(&self) -> &str {
         &self.node_type
     }
 
+    #[allow(deprecated)]
     pub fn execute_type_ref(&self) -> &str {
         &self.execute_type
     }
 
+    #[allow(deprecated)]
     pub fn set_renderer_key(&mut self, node_type: impl Into<String>) {
         self.node_type = node_type.into();
     }
 
+    #[allow(deprecated)]
     pub fn set_execute_type(&mut self, execute_type: impl Into<String>) {
         self.execute_type = execute_type.into();
     }
 
+    #[allow(deprecated)]
     pub fn position(&self) -> (Pixels, Pixels) {
         (self.x, self.y)
     }
 
+    #[allow(deprecated)]
     pub fn size_ref(&self) -> &Size<Pixels> {
         &self.size
     }
 
+    #[allow(deprecated)]
     pub fn inputs(&self) -> &[PortId] {
         &self.inputs
     }
 
+    #[allow(deprecated)]
     pub fn outputs(&self) -> &[PortId] {
         &self.outputs
     }
 
+    #[allow(deprecated)]
     pub fn data_ref(&self) -> &serde_json::Value {
         &self.data
     }
 
+    #[allow(deprecated)]
     pub fn data_mut(&mut self) -> &mut serde_json::Value {
         &mut self.data
     }
 
+    #[allow(deprecated)]
     pub fn set_position(&mut self, x: Pixels, y: Pixels) {
         self.x = x;
         self.y = y;
     }
 
+    #[allow(deprecated)]
     pub fn set_position_with_point(&mut self, point: Point<Pixels>) {
         self.x = point.x;
         self.y = point.y;
     }
 
+    #[allow(deprecated)]
     pub fn set_size_mut(&mut self, size: Size<Pixels>) {
         self.size = size;
     }
 
+    #[allow(deprecated)]
     pub fn set_size_width(&mut self, width: Pixels) {
         self.size.width = width;
     }
 
+    #[allow(deprecated)]
     pub fn set_size_height(&mut self, height: Pixels) {
         self.size.height = height;
     }
 
+    #[allow(deprecated)]
     pub fn set_data(&mut self, data: serde_json::Value) {
         self.data = data;
     }
 
+    #[allow(deprecated)]
     pub fn push_input(&mut self, id: PortId) {
         self.inputs.push(id);
     }
 
+    #[allow(deprecated)]
     pub fn push_output(&mut self, id: PortId) {
         self.outputs.push(id);
     }
 
+    #[allow(deprecated)]
     pub fn point(&self) -> Point<Pixels> {
         Point::new(self.x, self.y)
     }
 
+    #[allow(deprecated)]
     pub fn bounds(&self) -> Bounds<Pixels> {
         Bounds::new(self.point(), self.size)
     }
 
+    #[allow(deprecated)]
     pub fn set_size(mut self, size: Size<Pixels>) -> Self {
         self.size = size;
         self
     }
 
+    #[allow(deprecated)]
     pub fn output(mut self, id: PortId) -> Self {
         self.outputs.push(id);
         self
     }
 
+    #[allow(deprecated)]
     pub fn input(mut self, id: PortId) -> Self {
         self.inputs.push(id);
         self
@@ -258,6 +286,7 @@ pub struct Port {
 
 impl Port {
     #[allow(clippy::too_many_arguments)]
+    #[allow(deprecated)]
     pub fn new(
         id: PortId,
         kind: PortKind,
@@ -278,46 +307,57 @@ impl Port {
         }
     }
 
+    #[allow(deprecated)]
     pub fn id(&self) -> PortId {
         self.id
     }
 
+    #[allow(deprecated)]
     pub fn kind(&self) -> PortKind {
         self.kind
     }
 
+    #[allow(deprecated)]
     pub fn index(&self) -> usize {
         self.index
     }
 
+    #[allow(deprecated)]
     pub fn node_id(&self) -> NodeId {
         self.node_id
     }
 
+    #[allow(deprecated)]
     pub fn position(&self) -> PortPosition {
         self.position
     }
 
+    #[allow(deprecated)]
     pub fn size_ref(&self) -> &Size<Pixels> {
         &self.size
     }
 
+    #[allow(deprecated)]
     pub fn port_type_ref(&self) -> &serde_json::Value {
         &self.port_type
     }
 
+    #[allow(deprecated)]
     pub fn port_type_mut(&mut self) -> &mut serde_json::Value {
         &mut self.port_type
     }
 
+    #[allow(deprecated)]
     pub fn set_size(&mut self, size: Size<Pixels>) {
         self.size = size;
     }
 
+    #[allow(deprecated)]
     pub fn set_index(&mut self, index: usize) {
         self.index = index;
     }
 
+    #[allow(deprecated)]
     pub fn set_position(&mut self, position: PortPosition) {
         self.position = position;
     }
@@ -494,6 +534,7 @@ impl NodeBuilder {
         self
     }
 
+    #[allow(deprecated)]
     pub fn build_raw(self) -> (Node, Vec<Port>) {
         let node_id = NodeId::new();
 
