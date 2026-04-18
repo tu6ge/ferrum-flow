@@ -58,6 +58,8 @@ fn main() {
 }
 ```
 
+For more examples, see the [examples directory](./examples/).
+
 ## Architecture Overview
 
 The system is designed with clear separation of concerns:

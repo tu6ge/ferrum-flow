@@ -58,6 +58,8 @@ fn main() {
 }
 ```
 
+For more examples, see the [examples directory](./crates/core/examples/).
+
 ## Architecture Overview
 
 The system is designed with clear separation of concerns:
