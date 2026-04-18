@@ -4,9 +4,7 @@ use std::{
 };
 
 use futures::channel::mpsc::UnboundedSender;
-use gpui::{
-    Element as _, MouseMoveEvent, ParentElement, Pixels, Point, Styled as _, div, px,
-};
+use gpui::{Element as _, MouseMoveEvent, ParentElement, Pixels, Point, Styled as _, div, px};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
