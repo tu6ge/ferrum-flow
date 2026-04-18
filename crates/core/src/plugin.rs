@@ -103,7 +103,7 @@ impl<'a, 'b> InitPluginContext<'a, 'b> {
         self.graph.create_node(node_type)
     }
 
-    pub fn create_edge(&self) -> EdgeBuilder<'_> {
+    pub fn create_edge(&mut self) -> EdgeBuilder<'_> {
         self.graph.create_edge()
     }
 
@@ -478,7 +478,7 @@ impl<'a> PluginContext<'a> {
         self.graph.create_node(node_type)
     }
 
-    pub fn create_edge(&self) -> EdgeBuilder<'_> {
+    pub fn create_edge(&mut self) -> EdgeBuilder<'_> {
         self.graph.create_edge()
     }
 
@@ -780,10 +780,6 @@ impl<'a> RenderContext<'a> {
     /// Detached builder (no graph); use [`PluginContext::create_node`] or [`Graph::create_node`] to commit.
     pub fn create_node(&self, renderer_key: &str) -> NodeBuilder<'_> {
         NodeBuilder::new(renderer_key)
-    }
-
-    pub fn create_edge(&self) -> EdgeBuilder<'_> {
-        self.graph.create_edge()
     }
 
     pub fn next_node_id(&self) -> NodeId {

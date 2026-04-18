@@ -100,13 +100,13 @@ impl Graph {
         NodeBuilder::new(renderer_key).graph(self)
     }
 
-    pub fn create_edge(&self) -> EdgeBuilder<'_> {
-        EdgeBuilder::new()
+    pub fn create_edge(&mut self) -> EdgeBuilder<'_> {
+        EdgeBuilder::new().graph(self)
     }
 
     #[deprecated(note = "use `Graph::create_edge`")]
-    pub fn create_dege(&self) -> EdgeBuilder<'_> {
-        self.create_edge()
+    pub fn create_dege(&mut self) -> EdgeBuilder<'_> {
+        EdgeBuilder::new().graph(self)
     }
 
     pub fn next_node_id(&self) -> NodeId {

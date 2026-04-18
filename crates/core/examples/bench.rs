@@ -60,7 +60,8 @@ pub fn generate_chain_edges(graph: &mut Graph, node_ids: Vec<NodeId>) {
         let source_port = from_node.outputs()[0];
         let target_port = to_node.inputs()[0];
 
-        EdgeBuilder::new()
+        graph
+            .create_edge()
             .source(source_port)
             .target(target_port)
             .build();
