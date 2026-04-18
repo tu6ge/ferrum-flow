@@ -63,11 +63,17 @@ pub struct Node {
     )]
     pub size: Size<Pixels>,
 
-    #[deprecated(note = "Use `Node::inputs()` / `Node::push_input()` instead; fields will be private in next release.")]
+    #[deprecated(
+        note = "Use `Node::inputs()` / `Node::push_input()` instead; fields will be private in next release."
+    )]
     pub inputs: Vec<PortId>,
-    #[deprecated(note = "Use `Node::outputs()` / `Node::push_output()` instead; fields will be private in next release.")]
+    #[deprecated(
+        note = "Use `Node::outputs()` / `Node::push_output()` instead; fields will be private in next release."
+    )]
     pub outputs: Vec<PortId>,
-    #[deprecated(note = "Use `Node::data_ref()` / `Node::data_mut()` / `Node::set_data()` instead; fields will be private in next release.")]
+    #[deprecated(
+        note = "Use `Node::data_ref()` / `Node::data_mut()` / `Node::set_data()` instead; fields will be private in next release."
+    )]
     pub data: serde_json::Value,
 }
 
@@ -277,15 +283,23 @@ pub struct Port {
     pub id: PortId,
     #[deprecated(note = "Use `Port::kind()` instead; fields will be private in next release.")]
     pub kind: PortKind,
-    #[deprecated(note = "Use `Port::index()` / `Port::set_index()` instead; fields will be private in next release.")]
+    #[deprecated(
+        note = "Use `Port::index()` / `Port::set_index()` instead; fields will be private in next release."
+    )]
     pub index: usize,
     #[deprecated(note = "Use `Port::node_id()` instead; fields will be private in next release.")]
     pub node_id: NodeId,
-    #[deprecated(note = "Use `Port::position()` / `Port::set_position()` instead; fields will be private in next release.")]
+    #[deprecated(
+        note = "Use `Port::position()` / `Port::set_position()` instead; fields will be private in next release."
+    )]
     pub position: PortPosition,
-    #[deprecated(note = "Use `Port::size_ref()` / `Port::set_size()` instead; fields will be private in next release.")]
+    #[deprecated(
+        note = "Use `Port::size_ref()` / `Port::set_size()` instead; fields will be private in next release."
+    )]
     pub size: Size<Pixels>,
-    #[deprecated(note = "Use `Port::port_type_ref()` / `Port::port_type_mut()` instead; fields will be private in next release.")]
+    #[deprecated(
+        note = "Use `Port::port_type_ref()` / `Port::port_type_mut()` instead; fields will be private in next release."
+    )]
     pub port_type: serde_json::Value,
 }
 
@@ -450,6 +464,72 @@ const DEFAULT_PORT_SIZE: Size<Pixels> = Size {
     height: px(12.0),
 };
 
+pub struct PortBuilder {
+    id: PortId,
+    kind: PortKind,
+    index: usize,
+    node_id: NodeId,
+    position: PortPosition,
+    size: Size<Pixels>,
+    port_type: serde_json::Value,
+}
+
+impl PortBuilder {
+    pub fn new(id: PortId) -> Self {
+        Self {
+            id,
+            kind: PortKind::Input,
+            index: 0,
+            node_id: NodeId::from_uuid(Uuid::nil()),
+            position: PortPosition::Left,
+            size: DEFAULT_PORT_SIZE,
+            port_type: serde_json::Value::Null,
+        }
+    }
+
+    pub fn kind(mut self, kind: PortKind) -> Self {
+        self.kind = kind;
+        self
+    }
+
+    pub fn node_id(mut self, node_id: NodeId) -> Self {
+        self.node_id = node_id;
+        self
+    }
+
+    pub fn index(mut self, index: usize) -> Self {
+        self.index = index;
+        self
+    }
+
+    pub fn position(mut self, position: PortPosition) -> Self {
+        self.position = position;
+        self
+    }
+
+    pub fn size(mut self, width: f32, height: f32) -> Self {
+        self.size = Size::new(px(width), px(height));
+        self
+    }
+
+    pub fn port_type(mut self, port_type: serde_json::Value) -> Self {
+        self.port_type = port_type;
+        self
+    }
+
+    pub fn build(self) -> Port {
+        Port::new(
+            self.id,
+            self.kind,
+            self.index,
+            self.node_id,
+            self.position,
+            self.size,
+            self.port_type,
+        )
+    }
+}
+
 impl NodeBuilder {
     pub fn new(node_type: impl Into<String>) -> Self {
         Self {
@@ -537,6 +617,29 @@ impl NodeBuilder {
     pub fn data(mut self, data: serde_json::Value) -> Self {
         self.data = data;
         self
+    }
+
+    /// Like [`Self::build_raw`], but uses the given node id and input/output port id lists.
+    /// Returns an empty port vector: port records are expected to be loaded separately
+    /// (e.g. from persistence). Any [`PortSpec`]s on this builder are ignored.
+    #[allow(deprecated)]
+    pub fn build_raw_with_port_ids(
+        self,
+        node_id: NodeId,
+        input_ids: Vec<PortId>,
+        output_ids: Vec<PortId>,
+    ) -> Node {
+        Node {
+            id: node_id,
+            node_type: self.node_type,
+            execute_type: self.execute_type,
+            x: self.x,
+            y: self.y,
+            size: self.size,
+            inputs: input_ids,
+            outputs: output_ids,
+            data: self.data,
+        }
     }
 
     #[allow(deprecated)]
