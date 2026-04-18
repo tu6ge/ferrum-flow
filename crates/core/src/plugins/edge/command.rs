@@ -95,8 +95,8 @@ mod command_interop_tests {
         let n2_node = base.get_node(&n2).expect("n2");
         let edge_id = base
             .create_edge()
-            .source(n1_node.outputs[0])
-            .target(n2_node.inputs[0])
+            .source(n1_node.outputs()[0])
+            .target(n2_node.inputs()[0])
             .build(&mut base)
             .expect("edge");
 
@@ -134,8 +134,8 @@ mod command_interop_tests {
         let n2_node = base.get_node(&n2).expect("n2");
         let edge_id = base
             .create_edge()
-            .source(n1_node.outputs[0])
-            .target(n2_node.inputs[0])
+            .source(n1_node.outputs()[0])
+            .target(n2_node.inputs()[0])
             .build(&mut base)
             .expect("edge");
         base.add_selected_edge(edge_id, false);

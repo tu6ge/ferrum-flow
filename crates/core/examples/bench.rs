@@ -57,8 +57,8 @@ pub fn generate_chain_edges(graph: &mut Graph, node_ids: Vec<NodeId>) {
         let from_node = graph.get_node(&from).unwrap();
         let to_node = graph.get_node(&to).unwrap();
 
-        let source_port = from_node.outputs[0];
-        let target_port = to_node.inputs[0];
+        let source_port = from_node.outputs()[0];
+        let target_port = to_node.inputs()[0];
 
         EdgeBuilder::new()
             .source(source_port)
