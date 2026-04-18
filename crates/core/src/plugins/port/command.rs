@@ -86,10 +86,8 @@ impl Command for CreatePort {
 mod command_interop_tests {
     use serde_json::json;
 
-    use gpui::Size;
-
     use crate::{
-        CreateEdge, CreateNode, CreatePort, Graph, Port, PortKind, PortPosition,
+        CreateEdge, CreateNode, CreatePort, Graph, PortBuilder, PortKind, PortPosition,
         command_interop::assert_command_interop,
     };
 
@@ -113,15 +111,14 @@ mod command_interop_tests {
     fn create_port_command_interop() {
         let mut base = Graph::new();
         let node_id = base.create_node("x").position(0.0, 0.0).build(&mut base);
-        let port = Port {
-            id: base.next_port_id(),
-            kind: PortKind::Output,
-            index: 0,
-            node_id,
-            position: PortPosition::Right,
-            size: Size::new(gpui::px(12.0), gpui::px(12.0)),
-            port_type: serde_json::Value::Null,
-        };
+        let port = PortBuilder::new(base.next_port_id())
+            .kind(PortKind::Output)
+            .node_id(node_id)
+            .index(0)
+            .position(PortPosition::Right)
+            .size(12.0, 12.0)
+            .port_type(serde_json::Value::Null)
+            .build();
 
         assert_command_interop(
             &base,
@@ -147,8 +144,8 @@ mod command_interop_tests {
         let n2_node = base.get_node(&n2).expect("target node exists");
         let edge = base
             .new_edge()
-            .source(n1_node.outputs[0])
-            .target(n2_node.inputs[0]);
+            .source(n1_node.outputs()[0])
+            .target(n2_node.inputs()[0]);
 
         assert_command_interop(
             &base,
