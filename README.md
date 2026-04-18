@@ -49,7 +49,7 @@ fn main() {
         cx.open_window(WindowOptions::default(), |window, cx| {
             cx.new(|ctx| {
                 FlowCanvas::builder(graph, ctx, window)
-                    .default_plugins()
+                    .default_plugins() // Includes built-in rendering for nodes, edges, selection, and more. Replace with custom plugins as needed.
                     .build()
             })
         })
