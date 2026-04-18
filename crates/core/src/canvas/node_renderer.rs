@@ -83,7 +83,7 @@ impl RendererRegistry {
     }
 
     pub fn get(&self, name: &str) -> &dyn NodeRenderer {
-        if name.is_empty() {
+        if name.is_empty() || name == "default" {
             return self.default.as_ref();
         }
 
