@@ -5,7 +5,7 @@ use std::{
 
 use futures::channel::mpsc::UnboundedSender;
 use gpui::{
-    Element as _, MouseMoveEvent, ParentElement, Pixels, Point, Size, Styled as _, div, px,
+    Element as _, MouseMoveEvent, ParentElement, Pixels, Point, Styled as _, div, px,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -20,8 +20,8 @@ use yrs::{
 };
 
 use ferrum_flow::{
-    ChangeSource, Edge, EdgeId, Graph, GraphChange, GraphChangeKind, GraphOp, Node, NodeId, Port,
-    PortId, PortKind, PortPosition, SyncPlugin,
+    ChangeSource, Edge, EdgeId, Graph, GraphChange, GraphChangeKind, GraphOp, Node, NodeBuilder,
+    NodeId, Port, PortBuilder, PortId, PortKind, PortPosition, SyncPlugin,
 };
 
 use crate::server::{WsSyncConfig, start_sync_thread};
@@ -113,25 +113,25 @@ impl YrsSyncPlugin {
 
     fn insert_node(&self, txn: &mut TransactionMut, node: &Node) {
         let node_map = MapPrelim::default();
-        let node_ref = self.nodes.insert(txn, node.id.to_string(), node_map);
+        let node_ref = self.nodes.insert(txn, node.id().to_string(), node_map);
 
-        node_ref.insert(txn, "type", node.node_type.clone());
-        node_ref.insert(txn, "execute_type", node.execute_type.clone());
-        node_ref.insert(txn, "x", Into::<f32>::into(node.x));
-        node_ref.insert(txn, "y", Into::<f32>::into(node.y));
-        node_ref.insert(txn, "width", Into::<f32>::into(node.size.width));
-        node_ref.insert(txn, "height", Into::<f32>::into(node.size.height));
+        node_ref.insert(txn, "type", node.renderer_key());
+        node_ref.insert(txn, "execute_type", node.execute_type_ref());
+        node_ref.insert(txn, "x", Into::<f32>::into(node.position().0));
+        node_ref.insert(txn, "y", Into::<f32>::into(node.position().1));
+        node_ref.insert(txn, "width", Into::<f32>::into(node.size_ref().width));
+        node_ref.insert(txn, "height", Into::<f32>::into(node.size_ref().height));
 
         let inputs = node_ref.insert(txn, "inputs", ArrayRef::default_prelim());
-        for port_id in &node.inputs {
+        for port_id in node.inputs() {
             inputs.push_front(txn, port_id.to_string());
         }
         let outputs = node_ref.insert(txn, "outputs", ArrayRef::default_prelim());
-        for port_id in &node.outputs {
+        for port_id in node.outputs() {
             outputs.push_front(txn, port_id.to_string());
         }
 
-        let data_json = serde_json::to_string(&node.data).unwrap_or_default();
+        let data_json = serde_json::to_string(&node.data_ref()).unwrap_or_default();
         node_ref.insert(txn, "data", data_json);
     }
 
@@ -157,7 +157,7 @@ impl YrsSyncPlugin {
     fn add_port(&self, txn: &mut TransactionMut, port: &Port) {
         let port_map = self
             .ports
-            .insert(txn, port.id.to_string(), MapPrelim::default());
+            .insert(txn, port.id().to_string(), MapPrelim::default());
         write_port_to_map(txn, &port_map, port);
     }
 
@@ -375,16 +375,16 @@ struct RemoteCursorState {
 }
 
 fn write_port_to_map(txn: &mut TransactionMut, port_map: &MapRef, port: &Port) {
-    port_map.insert(txn, "kind", port.kind.to_string());
-    port_map.insert(txn, "node_id", port.node_id.to_string());
-    port_map.insert(txn, "index", port.index as u32);
-    port_map.insert(txn, "position", port.position.to_string());
-    port_map.insert(txn, "width", Into::<f32>::into(port.size.width));
-    port_map.insert(txn, "height", Into::<f32>::into(port.size.height));
+    port_map.insert(txn, "kind", port.kind().to_string());
+    port_map.insert(txn, "node_id", port.node_id().to_string());
+    port_map.insert(txn, "index", port.index() as u32);
+    port_map.insert(txn, "position", port.position().to_string());
+    port_map.insert(txn, "width", Into::<f32>::into(port.size_ref().width));
+    port_map.insert(txn, "height", Into::<f32>::into(port.size_ref().height));
     port_map.insert(
         txn,
         "port_type",
-        to_any(&port.port_type).unwrap_or_else(|_| Any::Null),
+        to_any(&port.port_type_ref()).unwrap_or_else(|_| Any::Null),
     );
 }
 
@@ -529,17 +529,13 @@ fn read_node_from_map(txn: &yrs::TransactionMut, node_map: &MapRef, id: NodeId) 
             }
         }
     }
-    Node {
-        id,
-        node_type,
-        execute_type,
-        x: px(x),
-        y: px(y),
-        size: Size::new(px(width), px(height)),
-        inputs,
-        outputs,
-        data,
-    }
+
+    NodeBuilder::new(node_type)
+        .execute_type(execute_type)
+        .position(x, y)
+        .size(width, height)
+        .data(data)
+        .build_raw_with_port_ids(id, inputs, outputs)
 }
 
 fn parse_port_change(
@@ -577,19 +573,23 @@ fn read_port_from_map(txn: &yrs::TransactionMut, node_map: &MapRef, id: PortId) 
         Ok(any) => from_any::<Value>(&any).unwrap_or(Value::Null),
         Err(_) => Value::Null,
     };
-    Port {
-        id,
-        kind: if kind == "input" {
-            PortKind::Input
-        } else {
-            PortKind::Output
-        },
-        index: index as usize,
-        node_id: NodeId::from_uuid(node_id.parse().unwrap_or_default()),
-        position: PortPosition::from_str(&position).unwrap_or(PortPosition::Left),
-        size: Size::new(px(width), px(height)),
-        port_type,
-    }
+
+    let kind = if kind == "input" {
+        PortKind::Input
+    } else {
+        PortKind::Output
+    };
+    let node_id = NodeId::from_uuid(node_id.parse().unwrap_or_default());
+    let position = PortPosition::from_str(&position).unwrap_or(PortPosition::Left);
+
+    PortBuilder::new(id)
+        .kind(kind)
+        .node_id(node_id)
+        .index(index as usize)
+        .position(position)
+        .size(width, height)
+        .port_type(port_type)
+        .build()
 }
 
 fn parse_edge_change(
