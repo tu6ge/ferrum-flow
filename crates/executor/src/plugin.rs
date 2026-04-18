@@ -6,7 +6,7 @@ use ferrum_flow::{
     RenderLayer,
 };
 use futures::{StreamExt, channel::mpsc};
-use gpui::{AnyElement, Element, Point, Size, Styled, div, px, rgb};
+use gpui::{AnyElement, Element, Size, Styled, div, px, rgb};
 
 use crate::{ExecutorContext, GraphExecutor};
 
@@ -150,10 +150,10 @@ impl Plugin for ExecutionHighlightPlugin {
             return None;
         }
         let node = ctx.graph.nodes().get(&id)?;
-        let top_left = ctx.world_to_screen(Point::new(node.x, node.y));
+        let top_left = ctx.world_to_screen(node.position_point());
         let size = Size::new(
-            ctx.world_length_to_screen(node.size.width),
-            ctx.world_length_to_screen(node.size.height),
+            ctx.world_length_to_screen(node.size_ref().width),
+            ctx.world_length_to_screen(node.size_ref().height),
         );
 
         Some(

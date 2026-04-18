@@ -112,12 +112,12 @@ impl Plugin for MeiliPortInteractionPlugin {
                 .graph
                 .ports()
                 .iter()
-                .filter(|(_, port)| ctx.is_node_visible(&port.node_id))
+                .filter(|(_, port)| ctx.is_node_visible(&port.node_id()))
                 .find(|(id, _)| match port_screen_bounds(**id, ctx) {
                     Some(b) => b.contains(&mouse_world),
                     None => false,
                 })
-                .map(|(_, p)| (p.id, p.position));
+                .map(|(_, p)| (p.id(), p.position()));
 
             if let Some((port_id, position)) = port_hit {
                 self.pending = None;
@@ -145,11 +145,11 @@ impl Plugin for MeiliPortInteractionPlugin {
     fn render(&mut self, ctx: &mut RenderContext) -> Option<gpui::AnyElement> {
         let p = self.pending.as_ref()?;
         let port_meta = ctx.graph.get_port(&p.source_port)?;
-        let node = ctx.nodes().get(&port_meta.node_id)?;
+        let node = ctx.nodes().get(&port_meta.node_id())?;
         let start = ctx.port_screen_center(node, p.source_port)?;
         let end = ctx.world_to_screen(p.end_world);
         let source_port = ctx.graph.get_port(&p.source_port)?;
-        let start_position = source_port.position;
+        let start_position = source_port.position();
         let target_position = Self::facing_position(start_position);
         let viewport = ctx.viewport().clone();
         let line_rgb = ctx.theme.port_preview_line;
@@ -190,15 +190,15 @@ impl Interaction for PortConnecting {
             .graph
             .ports()
             .iter()
-            .filter(|(_, port)| ctx.is_node_visible(&port.node_id))
+            .filter(|(_, port)| ctx.is_node_visible(&port.node_id()))
             .find(|(id, _)| match port_screen_big_bounds(**id, ctx) {
                 Some(b) => b.contains(&mouse_world),
                 None => false,
             })
             .map(|(_, p)| p)
         {
-            if port.id != self.port_id {
-                self.target_position = port.position;
+            if port.id() != self.port_id {
+                self.target_position = port.position();
             }
         }
         ctx.notify();
@@ -215,14 +215,14 @@ impl Interaction for PortConnecting {
             .graph
             .ports()
             .iter()
-            .filter(|(_, port)| ctx.is_node_visible(&port.node_id))
+            .filter(|(_, port)| ctx.is_node_visible(&port.node_id()))
             .find(|(id, _)| match port_screen_bounds(**id, ctx) {
                 Some(b) => b.contains(&mouse_world),
                 None => false,
             })
-            .map(|(_, p)| (p.node_id, p.id))
+            .map(|(_, p)| (p.node_id(), p.id()))
         {
-            let Some(source_node) = ctx.graph.get_port(&self.port_id).map(|p| p.node_id) else {
+            let Some(source_node) = ctx.graph.get_port(&self.port_id).map(|p| p.node_id()) else {
                 return ferrum_flow::InteractionResult::End;
             };
             if node_id == source_node {
@@ -236,12 +236,12 @@ impl Interaction for PortConnecting {
             let Some(target_port) = ctx.graph.get_port(&port_id) else {
                 return ferrum_flow::InteractionResult::End;
             };
-            if connecting_port.kind == target_port.kind {
+            if connecting_port.kind() == target_port.kind() {
                 ctx.cancel_interaction();
                 ctx.notify();
                 return ferrum_flow::InteractionResult::End;
             }
-            let edge = match (connecting_port.kind, target_port.kind) {
+            let edge = match (connecting_port.kind(), target_port.kind()) {
                 (PortKind::Output, PortKind::Input) => {
                     ctx.new_edge().source(self.port_id).target(port_id)
                 }
@@ -269,7 +269,7 @@ impl Interaction for PortConnecting {
     fn render(&self, ctx: &mut RenderContext) -> Option<gpui::AnyElement> {
         let mouse = self.mouse?;
         let port_meta = ctx.graph.get_port(&self.port_id)?;
-        let node = ctx.nodes().get(&port_meta.node_id)?;
+        let node = ctx.nodes().get(&port_meta.node_id())?;
         let start = ctx.port_screen_center(node, self.port_id)?;
         let position = self.position;
         let target_position = self.target_position;

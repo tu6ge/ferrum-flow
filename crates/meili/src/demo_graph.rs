@@ -20,7 +20,7 @@ fn build_main_pipeline(graph: &mut Graph) {
         }))
         .output()
         .build(graph);
-    let out_in = graph.get_node(&n_in).unwrap().outputs[0];
+    let out_in = graph.get_node(&n_in).unwrap().outputs()[0];
 
     let n_preprocess = graph
         .create_node("tool")
@@ -33,8 +33,8 @@ fn build_main_pipeline(graph: &mut Graph) {
         .input()
         .output()
         .build(graph);
-    let in_pre = graph.get_node(&n_preprocess).unwrap().inputs[0];
-    let out_pre = graph.get_node(&n_preprocess).unwrap().outputs[0];
+    let in_pre = graph.get_node(&n_preprocess).unwrap().inputs()[0];
+    let out_pre = graph.get_node(&n_preprocess).unwrap().outputs()[0];
 
     let n_agent = graph
         .create_node("agent")
@@ -48,9 +48,9 @@ fn build_main_pipeline(graph: &mut Graph) {
         .output()
         .output()
         .build(graph);
-    let in_agent = graph.get_node(&n_agent).unwrap().inputs[0];
-    let out_agent_plan = graph.get_node(&n_agent).unwrap().outputs[0];
-    let out_agent_rag = graph.get_node(&n_agent).unwrap().outputs[1];
+    let in_agent = graph.get_node(&n_agent).unwrap().inputs()[0];
+    let out_agent_plan = graph.get_node(&n_agent).unwrap().outputs()[0];
+    let out_agent_rag = graph.get_node(&n_agent).unwrap().outputs()[1];
 
     let n_llm = graph
         .create_node("llm")
@@ -63,8 +63,8 @@ fn build_main_pipeline(graph: &mut Graph) {
         .input()
         .output()
         .build(graph);
-    let in_llm = graph.get_node(&n_llm).unwrap().inputs[0];
-    let out_llm = graph.get_node(&n_llm).unwrap().outputs[0];
+    let in_llm = graph.get_node(&n_llm).unwrap().inputs()[0];
+    let out_llm = graph.get_node(&n_llm).unwrap().outputs()[0];
 
     let n_rag = graph
         .create_node("tool")
@@ -77,8 +77,8 @@ fn build_main_pipeline(graph: &mut Graph) {
         .input_at(PortPosition::Top)
         .output_at(PortPosition::Bottom)
         .build(graph);
-    let in_rag = graph.get_node(&n_rag).unwrap().inputs[0];
-    let out_rag = graph.get_node(&n_rag).unwrap().outputs[0];
+    let in_rag = graph.get_node(&n_rag).unwrap().inputs()[0];
+    let out_rag = graph.get_node(&n_rag).unwrap().outputs()[0];
 
     let n_merge = graph
         .create_node("router")
@@ -92,9 +92,9 @@ fn build_main_pipeline(graph: &mut Graph) {
         .input()
         .output()
         .build(graph);
-    let in_merge_a = graph.get_node(&n_merge).unwrap().inputs[0];
-    let in_merge_b = graph.get_node(&n_merge).unwrap().inputs[1];
-    let out_merge = graph.get_node(&n_merge).unwrap().outputs[0];
+    let in_merge_a = graph.get_node(&n_merge).unwrap().inputs()[0];
+    let in_merge_b = graph.get_node(&n_merge).unwrap().inputs()[1];
+    let out_merge = graph.get_node(&n_merge).unwrap().outputs()[0];
 
     let n_search = graph
         .create_node("tool")
@@ -107,8 +107,8 @@ fn build_main_pipeline(graph: &mut Graph) {
         .input()
         .output()
         .build(graph);
-    let in_search = graph.get_node(&n_search).unwrap().inputs[0];
-    let out_search = graph.get_node(&n_search).unwrap().outputs[0];
+    let in_search = graph.get_node(&n_search).unwrap().inputs()[0];
+    let out_search = graph.get_node(&n_search).unwrap().outputs()[0];
 
     let n_gate = graph
         .create_node("router")
@@ -121,8 +121,8 @@ fn build_main_pipeline(graph: &mut Graph) {
         .input()
         .output()
         .build(graph);
-    let in_gate = graph.get_node(&n_gate).unwrap().inputs[0];
-    let out_gate = graph.get_node(&n_gate).unwrap().outputs[0];
+    let in_gate = graph.get_node(&n_gate).unwrap().inputs()[0];
+    let out_gate = graph.get_node(&n_gate).unwrap().outputs()[0];
 
     let n_format = graph
         .create_node("llm")
@@ -135,8 +135,8 @@ fn build_main_pipeline(graph: &mut Graph) {
         .input()
         .output()
         .build(graph);
-    let in_format = graph.get_node(&n_format).unwrap().inputs[0];
-    let out_format = graph.get_node(&n_format).unwrap().outputs[0];
+    let in_format = graph.get_node(&n_format).unwrap().inputs()[0];
+    let out_format = graph.get_node(&n_format).unwrap().outputs()[0];
 
     let n_out = graph
         .create_node("io_end")
@@ -148,7 +148,7 @@ fn build_main_pipeline(graph: &mut Graph) {
         }))
         .input()
         .build(graph);
-    let in_out = graph.get_node(&n_out).unwrap().inputs[0];
+    let in_out = graph.get_node(&n_out).unwrap().inputs()[0];
 
     graph
         .create_edge()
@@ -214,7 +214,7 @@ fn build_batch_lane(graph: &mut Graph) {
         }))
         .output()
         .build(graph);
-    let out_batch_in = graph.get_node(&n_batch_in).unwrap().outputs[0];
+    let out_batch_in = graph.get_node(&n_batch_in).unwrap().outputs()[0];
 
     let n_score = graph
         .create_node("llm")
@@ -227,8 +227,8 @@ fn build_batch_lane(graph: &mut Graph) {
         .input()
         .output()
         .build(graph);
-    let in_score = graph.get_node(&n_score).unwrap().inputs[0];
-    let out_score = graph.get_node(&n_score).unwrap().outputs[0];
+    let in_score = graph.get_node(&n_score).unwrap().inputs()[0];
+    let out_score = graph.get_node(&n_score).unwrap().outputs()[0];
 
     let n_tool_batch = graph
         .create_node("tool")
@@ -241,8 +241,8 @@ fn build_batch_lane(graph: &mut Graph) {
         .input()
         .output()
         .build(graph);
-    let in_tool_b = graph.get_node(&n_tool_batch).unwrap().inputs[0];
-    let out_tool_b = graph.get_node(&n_tool_batch).unwrap().outputs[0];
+    let in_tool_b = graph.get_node(&n_tool_batch).unwrap().inputs()[0];
+    let out_tool_b = graph.get_node(&n_tool_batch).unwrap().outputs()[0];
 
     let n_stub = graph
         .create_node("")
@@ -255,8 +255,8 @@ fn build_batch_lane(graph: &mut Graph) {
         .input()
         .output()
         .build(graph);
-    let in_stub = graph.get_node(&n_stub).unwrap().inputs[0];
-    let out_stub = graph.get_node(&n_stub).unwrap().outputs[0];
+    let in_stub = graph.get_node(&n_stub).unwrap().inputs()[0];
+    let out_stub = graph.get_node(&n_stub).unwrap().outputs()[0];
 
     let n_batch_agent = graph
         .create_node("agent")
@@ -269,8 +269,8 @@ fn build_batch_lane(graph: &mut Graph) {
         .input()
         .output()
         .build(graph);
-    let in_ba = graph.get_node(&n_batch_agent).unwrap().inputs[0];
-    let out_ba = graph.get_node(&n_batch_agent).unwrap().outputs[0];
+    let in_ba = graph.get_node(&n_batch_agent).unwrap().inputs()[0];
+    let out_ba = graph.get_node(&n_batch_agent).unwrap().outputs()[0];
 
     let n_batch_out = graph
         .create_node("io_end")
@@ -282,7 +282,7 @@ fn build_batch_lane(graph: &mut Graph) {
         }))
         .input()
         .build(graph);
-    let in_batch_out = graph.get_node(&n_batch_out).unwrap().inputs[0];
+    let in_batch_out = graph.get_node(&n_batch_out).unwrap().inputs()[0];
 
     graph
         .create_edge()
