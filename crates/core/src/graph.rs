@@ -96,8 +96,8 @@ impl Graph {
         }
     }
 
-    pub fn create_node(&mut self, node_type: &str) -> NodeBuilder<'_> {
-        NodeBuilder::new(node_type).graph(self)
+    pub fn create_node(&mut self, renderer_key: &str) -> NodeBuilder<'_> {
+        NodeBuilder::new(renderer_key).graph(self)
     }
 
     pub fn create_edge(&self) -> EdgeBuilder<'_> {
