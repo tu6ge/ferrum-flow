@@ -69,7 +69,7 @@ fn demo_seed_graph() -> Graph {
         .output()
         .output_with(PortPosition::Bottom, Size::new(px(20.0), px(20.0)))
         .output_at(PortPosition::Bottom)
-        .build(&mut graph);
+        .build();
 
     graph
         .create_node("sync")
@@ -80,14 +80,14 @@ fn demo_seed_graph() -> Graph {
         .output()
         .output_at(PortPosition::Bottom)
         .output_at(PortPosition::Bottom)
-        .build(&mut graph);
+        .build();
 
     graph
         .create_node("sync")
         .position(500.0, 500.0)
         .input()
         .output()
-        .build(&mut graph);
+        .build();
 
     graph
 }
