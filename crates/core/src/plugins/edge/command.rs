@@ -85,12 +85,14 @@ mod command_interop_tests {
             .create_node("a")
             .position(0.0, 0.0)
             .output()
-            .build(&mut base);
+            .build()
+            .unwrap();
         let n2 = base
             .create_node("b")
             .position(100.0, 0.0)
             .input()
-            .build(&mut base);
+            .build()
+            .unwrap();
         let n1_node = base.get_node(&n1).expect("n1");
         let n2_node = base.get_node(&n2).expect("n2");
         let edge_id = base
@@ -124,12 +126,14 @@ mod command_interop_tests {
             .create_node("a")
             .position(0.0, 0.0)
             .output()
-            .build(&mut base);
+            .build()
+            .unwrap();
         let n2 = base
             .create_node("b")
             .position(100.0, 0.0)
             .input()
-            .build(&mut base);
+            .build()
+            .unwrap();
         let n1_node = base.get_node(&n1).expect("n1");
         let n2_node = base.get_node(&n2).expect("n2");
         let edge_id = base

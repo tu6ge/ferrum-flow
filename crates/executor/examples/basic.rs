@@ -159,7 +159,8 @@ fn build_demo_graph(graph: &mut Graph) -> (NodeId, PortId) {
         .size(152.0, 88.0)
         .data(json!({ "text": "1" }))
         .output()
-        .build(graph);
+        .build()
+        .unwrap();
     let out1 = graph.get_node(&n1).unwrap().outputs()[0];
 
     let n2 = graph
@@ -170,7 +171,8 @@ fn build_demo_graph(graph: &mut Graph) -> (NodeId, PortId) {
         .data(json!({ "text": "+1" }))
         .input()
         .output()
-        .build(graph);
+        .build()
+        .unwrap();
     let in2 = graph.get_node(&n2).unwrap().inputs()[0];
     let out2 = graph.get_node(&n2).unwrap().outputs()[0];
 
@@ -181,7 +183,8 @@ fn build_demo_graph(graph: &mut Graph) -> (NodeId, PortId) {
         .size(152.0, 88.0)
         .data(json!({ "text": "" }))
         .input_at(PortPosition::Top)
-        .build(graph);
+        .build()
+        .unwrap();
     let in3 = graph.get_node(&n3).unwrap().inputs()[0];
 
     graph.create_edge().source(out1).target(in2).build(graph);

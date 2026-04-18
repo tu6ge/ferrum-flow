@@ -29,7 +29,7 @@ impl MeiliAddNodePlugin {
             .data(data)
             .execute_type(node_type);
         let builder = preset.apply_standalone_ports(builder);
-        let (new_node, new_ports) = builder.build_raw();
+        let (new_node, new_ports, _) = builder.build_raw();
         ctx.execute_command(CreateNode::new(new_node));
         for port in new_ports {
             ctx.execute_command(CreatePort::new(port));

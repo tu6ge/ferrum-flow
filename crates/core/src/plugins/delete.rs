@@ -174,7 +174,8 @@ mod command_interop_tests {
             .create_node("x")
             .position(0.0, 0.0)
             .output()
-            .build(&mut base);
+            .build()
+            .unwrap();
         let nid = *base.node_order().first().expect("node");
         base.add_selected_node(nid, false);
 

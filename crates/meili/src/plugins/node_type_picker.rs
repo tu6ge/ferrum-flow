@@ -80,7 +80,7 @@ impl NodeTypePickerPlugin {
             .execute_type(node_type);
         builder = Self::with_opposite_port(source.kind(), choice, builder);
 
-        let (new_node, new_ports) = builder.build_raw();
+        let (new_node, new_ports, _) = builder.build_raw();
 
         let edge = match source.kind() {
             PortKind::Output => {

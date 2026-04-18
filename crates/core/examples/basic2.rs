@@ -14,7 +14,7 @@ fn main() {
             .output_with(PortPosition::Bottom, Size::new(px(20.0), px(20.0)))
             .output_at(PortPosition::Bottom)
             .data(json!({ "label": "Node 1" }))
-            .build(&mut graph);
+            .build();
 
         graph
             .create_node("")
@@ -26,7 +26,7 @@ fn main() {
             .output_at(PortPosition::Bottom)
             .output_at(PortPosition::Bottom)
             .data(json!({ "label": "Node 2" }))
-            .build(&mut graph);
+            .build();
 
         graph
             .create_node("")
@@ -34,7 +34,7 @@ fn main() {
             .input()
             .output()
             .data(json!({ "label": "Node 3" }))
-            .build(&mut graph);
+            .build();
 
         cx.open_window(WindowOptions::default(), |window, cx| {
             cx.new(|ctx| {

@@ -418,7 +418,8 @@ impl PortPosition {
     }
 }
 
-pub struct NodeBuilder {
+pub struct NodeBuilder<'a> {
+    graph: Option<&'a mut Graph>,
     node_type: String,
     execute_type: String,
     x: Pixels,
@@ -535,9 +536,10 @@ impl PortBuilder {
     }
 }
 
-impl NodeBuilder {
-    pub fn new(node_type: impl Into<String>) -> Self {
-        Self {
+impl<'a> NodeBuilder<'a> {
+    pub fn new(node_type: impl Into<String>) -> NodeBuilder<'static> {
+        NodeBuilder {
+            graph: None,
             node_type: node_type.into(),
             execute_type: String::new(),
             x: px(0.0),
@@ -550,6 +552,11 @@ impl NodeBuilder {
             outputs: vec![],
             data: json!({}),
         }
+    }
+
+    pub fn graph(mut self, graph: &'a mut Graph) -> NodeBuilder<'a> {
+        self.graph = Some(graph);
+        self
     }
 
     pub fn execute_type(mut self, execute_type: impl Into<String>) -> Self {
@@ -648,7 +655,7 @@ impl NodeBuilder {
     }
 
     #[allow(deprecated)]
-    pub fn build_raw(self) -> (Node, Vec<Port>) {
+    pub fn build_raw(self) -> (Node, Vec<Port>, Option<&'a mut Graph>) {
         let node_id = NodeId::new();
 
         let mut inputs = Vec::new();
@@ -714,15 +721,18 @@ impl NodeBuilder {
                 data: self.data,
             },
             ports,
+            self.graph,
         )
     }
 
-    pub fn build(self, graph: &mut Graph) -> NodeId {
-        let (node, ports) = self.build_raw();
-        graph.add_node(node.clone());
+    pub fn build(self) -> Option<NodeId> {
+        let (node, ports, graph) = self.build_raw();
+        let id = node.id();
+        let graph = graph?;
+        graph.add_node(node);
         for port in ports {
             graph.add_port(port);
         }
-        node.id()
+        Some(id)
     }
 }

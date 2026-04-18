@@ -54,7 +54,7 @@ fn main() {
             .output()
             .output()
             .data(json!({ "label": "Themed" }))
-            .build(&mut graph);
+            .build();
 
         cx.open_window(WindowOptions::default(), |window, cx| {
             cx.new(|ctx| {

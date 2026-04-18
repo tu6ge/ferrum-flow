@@ -134,8 +134,8 @@ mod command_interop_tests {
     #[test]
     fn select_node_command_interop() {
         let mut base = Graph::new();
-        let n1 = base.create_node("a").position(0.0, 0.0).build(&mut base);
-        let _n2 = base.create_node("b").position(50.0, 0.0).build(&mut base);
+        let n1 = base.create_node("a").position(0.0, 0.0).build().unwrap();
+        let _n2 = base.create_node("b").position(50.0, 0.0).build().unwrap();
 
         let old_node_order = base.node_order().to_vec();
         let old_selected_edge = base.selected_edge().clone();
@@ -159,7 +159,7 @@ mod command_interop_tests {
     #[test]
     fn drag_nodes_command_interop() {
         let mut base = Graph::new();
-        let n = base.create_node("n").position(0.0, 0.0).build(&mut base);
+        let n = base.create_node("n").position(0.0, 0.0).build().unwrap();
         let from = vec![(n, Point::new(px(0.0), px(0.0)))];
         let to = vec![(n, Point::new(px(30.0), px(40.0)))];
         let cmd = DragNodesCommand::from_positions(from, to);

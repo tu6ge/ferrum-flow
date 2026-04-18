@@ -15,20 +15,16 @@ fn main() {
             .size(300.0, 150.0)
             .output()
             .data(json!({ "label": "Number Node" }))
-            .build(&mut graph);
+            .build();
 
-        graph
-            .create_node("")
-            .position(300.0, 400.0)
-            .input()
-            .build(&mut graph);
+        graph.create_node("").position(300.0, 400.0).input().build();
 
         graph
             .create_node("undefined")
             .position(500.0, 500.0)
             .input()
             .output()
-            .build(&mut graph);
+            .build();
 
         cx.open_window(WindowOptions::default(), |window, cx| {
             cx.new(|ctx| {
