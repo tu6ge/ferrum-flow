@@ -70,13 +70,13 @@ impl WorkflowNodeRenderer {
     }
 
     fn read_title<'a>(&self, node: &'a Node) -> String {
-        data_str(&node.data, "title")
+        data_str(&node.data_ref(), "title")
             .map(String::from)
             .unwrap_or_else(|| self.kind.default_title().to_string())
     }
 
     fn read_subtitle(&self, node: &Node) -> Option<String> {
-        data_str(&node.data, "subtitle")
+        data_str(&node.data_ref(), "subtitle")
             .map(String::from)
             .or_else(|| self.kind.default_subtitle().map(String::from))
     }
@@ -100,11 +100,11 @@ fn data_str<'a>(data: &'a Value, key: &str) -> Option<&'a str> {
 
 impl NodeRenderer for WorkflowNodeRenderer {
     fn render(&self, node: &Node, ctx: &mut RenderContext) -> AnyElement {
-        let node_id = node.id;
+        let node_id = node.id();
         let selected = ctx.graph.selected_node().contains(&node_id);
         let screen = ctx.world_to_screen(node.point());
-        let w = ctx.world_length_to_screen(node.size.width);
-        let h = ctx.world_length_to_screen(node.size.height);
+        let w = ctx.world_length_to_screen(node.size_ref().width);
+        let h = ctx.world_length_to_screen(node.size_ref().height);
         let accent = self.kind.accent();
         let bg = self.card_bg();
         let title = self.read_title(node);
@@ -160,7 +160,7 @@ impl NodeRenderer for WorkflowNodeRenderer {
         let size = frame.size;
         let o = frame.origin();
 
-        let (ring, core) = match port.kind {
+        let (ring, core) = match port.kind() {
             PortKind::Input => (rgb(PORT_IN), rgb(PORT_RING)),
             PortKind::Output => (rgb(PORT_OUT), rgb(PORT_RING)),
         };

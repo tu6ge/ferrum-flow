@@ -52,7 +52,7 @@ impl GraphExecutor {
             .get_node(node_id)
             .ok_or_else(|| anyhow::anyhow!("Node not found: {}", node_id))?;
 
-        for input_port_id in &node.inputs {
+        for input_port_id in node.inputs() {
             if let Some(source_port_id) = edge_map.get(input_port_id) {
                 if let Some(val) = ctx.values.get(source_port_id).cloned() {
                     ctx.values.insert(*input_port_id, val);
@@ -60,10 +60,9 @@ impl GraphExecutor {
             }
         }
 
-        let handler = self
-            .registry
-            .get(&node.execute_type)
-            .ok_or_else(|| anyhow::anyhow!("No handler for node type: {}", node.execute_type))?;
+        let handler = self.registry.get(&node.execute_type_ref()).ok_or_else(|| {
+            anyhow::anyhow!("No handler for node type: {}", node.execute_type_ref())
+        })?;
 
         let output = handler.execute(node, ctx)?;
 
@@ -98,8 +97,10 @@ impl GraphExecutor {
             graph.nodes().keys().map(|id| (*id, 0)).collect();
 
         // Reverse lookup: port -> owning node
-        let port_to_node: HashMap<PortId, NodeId> =
-            graph.ports_values().map(|p| (p.id, p.node_id)).collect();
+        let port_to_node: HashMap<PortId, NodeId> = graph
+            .ports_values()
+            .map(|p| (p.id(), p.node_id()))
+            .collect();
 
         // Derive dependencies from edges
         for edge in graph.edges_values() {

@@ -21,11 +21,11 @@ impl NodeProcessor for SourceNode {
 
     fn execute(&self, node: &Node, _ctx: &mut ExecutorContext) -> anyhow::Result<NodeOutput> {
         let mut outputs = PortValues::new();
-        if let Some(p) = node.outputs.first() {
+        if let Some(p) = node.outputs().first() {
             outputs.insert(*p, json!(1.0));
         }
         Ok(NodeOutput {
-            node_id: node.id,
+            node_id: node.id(),
             outputs,
             error: None,
         })
@@ -41,18 +41,18 @@ impl NodeProcessor for AddOneNode {
 
     fn execute(&self, node: &Node, ctx: &mut ExecutorContext) -> anyhow::Result<NodeOutput> {
         let v = node
-            .inputs
+            .inputs()
             .first()
             .and_then(|p| ctx.get_input(p))
             .and_then(Value::as_f64)
             .unwrap_or(0.0)
             + 1.0;
         let mut outputs = PortValues::new();
-        if let Some(p) = node.outputs.first() {
+        if let Some(p) = node.outputs().first() {
             outputs.insert(*p, json!(v));
         }
         Ok(NodeOutput {
-            node_id: node.id,
+            node_id: node.id(),
             outputs,
             error: None,
         })
@@ -67,9 +67,9 @@ impl NodeProcessor for SinkNode {
     }
 
     fn execute(&self, node: &Node, _ctx: &mut ExecutorContext) -> anyhow::Result<NodeOutput> {
-        let _ = node.inputs.first();
+        let _ = node.inputs().first();
         Ok(NodeOutput {
-            node_id: node.id,
+            node_id: node.id(),
             outputs: PortValues::new(),
             error: None,
         })
@@ -81,18 +81,22 @@ struct CalcDemoRenderer;
 
 impl NodeRenderer for CalcDemoRenderer {
     fn render(&self, node: &Node, ctx: &mut RenderContext) -> AnyElement {
-        let text = node.data.get("text").and_then(|v| v.as_str()).unwrap_or("");
+        let text = node
+            .data_ref()
+            .get("text")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
 
         let screen = ctx.world_to_screen(node.point());
-        let node_id = node.id;
+        let node_id = node.id();
         let selected = ctx.graph.selected_node().contains(&node_id);
 
         div()
             .absolute()
             .left(screen.x)
             .top(screen.y)
-            .w(ctx.world_length_to_screen(node.size.width))
-            .h(ctx.world_length_to_screen(node.size.height))
+            .w(ctx.world_length_to_screen(node.size_ref().width))
+            .h(ctx.world_length_to_screen(node.size_ref().height))
             .bg(rgb(0x2D3142))
             .rounded(px(8.0))
             .border(px(2.0))
@@ -156,7 +160,7 @@ fn build_demo_graph(graph: &mut Graph) -> (NodeId, PortId) {
         .data(json!({ "text": "1" }))
         .output()
         .build(graph);
-    let out1 = graph.get_node(&n1).unwrap().outputs[0];
+    let out1 = graph.get_node(&n1).unwrap().outputs()[0];
 
     let n2 = graph
         .create_node("calc_demo")
@@ -167,8 +171,8 @@ fn build_demo_graph(graph: &mut Graph) -> (NodeId, PortId) {
         .input()
         .output()
         .build(graph);
-    let in2 = graph.get_node(&n2).unwrap().inputs[0];
-    let out2 = graph.get_node(&n2).unwrap().outputs[0];
+    let in2 = graph.get_node(&n2).unwrap().inputs()[0];
+    let out2 = graph.get_node(&n2).unwrap().outputs()[0];
 
     let n3 = graph
         .create_node("calc_demo")
@@ -178,7 +182,7 @@ fn build_demo_graph(graph: &mut Graph) -> (NodeId, PortId) {
         .data(json!({ "text": "" }))
         .input_at(PortPosition::Top)
         .build(graph);
-    let in3 = graph.get_node(&n3).unwrap().inputs[0];
+    let in3 = graph.get_node(&n3).unwrap().inputs()[0];
 
     graph.create_edge().source(out1).target(in2).build(graph);
     graph.create_edge().source(out2).target(in3).build(graph);
@@ -220,7 +224,7 @@ fn main() {
                     .map(format_result_value)
                     .unwrap_or_default();
                 if let Some(n) = g.get_node_mut(&sink_id) {
-                    n.data = json!({ "text": text });
+                    n.set_data(json!({ "text": text }));
                 }
             });
 

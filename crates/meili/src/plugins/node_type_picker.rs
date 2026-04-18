@@ -78,19 +78,19 @@ impl NodeTypePickerPlugin {
             .size(w, h)
             .data(data)
             .execute_type(node_type);
-        builder = Self::with_opposite_port(source.kind, choice, builder);
+        builder = Self::with_opposite_port(source.kind(), choice, builder);
 
         let (new_node, new_ports) = builder.build_raw();
 
-        let edge = match source.kind {
+        let edge = match source.kind() {
             PortKind::Output => {
-                let Some(in_port) = new_node.inputs.first().copied() else {
+                let Some(in_port) = new_node.inputs().first().copied() else {
                     return;
                 };
                 ctx.new_edge().source(p.source_port).target(in_port)
             }
             PortKind::Input => {
-                let Some(out_port) = new_node.outputs.first().copied() else {
+                let Some(out_port) = new_node.outputs().first().copied() else {
                     return;
                 };
                 ctx.new_edge().source(out_port).target(p.source_port)
@@ -154,10 +154,10 @@ impl Plugin for NodeTypePickerPlugin {
     fn render(&mut self, ctx: &mut RenderContext) -> Option<gpui::AnyElement> {
         let p = pick_state::pending_peek()?;
         let port = ctx.graph.get_port(&p.source_port)?;
-        let node = ctx.nodes().get(&port.node_id)?;
+        let node = ctx.nodes().get(&port.node_id())?;
         let start = ctx.port_screen_center(node, p.source_port)?;
         let end = ctx.world_to_screen(p.end_world);
-        let start_position = port.position;
+        let start_position = port.position();
         let target_position = Self::facing_position(start_position);
         let viewport = ctx.viewport().clone();
         let line_rgb = ctx.theme.port_preview_line;
