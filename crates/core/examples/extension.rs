@@ -29,7 +29,7 @@ fn main() {
         cx.open_window(WindowOptions::default(), |window, cx| {
             cx.new(|ctx| {
                 FlowCanvas::builder(graph, ctx, window)
-                    .core_plugins()
+                    .default_plugins()
                     .plugin(ZoomControlsPlugin::new())
                     .plugin(FocusSelectionPlugin::new())
                     .plugin(FitAllGraphPlugin::new())
