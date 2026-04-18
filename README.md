@@ -44,7 +44,7 @@ fn main() {
             .input()
             .output()
             .data(json!({ "label": "Hello World" }))
-            .build(&mut graph);
+            .build();
 
         cx.open_window(WindowOptions::default(), |window, cx| {
             cx.new(|ctx| {
