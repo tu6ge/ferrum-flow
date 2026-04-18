@@ -30,7 +30,7 @@ fn main() {
             cx.new(|ctx| {
                 FlowCanvas::builder(graph, ctx, window)
                     .theme(shader_studio_theme())
-                    .plugins_core()
+                    .core_plugins()
                     .plugin(ShaderGraphFilePlugin::new(path.clone()))
                     .plugins(shader_studio_extra_plugins())
                     .node_renderers(shader_studio_node_renderers())
