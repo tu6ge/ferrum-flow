@@ -148,7 +148,7 @@ impl<'a> CommandContext<'a> {
         self.graph.create_node(node_type)
     }
 
-    pub fn create_edge(&self) -> EdgeBuilder {
+    pub fn create_edge(&self) -> EdgeBuilder<'_> {
         self.graph.create_edge()
     }
 

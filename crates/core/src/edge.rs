@@ -57,17 +57,24 @@ impl Edge {
     }
 }
 
-pub struct EdgeBuilder {
+pub struct EdgeBuilder<'a> {
+    graph: Option<&'a mut Graph>,
     source: Option<PortId>,
     target: Option<PortId>,
 }
 
-impl EdgeBuilder {
+impl<'a> EdgeBuilder<'a> {
     pub fn new() -> Self {
         Self {
+            graph: None,
             source: None,
             target: None,
         }
+    }
+
+    pub fn graph(mut self, graph: &'a mut Graph) -> Self {
+        self.graph = Some(graph);
+        self
     }
 
     pub fn source(mut self, port: PortId) -> Self {
@@ -80,7 +87,8 @@ impl EdgeBuilder {
         self
     }
 
-    pub fn build(self, graph: &mut Graph) -> Option<EdgeId> {
+    pub fn build(self) -> Option<EdgeId> {
+        let graph = self.graph?;
         let source = self.source?;
         let target = self.target?;
 

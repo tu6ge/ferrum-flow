@@ -99,7 +99,7 @@ mod command_interop_tests {
             .create_edge()
             .source(n1_node.outputs()[0])
             .target(n2_node.inputs()[0])
-            .build(&mut base)
+            .build()
             .expect("edge");
 
         let old_selected_edge = base.selected_edge().clone();
@@ -140,7 +140,7 @@ mod command_interop_tests {
             .create_edge()
             .source(n1_node.outputs()[0])
             .target(n2_node.inputs()[0])
-            .build(&mut base)
+            .build()
             .expect("edge");
         base.add_selected_edge(edge_id, false);
 
