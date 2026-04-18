@@ -187,8 +187,8 @@ fn build_demo_graph(graph: &mut Graph) -> (NodeId, PortId) {
         .unwrap();
     let in3 = graph.get_node(&n3).unwrap().inputs()[0];
 
-    graph.create_edge().source(out1).target(in2).build(graph);
-    graph.create_edge().source(out2).target(in3).build(graph);
+    graph.create_edge().source(out1).target(in2).build();
+    graph.create_edge().source(out2).target(in3).build();
 
     (n3, in3)
 }

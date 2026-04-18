@@ -63,6 +63,6 @@ pub fn generate_chain_edges(graph: &mut Graph, node_ids: Vec<NodeId>) {
         EdgeBuilder::new()
             .source(source_port)
             .target(target_port)
-            .build(graph);
+            .build();
     }
 }

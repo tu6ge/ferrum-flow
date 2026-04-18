@@ -160,56 +160,48 @@ fn build_main_pipeline(graph: &mut Graph) {
         .unwrap();
     let in_out = graph.get_node(&n_out).unwrap().inputs()[0];
 
-    graph
-        .create_edge()
-        .source(out_in)
-        .target(in_pre)
-        .build(graph);
-    graph
-        .create_edge()
-        .source(out_pre)
-        .target(in_agent)
-        .build(graph);
+    graph.create_edge().source(out_in).target(in_pre).build();
+    graph.create_edge().source(out_pre).target(in_agent).build();
     graph
         .create_edge()
         .source(out_agent_plan)
         .target(in_llm)
-        .build(graph);
+        .build();
     graph
         .create_edge()
         .source(out_agent_rag)
         .target(in_rag)
-        .build(graph);
+        .build();
     graph
         .create_edge()
         .source(out_llm)
         .target(in_merge_a)
-        .build(graph);
+        .build();
     graph
         .create_edge()
         .source(out_rag)
         .target(in_merge_b)
-        .build(graph);
+        .build();
     graph
         .create_edge()
         .source(out_merge)
         .target(in_search)
-        .build(graph);
+        .build();
     graph
         .create_edge()
         .source(out_search)
         .target(in_gate)
-        .build(graph);
+        .build();
     graph
         .create_edge()
         .source(out_gate)
         .target(in_format)
-        .build(graph);
+        .build();
     graph
         .create_edge()
         .source(out_format)
         .target(in_out)
-        .build(graph);
+        .build();
 }
 
 /// Second row: quick “batch scoring” lane to show more cards without touching the main DAG.
@@ -304,25 +296,21 @@ fn build_batch_lane(graph: &mut Graph) {
         .create_edge()
         .source(out_batch_in)
         .target(in_score)
-        .build(graph);
+        .build();
     graph
         .create_edge()
         .source(out_score)
         .target(in_tool_b)
-        .build(graph);
+        .build();
     graph
         .create_edge()
         .source(out_tool_b)
         .target(in_stub)
-        .build(graph);
-    graph
-        .create_edge()
-        .source(out_stub)
-        .target(in_ba)
-        .build(graph);
+        .build();
+    graph.create_edge().source(out_stub).target(in_ba).build();
     graph
         .create_edge()
         .source(out_ba)
         .target(in_batch_out)
-        .build(graph);
+        .build();
 }

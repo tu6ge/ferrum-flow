@@ -100,12 +100,12 @@ impl Graph {
         NodeBuilder::new(node_type).graph(self)
     }
 
-    pub fn create_edge(&self) -> EdgeBuilder {
+    pub fn create_edge(&self) -> EdgeBuilder<'_> {
         EdgeBuilder::new()
     }
 
     #[deprecated(note = "use `Graph::create_edge`")]
-    pub fn create_dege(&self) -> EdgeBuilder {
+    pub fn create_dege(&self) -> EdgeBuilder<'_> {
         self.create_edge()
     }
 
