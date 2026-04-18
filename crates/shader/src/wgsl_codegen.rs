@@ -26,7 +26,7 @@ fn find_output_nodes(graph: &Graph) -> Vec<NodeId> {
     graph
         .nodes()
         .iter()
-        .filter(|(_, n)| n.node_type == "output")
+        .filter(|(_, n)| n.renderer_key() == "output")
         .map(|(id, _)| *id)
         .collect()
 }
@@ -44,7 +44,7 @@ fn source_port_for_input(graph: &Graph, input_port: PortId) -> Result<PortId, Co
 fn owner_of_port(graph: &Graph, port: PortId) -> Result<NodeId, CompileError> {
     graph
         .get_port(&port)
-        .map(|p| p.node_id)
+        .map(|p| p.node_id())
         .ok_or_else(|| err(format!("unknown port {port:?}")))
 }
 
@@ -65,7 +65,7 @@ fn dependency_order(graph: &Graph, output: NodeId) -> Result<Vec<NodeId>, Compil
         let node = graph
             .get_node(&id)
             .ok_or_else(|| err(format!("node {id:?} is missing")))?;
-        for in_p in &node.inputs {
+        for in_p in node.inputs() {
             let src = source_port_for_input(graph, *in_p)?;
             let up = owner_of_port(graph, src)?;
             visit(graph, up, visited, post)?;
@@ -156,9 +156,11 @@ pub fn compile_graph_to_wgsl(graph: &Graph) -> Result<String, CompileError> {
     let output_id = outs[0];
     let order = dependency_order(graph, output_id)?;
 
-    let needs_noise = order
-        .iter()
-        .any(|id| graph.get_node(id).is_some_and(|n| n.node_type == "noise"));
+    let needs_noise = order.iter().any(|id| {
+        graph
+            .get_node(id)
+            .is_some_and(|n| n.renderer_key() == "noise")
+    });
 
     let mut port_to_var: HashMap<PortId, String> = HashMap::new();
     let mut body = String::new();
@@ -167,79 +169,79 @@ pub fn compile_graph_to_wgsl(graph: &Graph) -> Result<String, CompileError> {
     for &nid in &order {
         let node = graph.get_node(&nid).ok_or_else(|| err("node missing"))?;
 
-        match node.node_type.as_str() {
+        match node.renderer_key() {
             "output" => {
-                if node.inputs.len() != 1 {
+                if node.inputs().len() != 1 {
                     return Err(err("output node must have exactly 1 input"));
                 }
-                let src_p = source_port_for_input(graph, node.inputs[0])?;
+                let src_p = source_port_for_input(graph, node.inputs()[0])?;
                 let v = var_for_port(&port_to_var, src_p)?;
                 writeln!(&mut body, "    return vec4<f32>({v}, 1.0);").unwrap();
             }
             "uv" => {
-                if !node.outputs.is_empty() {
+                if !node.outputs().is_empty() {
                     let name = format!("v{n}");
                     n += 1;
                     writeln!(&mut body, "    let {name} = in.uv;").unwrap();
-                    port_to_var.insert(node.outputs[0], name);
+                    port_to_var.insert(node.outputs()[0], name);
                 }
             }
             "time" => {
-                if !node.outputs.is_empty() {
+                if !node.outputs().is_empty() {
                     let name = format!("v{n}");
                     n += 1;
                     writeln!(&mut body, "    let {name} = globals.time;").unwrap();
-                    port_to_var.insert(node.outputs[0], name);
+                    port_to_var.insert(node.outputs()[0], name);
                 }
             }
             "color" => {
-                if node.outputs.len() != 1 {
+                if node.outputs().len() != 1 {
                     return Err(err("color node must have exactly 1 output"));
                 }
                 let name = format!("v{n}");
                 n += 1;
-                let lit = vec3_literal_from_node_data(&node.data);
+                let lit = vec3_literal_from_node_data(node.data_ref());
                 writeln!(&mut body, "    let {name} = {lit};").unwrap();
-                port_to_var.insert(node.outputs[0], name);
+                port_to_var.insert(node.outputs()[0], name);
             }
             "noise" => {
-                if node.inputs.len() != 1 || node.outputs.len() != 1 {
+                if node.inputs().len() != 1 || node.outputs().len() != 1 {
                     return Err(err("noise node must have 1 input and 1 output"));
                 }
-                let src_p = source_port_for_input(graph, node.inputs[0])?;
+                let src_p = source_port_for_input(graph, node.inputs()[0])?;
                 let uv = var_for_port(&port_to_var, src_p)?;
                 let name = format!("v{n}");
                 n += 1;
                 writeln!(&mut body, "    let {name} = ff_value_noise({uv});").unwrap();
-                port_to_var.insert(node.outputs[0], name);
+                port_to_var.insert(node.outputs()[0], name);
             }
             "mix" => {
-                if node.inputs.len() != 3 || node.outputs.len() != 1 {
+                if node.inputs().len() != 3 || node.outputs().len() != 1 {
                     return Err(err("mix node must have 3 inputs and 1 output (t, a, b)"));
                 }
-                let p_t = source_port_for_input(graph, node.inputs[0])?;
-                let p_a = source_port_for_input(graph, node.inputs[1])?;
-                let p_b = source_port_for_input(graph, node.inputs[2])?;
+                let p_t = source_port_for_input(graph, node.inputs()[0])?;
+                let p_a = source_port_for_input(graph, node.inputs()[1])?;
+                let p_b = source_port_for_input(graph, node.inputs()[2])?;
                 let t = var_for_port(&port_to_var, p_t)?;
                 let a = var_for_port(&port_to_var, p_a)?;
                 let b = var_for_port(&port_to_var, p_b)?;
                 let name = format!("v{n}");
                 n += 1;
                 writeln!(&mut body, "    let {name} = mix({a}, {b}, {t});").unwrap();
-                port_to_var.insert(node.outputs[0], name);
+                port_to_var.insert(node.outputs()[0], name);
             }
             "scalar" => {
-                if node.inputs.is_empty() && node.outputs.len() == 1 {
+                if node.inputs().is_empty() && node.outputs().len() == 1 {
                     let name = format!("v{n}");
                     n += 1;
                     let v = node
-                        .data
+                        .data_ref()
                         .get("value")
                         .and_then(|x| x.as_f64())
                         .unwrap_or(0.0) as f32;
                     // WGSL float literal suffix; bare `0` breaks smoothstep overload resolution.
                     writeln!(&mut body, "    let {name} = {v}f;").unwrap();
-                    port_to_var.insert(node.outputs[0], name);
+                    port_to_var.insert(node.outputs()[0], name);
                 } else {
                     return Err(err(
                         "scalar node must have 0 inputs, 1 output, numeric data.value",
@@ -247,94 +249,98 @@ pub fn compile_graph_to_wgsl(graph: &Graph) -> Result<String, CompileError> {
                 }
             }
             "join_ff" => {
-                if node.inputs.len() != 2 || node.outputs.len() != 1 {
+                if node.inputs().len() != 2 || node.outputs().len() != 1 {
                     return Err(err("join_ff must be 2× f32 → vec2"));
                 }
-                let p0 = source_port_for_input(graph, node.inputs[0])?;
-                let p1 = source_port_for_input(graph, node.inputs[1])?;
+                let p0 = source_port_for_input(graph, node.inputs()[0])?;
+                let p1 = source_port_for_input(graph, node.inputs()[1])?;
                 let a = var_for_port(&port_to_var, p0)?;
                 let b = var_for_port(&port_to_var, p1)?;
                 let name = format!("v{n}");
                 n += 1;
                 writeln!(&mut body, "    let {name} = vec2<f32>({a}, {b});").unwrap();
-                port_to_var.insert(node.outputs[0], name);
+                port_to_var.insert(node.outputs()[0], name);
             }
             "sub_vec2" => {
-                if node.inputs.len() != 2 || node.outputs.len() != 1 {
+                if node.inputs().len() != 2 || node.outputs().len() != 1 {
                     return Err(err("sub_vec2 must be 2× vec2 → vec2"));
                 }
-                let p0 = source_port_for_input(graph, node.inputs[0])?;
-                let p1 = source_port_for_input(graph, node.inputs[1])?;
+                let p0 = source_port_for_input(graph, node.inputs()[0])?;
+                let p1 = source_port_for_input(graph, node.inputs()[1])?;
                 let a = var_for_port(&port_to_var, p0)?;
                 let b = var_for_port(&port_to_var, p1)?;
                 let name = format!("v{n}");
                 n += 1;
                 writeln!(&mut body, "    let {name} = {a} - {b};").unwrap();
-                port_to_var.insert(node.outputs[0], name);
+                port_to_var.insert(node.outputs()[0], name);
             }
             "length_v2" => {
-                if node.inputs.len() != 1 || node.outputs.len() != 1 {
+                if node.inputs().len() != 1 || node.outputs().len() != 1 {
                     return Err(err("length_v2 must be vec2 → f32"));
                 }
-                let p0 = source_port_for_input(graph, node.inputs[0])?;
+                let p0 = source_port_for_input(graph, node.inputs()[0])?;
                 let a = var_for_port(&port_to_var, p0)?;
                 let name = format!("v{n}");
                 n += 1;
                 writeln!(&mut body, "    let {name} = length({a});").unwrap();
-                port_to_var.insert(node.outputs[0], name);
+                port_to_var.insert(node.outputs()[0], name);
             }
             "sin_f" => {
-                if node.inputs.len() != 1 || node.outputs.len() != 1 {
+                if node.inputs().len() != 1 || node.outputs().len() != 1 {
                     return Err(err("sin_f must be f32 → f32"));
                 }
-                let p0 = source_port_for_input(graph, node.inputs[0])?;
+                let p0 = source_port_for_input(graph, node.inputs()[0])?;
                 let a = var_for_port(&port_to_var, p0)?;
                 let name = format!("v{n}");
                 n += 1;
                 writeln!(&mut body, "    let {name} = sin({a});").unwrap();
-                port_to_var.insert(node.outputs[0], name);
+                port_to_var.insert(node.outputs()[0], name);
             }
             "mul_ff" | "add_ff" => {
-                if node.inputs.len() != 2 || node.outputs.len() != 1 {
+                if node.inputs().len() != 2 || node.outputs().len() != 1 {
                     return Err(err("mul_ff / add_ff must be 2× f32 → f32"));
                 }
-                let p0 = source_port_for_input(graph, node.inputs[0])?;
-                let p1 = source_port_for_input(graph, node.inputs[1])?;
+                let p0 = source_port_for_input(graph, node.inputs()[0])?;
+                let p1 = source_port_for_input(graph, node.inputs()[1])?;
                 let a = var_for_port(&port_to_var, p0)?;
                 let b = var_for_port(&port_to_var, p1)?;
                 let name = format!("v{n}");
                 n += 1;
-                let op = if node.node_type == "mul_ff" { '*' } else { '+' };
+                let op = if node.renderer_key() == "mul_ff" {
+                    '*'
+                } else {
+                    '+'
+                };
                 writeln!(&mut body, "    let {name} = {a} {op} {b};").unwrap();
-                port_to_var.insert(node.outputs[0], name);
+                port_to_var.insert(node.outputs()[0], name);
             }
             "mul_vec2_f" => {
-                if node.inputs.len() != 2 || node.outputs.len() != 1 {
+                if node.inputs().len() != 2 || node.outputs().len() != 1 {
                     return Err(err("mul_vec2_f must be vec2 × f32 → vec2"));
                 }
-                let p0 = source_port_for_input(graph, node.inputs[0])?;
-                let p1 = source_port_for_input(graph, node.inputs[1])?;
+                let p0 = source_port_for_input(graph, node.inputs()[0])?;
+                let p1 = source_port_for_input(graph, node.inputs()[1])?;
                 let a = var_for_port(&port_to_var, p0)?;
                 let b = var_for_port(&port_to_var, p1)?;
                 let name = format!("v{n}");
                 n += 1;
                 writeln!(&mut body, "    let {name} = {a} * {b};").unwrap();
-                port_to_var.insert(node.outputs[0], name);
+                port_to_var.insert(node.outputs()[0], name);
             }
             "smoothstep" => {
-                if node.inputs.len() != 3 || node.outputs.len() != 1 {
+                if node.inputs().len() != 3 || node.outputs().len() != 1 {
                     return Err(err("smoothstep must be 3× f32 → f32 (edge0, edge1, x)"));
                 }
-                let p0 = source_port_for_input(graph, node.inputs[0])?;
-                let p1 = source_port_for_input(graph, node.inputs[1])?;
-                let p2 = source_port_for_input(graph, node.inputs[2])?;
+                let p0 = source_port_for_input(graph, node.inputs()[0])?;
+                let p1 = source_port_for_input(graph, node.inputs()[1])?;
+                let p2 = source_port_for_input(graph, node.inputs()[2])?;
                 let e0 = var_for_port(&port_to_var, p0)?;
                 let e1 = var_for_port(&port_to_var, p1)?;
                 let x = var_for_port(&port_to_var, p2)?;
                 let name = format!("v{n}");
                 n += 1;
                 writeln!(&mut body, "    let {name} = smoothstep({e0}, {e1}, {x});").unwrap();
-                port_to_var.insert(node.outputs[0], name);
+                port_to_var.insert(node.outputs()[0], name);
             }
             other => {
                 return Err(err(format!(
@@ -403,7 +409,7 @@ mod tests {
         let g = sample_shader_graph();
         let order = dependency_order(&g, find_output_nodes(&g)[0]).unwrap();
         assert_eq!(
-            g.get_node(order.last().unwrap()).unwrap().node_type,
+            g.get_node(order.last().unwrap()).unwrap().renderer_key(),
             "output"
         );
         assert!(order.len() >= 10);
