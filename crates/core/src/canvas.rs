@@ -456,7 +456,7 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
     /// Event order is determined by each plugin’s [`Plugin::priority`] when [`FlowCanvas::build`]
     /// runs (not by the order of calls to [`.plugin`](Self::plugin)). Add minimap, clipboard,
     /// context menu, etc. with [`.plugin`](Self::plugin) before or after this call.
-    pub fn plugins_core(mut self) -> Self {
+    pub fn core_plugins(mut self) -> Self {
         self.plugins = self
             .plugins
             .add(BackgroundPlugin::new())
