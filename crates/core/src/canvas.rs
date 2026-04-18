@@ -85,6 +85,7 @@ impl FlowCanvas {
         .detach();
     }
 
+    #[deprecated(note = "use builder instead")]
     pub fn new(graph: Graph, cx: &mut Context<Self>) -> Self {
         let focus_handle = cx.focus_handle();
         let (delayed_notify_tx, _rx) = mpsc::unbounded::<()>();
