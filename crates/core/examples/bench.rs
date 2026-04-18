@@ -14,7 +14,7 @@ fn main() {
                     .input()
                     .output()
                     .data(json!({ "label": format!("Node {}", i * 100 + j) }))
-                    .build(&mut graph);
+                    .build();
             }
         }
 

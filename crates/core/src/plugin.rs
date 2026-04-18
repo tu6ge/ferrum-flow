@@ -99,7 +99,7 @@ impl<'a, 'b> InitPluginContext<'a, 'b> {
             shared_state,
         }
     }
-    pub fn create_node(&self, node_type: &str) -> NodeBuilder {
+    pub fn create_node(&mut self, node_type: &str) -> NodeBuilder<'_> {
         self.graph.create_node(node_type)
     }
 
@@ -474,7 +474,7 @@ impl<'a> PluginContext<'a> {
         self.history.clear();
     }
 
-    pub fn create_node(&self, node_type: &str) -> NodeBuilder {
+    pub fn create_node(&mut self, node_type: &str) -> NodeBuilder<'_> {
         self.graph.create_node(node_type)
     }
 
@@ -777,8 +777,9 @@ impl<'a> RenderContext<'a> {
         }
     }
 
-    pub fn create_node(&self, node_type: &str) -> NodeBuilder {
-        self.graph.create_node(node_type)
+    /// Detached builder (no graph); use [`PluginContext::create_node`] or [`Graph::create_node`] to commit.
+    pub fn create_node(&self, node_type: &str) -> NodeBuilder<'static> {
+        NodeBuilder::new(node_type)
     }
 
     pub fn create_edge(&self) -> EdgeBuilder {

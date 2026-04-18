@@ -144,7 +144,7 @@ impl<'a> CommandContext<'a> {
             notify,
         }
     }
-    pub fn create_node(&self, node_type: &str) -> NodeBuilder {
+    pub fn create_node(&mut self, node_type: &str) -> NodeBuilder<'_> {
         self.graph.create_node(node_type)
     }
 
