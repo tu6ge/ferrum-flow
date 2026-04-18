@@ -778,8 +778,8 @@ impl<'a> RenderContext<'a> {
     }
 
     /// Detached builder (no graph); use [`PluginContext::create_node`] or [`Graph::create_node`] to commit.
-    pub fn create_node(&self, node_type: &str) -> NodeBuilder<'_> {
-        NodeBuilder::new(node_type)
+    pub fn create_node(&self, renderer_key: &str) -> NodeBuilder<'_> {
+        NodeBuilder::new(renderer_key)
     }
 
     pub fn create_edge(&self) -> EdgeBuilder<'_> {

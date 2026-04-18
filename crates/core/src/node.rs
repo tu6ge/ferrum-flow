@@ -537,10 +537,10 @@ impl PortBuilder {
 }
 
 impl<'a> NodeBuilder<'a> {
-    pub fn new(node_type: impl Into<String>) -> NodeBuilder<'static> {
+    pub fn new(renderer_key: impl Into<String>) -> NodeBuilder<'static> {
         NodeBuilder {
             graph: None,
-            node_type: node_type.into(),
+            node_type: renderer_key.into(),
             execute_type: String::new(),
             x: px(0.0),
             y: px(0.0),
