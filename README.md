@@ -39,7 +39,7 @@ fn main() {
         let mut graph = Graph::new();
 
         graph
-            .create_node("")
+            .create_node("default")
             .position(100.0, 100.0)
             .input()
             .output()
