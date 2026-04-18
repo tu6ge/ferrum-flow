@@ -41,8 +41,6 @@ fn main() {
         graph
             .create_node("default")
             .position(100.0, 100.0)
-            .input()
-            .output()
             .data(json!({ "label": "Hello World" }))
             .build();
 
