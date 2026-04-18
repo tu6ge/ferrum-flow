@@ -20,9 +20,9 @@ pub(crate) fn graph_fingerprint(g: &ferrum_flow::Graph) -> u64 {
         let Some(n) = g.get_node(id) else {
             continue;
         };
-        n.node_type.hash(&mut h);
-        let xf: f32 = n.x.into();
-        let yf: f32 = n.y.into();
+        n.renderer_key().hash(&mut h);
+        let xf: f32 = n.position().0.into();
+        let yf: f32 = n.position().1.into();
         xf.to_bits().hash(&mut h);
         yf.to_bits().hash(&mut h);
     }

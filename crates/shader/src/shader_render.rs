@@ -33,7 +33,7 @@ fn category_badge(node_type: &str) -> Option<(&'static str, u32)> {
 }
 
 fn caption_secondary(node: &Node) -> Option<String> {
-    node.data
+    node.data_ref()
         .get("hint")
         .and_then(|v| v.as_str())
         .map(|s| s.trim().to_string())
@@ -42,10 +42,10 @@ fn caption_secondary(node: &Node) -> Option<String> {
 
 impl NodeRenderer for ShaderNodeRenderer {
     fn render(&self, node: &Node, ctx: &mut RenderContext) -> AnyElement {
-        let node_id = node.id;
+        let node_id = node.id();
         let selected = ctx.graph.selected_node_iter().any(|id| *id == node_id);
 
-        let (bg, border) = card_colors(node.node_type.as_str());
+        let (bg, border) = card_colors(node.renderer_key());
         let border = if selected {
             ctx.theme.node_card_border_selected
         } else {
@@ -54,7 +54,7 @@ impl NodeRenderer for ShaderNodeRenderer {
 
         let title = default_node_caption(node);
         let hint = caption_secondary(node);
-        let badge = category_badge(node.node_type.as_str());
+        let badge = category_badge(node.renderer_key());
 
         let badge_el = badge.map(|(label, accent)| {
             div()
@@ -107,7 +107,7 @@ impl NodeRenderer for ShaderNodeRenderer {
     }
 
     fn port_render(&self, node: &Node, port: &Port, ctx: &mut RenderContext) -> Option<AnyElement> {
-        let (_, accent) = card_colors(node.node_type.as_str());
+        let (_, accent) = card_colors(node.renderer_key());
         let frame = ctx.port_screen_frame(node, port)?;
 
         Some(

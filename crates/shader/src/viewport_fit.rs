@@ -15,10 +15,10 @@ fn graph_bounds(ctx: &PluginContext) -> Option<(f32, f32, f32, f32)> {
     let mut any = false;
 
     for n in ctx.graph.nodes().values() {
-        let x: f32 = n.x.into();
-        let y: f32 = n.y.into();
-        let w: f32 = n.size.width.into();
-        let h: f32 = n.size.height.into();
+        let x: f32 = n.position().0.into();
+        let y: f32 = n.position().1.into();
+        let w: f32 = n.size_ref().width.into();
+        let h: f32 = n.size_ref().height.into();
         min_x = min_x.min(x);
         min_y = min_y.min(y);
         max_x = max_x.max(x + w);

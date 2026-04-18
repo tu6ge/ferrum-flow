@@ -33,8 +33,8 @@ pub fn shader_demo_advance() -> (&'static str, Graph) {
 }
 
 fn wire(graph: &mut Graph, from: NodeId, out_i: usize, to: NodeId, in_i: usize) {
-    let s = graph.get_node(&from).unwrap().outputs[out_i];
-    let t = graph.get_node(&to).unwrap().inputs[in_i];
+    let s = graph.get_node(&from).unwrap().outputs()[out_i];
+    let t = graph.get_node(&to).unwrap().inputs()[in_i];
     graph.create_edge().source(s).target(t).build(graph);
 }
 

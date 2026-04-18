@@ -7,10 +7,10 @@ use ferrum_flow::Graph;
 fn node_label(graph: &Graph, id: &ferrum_flow::NodeId) -> String {
     graph
         .get_node(id)
-        .and_then(|n| n.data.get("label").and_then(|v| v.as_str()))
+        .and_then(|n| n.data_ref().get("label").and_then(|v| v.as_str()))
         .map(|s| s.trim().to_string())
         .filter(|s| !s.is_empty())
-        .or_else(|| graph.get_node(id).map(|n| n.node_type.clone()))
+        .or_else(|| graph.get_node(id).map(|n| n.renderer_key().to_string()))
         .unwrap_or_else(|| "node".to_string())
 }
 
@@ -24,17 +24,17 @@ pub fn graph_validation_notes(graph: &Graph) -> Vec<String> {
     for (id, node) in graph.nodes() {
         let label = node_label(graph, id);
 
-        for (i, port_id) in node.inputs.iter().enumerate() {
+        for (i, port_id) in node.inputs().iter().enumerate() {
             if !targets.contains(port_id) {
                 notes.push(format!(
                     "Unconnected input: port {} of «{label}» (type {})",
                     i + 1,
-                    node.node_type,
+                    node.renderer_key(),
                 ));
             }
         }
 
-        if node.node_type == "output" && node.inputs.is_empty() {
+        if node.renderer_key() == "output" && node.inputs().is_empty() {
             notes.push(format!(
                 "Output node «{label}» has no inputs (graph may be incomplete)"
             ));
