@@ -140,6 +140,11 @@ impl Node {
     }
 
     #[allow(deprecated)]
+    pub fn position_point(&self) -> Point<Pixels> {
+        Point::new(self.x, self.y)
+    }
+
+    #[allow(deprecated)]
     pub fn size_ref(&self) -> &Size<Pixels> {
         &self.size
     }
