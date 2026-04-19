@@ -10,6 +10,12 @@ use std::time::Duration;
 
 use crate::NodeId;
 
+/// Stored in [`crate::SharedState`] while [`super::interaction::NodeDragInteraction`] is active in
+/// the dragging phase: these node ids are rendered on the interaction layer only; [`super::NodePlugin`]
+/// skips them in the static nodes layer to cut work per frame.
+#[derive(Clone, Debug)]
+pub struct ActiveNodeDrag(pub Arc<[NodeId]>);
+
 /// Default throttle for [`NodeDragEvent::Tick`] ([`crate::plugins::NodeInteractionPlugin::new`]).
 /// Use [`crate::plugins::NodeInteractionPlugin::with_drag_tick_interval`] to change it.
 pub const NODE_DRAG_TICK_INTERVAL: Duration = Duration::from_millis(50);
