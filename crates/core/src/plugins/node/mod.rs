@@ -11,6 +11,7 @@ pub use interaction::NodeInteractionPlugin;
 pub(super) fn render_node_cards(
     ctx: &mut RenderContext,
     node_ids: &[crate::NodeId],
+    id: &'static str,
 ) -> gpui::AnyElement {
     ctx.cache_port_offset_with_nodes(&node_ids);
     let list = node_ids.iter().filter_map(|node_id| {
@@ -19,12 +20,11 @@ pub(super) fn render_node_cards(
 
         let node_render = render.render(node, ctx);
 
-        let ports = ctx
-            .graph
-            .ports()
-            .iter()
-            .filter(|(_, port)| port.node_id() == *node_id)
-            .filter_map(|(_, port)| render.port_render(node, port, ctx));
+        let port_ids: Vec<crate::PortId> = ctx.cached_port_ids_for_node(node_id).collect();
+        let ports = port_ids.iter().filter_map(|port_id| {
+            let port = ctx.graph.get_port(port_id)?;
+            render.port_render(node, port, ctx)
+        });
 
         Some(
             div()
@@ -34,7 +34,7 @@ pub(super) fn render_node_cards(
         )
     });
 
-    div().id("node-cards").children(list).into_any()
+    div().id(id).children(list).into_any()
 }
 
 use std::sync::Arc;
@@ -114,6 +114,10 @@ impl Plugin for NodePlugin {
                 .collect();
         }
 
-        Some(render_node_cards(ctx, &self.static_layer_node_ids))
+        Some(render_node_cards(
+            ctx,
+            &self.static_layer_node_ids,
+            "static-layer-node-cards",
+        ))
     }
 }

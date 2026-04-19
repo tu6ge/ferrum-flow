@@ -223,9 +223,11 @@ impl Interaction for NodeDragInteraction {
     }
     fn render(&self, ctx: &mut crate::plugin::RenderContext) -> Option<gpui::AnyElement> {
         match &self.state {
-            NodeDragState::Draging { dragged_ids, .. } => {
-                Some(super::render_node_cards(ctx, dragged_ids.as_ref()))
-            }
+            NodeDragState::Draging { dragged_ids, .. } => Some(super::render_node_cards(
+                ctx,
+                dragged_ids.as_ref(),
+                "draging-node-cards",
+            )),
             NodeDragState::Pending { .. } => None,
         }
     }
