@@ -45,7 +45,7 @@ impl Plugin for ViewportPlugin {
             let zoom_delta = if delta > 0.0 { 0.9 } else { 1.1 };
 
             ctx.set_zoom(ctx.zoom_scaled_by(zoom_delta));
-            ctx.set_zoom(ctx.zoom().clamp(0.7, 3.0));
+            ctx.set_zoom(ctx.zoom().clamp(0.5, 3.0));
 
             let after = ctx.world_to_screen(before);
 

@@ -8,7 +8,7 @@ use crate::{
     canvas::{Interaction, InteractionResult},
     plugin::{EventResult, FlowEvent, InitPluginContext, InputEvent, Plugin, PluginContext},
     plugins::node::{
-        NODE_DRAG_TICK_INTERVAL, NodeDragEvent,
+        ActiveNodeDrag, NODE_DRAG_TICK_INTERVAL, NodeDragEvent,
         command::{DragNodesCommand, SelecteNodeCommand},
     },
 };
@@ -151,8 +151,9 @@ impl Interaction for NodeDragInteraction {
                     self.state = NodeDragState::Draging {
                         start_mouse: ev.position,
                         start_positions: nodes,
-                        dragged_ids,
+                        dragged_ids: Arc::clone(&dragged_ids),
                     };
+                    ctx.shared_state.insert(ActiveNodeDrag(dragged_ids));
 
                     ctx.notify();
                 }
@@ -204,6 +205,7 @@ impl Interaction for NodeDragInteraction {
         _ev: &gpui::MouseUpEvent,
         ctx: &mut PluginContext,
     ) -> crate::canvas::InteractionResult {
+        ctx.shared_state.remove::<ActiveNodeDrag>();
         match &self.state {
             NodeDragState::Pending { node_id, shift, .. } => {
                 ctx.emit(FlowEvent::custom(NodeDragEvent::End));
@@ -219,7 +221,12 @@ impl Interaction for NodeDragInteraction {
             }
         }
     }
-    fn render(&self, _ctx: &mut crate::plugin::RenderContext) -> Option<gpui::AnyElement> {
-        None
+    fn render(&self, ctx: &mut crate::plugin::RenderContext) -> Option<gpui::AnyElement> {
+        match &self.state {
+            NodeDragState::Draging { dragged_ids, .. } => {
+                Some(super::render_node_cards(ctx, dragged_ids.as_ref()))
+            }
+            NodeDragState::Pending { .. } => None,
+        }
     }
 }

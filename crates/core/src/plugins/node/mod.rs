@@ -3,11 +3,36 @@ mod drag_events;
 mod interaction;
 
 pub use command::DragNodesCommand;
-pub use drag_events::{NODE_DRAG_TICK_INTERVAL, NodeDragEvent};
+pub use drag_events::{ActiveNodeDrag, NODE_DRAG_TICK_INTERVAL, NodeDragEvent};
 use gpui::{Element, ParentElement, div};
 pub use interaction::NodeInteractionPlugin;
 
-use crate::{RenderContext, plugin::Plugin};
+/// Renders the given nodes (and their ports) like [`NodePlugin`], for use on the interaction overlay.
+pub(super) fn render_node_cards(
+    ctx: &mut RenderContext,
+    node_ids: &[crate::NodeId],
+) -> gpui::AnyElement {
+    ctx.cache_port_offset_with_nodes(&node_ids.to_vec());
+    let list = node_ids.iter().filter_map(|node_id| {
+        let node = ctx.graph.nodes().get(node_id)?;
+        let render = ctx.renderers.get(node.renderer_key());
+
+        let node_render = render.render(node, ctx);
+
+        let ports = ctx
+            .graph
+            .ports()
+            .iter()
+            .filter(|(_, port)| port.node_id() == *node_id)
+            .filter_map(|(_, port)| render.port_render(node, port, ctx));
+
+        Some(div().child(node_render).children(ports))
+    });
+
+    div().children(list).into_any()
+}
+
+use crate::plugin::{Plugin, RenderContext};
 
 pub struct NodePlugin {}
 
@@ -40,28 +65,15 @@ impl Plugin for NodePlugin {
             .graph
             .node_order()
             .iter()
-            .filter(|node_id| ctx.is_node_visible(node_id))
+            .filter(|node_id| {
+                ctx.is_node_visible(node_id)
+                    && !ctx
+                        .get_shared_state::<ActiveNodeDrag>()
+                        .is_some_and(|d| d.0.contains(node_id))
+            })
             .cloned()
             .collect();
 
-        ctx.cache_port_offset_with_nodes(&node_ids);
-
-        let list = node_ids.iter().filter_map(|node_id| {
-            let node = ctx.graph.nodes().get(node_id)?;
-            let render = ctx.renderers.get(node.renderer_key());
-
-            let node_render = render.render(node, ctx);
-
-            let ports = ctx
-                .graph
-                .ports()
-                .iter()
-                .filter(|(_, port)| port.node_id() == *node_id)
-                .filter_map(|(_, port)| render.port_render(node, port, ctx));
-
-            Some(div().child(node_render).children(ports))
-        });
-
-        Some(div().children(list).into_any())
+        Some(render_node_cards(ctx, &node_ids))
     }
 }

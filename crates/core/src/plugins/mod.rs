@@ -28,7 +28,9 @@ pub use fit_all::FitAllGraphPlugin;
 pub use focus_selection::FocusSelectionPlugin;
 pub use history::HistoryPlugin;
 pub use minimap::MinimapPlugin;
-pub use node::{NODE_DRAG_TICK_INTERVAL, NodeDragEvent, NodeInteractionPlugin, NodePlugin};
+pub use node::{
+    ActiveNodeDrag, NODE_DRAG_TICK_INTERVAL, NodeDragEvent, NodeInteractionPlugin, NodePlugin,
+};
 pub use port::{
     CreateEdge, CreateNode, CreatePort, DefaultEdgeValidator, EdgeValidationError,
     EdgeValidationErrorCode, EdgeValidator, PortInteractionPlugin, edge_bezier, filled_disc_path,
