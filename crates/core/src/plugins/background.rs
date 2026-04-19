@@ -1,9 +1,7 @@
 use std::sync::Arc;
 
 use gpui::{
-    App, Bounds, Corners, Element, ElementId, GlobalElementId, InspectorElementId,
-    InteractiveElement as _, IntoElement, LayoutId, ParentElement, RenderImage, Style, Styled,
-    Window, div, relative,
+    Corners, Element as _, InteractiveElement as _, ParentElement, RenderImage, Styled, canvas, div,
 };
 use image::{Frame, RgbaImage};
 use smallvec::smallvec;
@@ -72,7 +70,6 @@ fn rasterize_dot_grid(
         x += grid;
     }
 
-    // GPUI expects BGRA for this path (see gpui `img` loader).
     for chunk in data.chunks_exact_mut(4) {
         chunk.swap(0, 2);
     }
@@ -91,90 +88,6 @@ struct BackgroundLayoutCacheKey {
     height: f32,
     bg_color: u32,
     dot_color: u32,
-}
-
-/// Custom element: draws the cached grid as a single [`Window::paint_image`].
-struct BackgroundDots {
-    image: Arc<RenderImage>,
-}
-
-impl BackgroundDots {
-    fn new(image: Arc<RenderImage>) -> Self {
-        Self { image }
-    }
-}
-
-struct BackgroundPaintState {
-    bounds: Bounds<gpui::Pixels>,
-    image: Arc<RenderImage>,
-}
-
-impl IntoElement for BackgroundDots {
-    type Element = Self;
-    fn into_element(self) -> Self {
-        self
-    }
-}
-
-impl Element for BackgroundDots {
-    type RequestLayoutState = ();
-    type PrepaintState = BackgroundPaintState;
-
-    fn id(&self) -> Option<ElementId> {
-        Some(ElementId::Name("background-dots".into()))
-    }
-
-    fn source_location(&self) -> Option<&'static std::panic::Location<'static>> {
-        None
-    }
-
-    fn request_layout(
-        &mut self,
-        _id: Option<&GlobalElementId>,
-        _inspector_id: Option<&InspectorElementId>,
-        window: &mut Window,
-        cx: &mut App,
-    ) -> (LayoutId, Self::RequestLayoutState) {
-        let mut style = Style::default();
-        style.size.width = relative(1.0).into();
-        style.size.height = relative(1.0).into();
-        let layout_id = window.request_layout(style, [], cx);
-        (layout_id, ())
-    }
-
-    fn prepaint(
-        &mut self,
-        _id: Option<&GlobalElementId>,
-        _inspector_id: Option<&InspectorElementId>,
-        bounds: Bounds<gpui::Pixels>,
-        _state: &mut Self::RequestLayoutState,
-        _window: &mut Window,
-        _cx: &mut App,
-    ) -> Self::PrepaintState {
-        BackgroundPaintState {
-            bounds,
-            image: Arc::clone(&self.image),
-        }
-    }
-
-    fn paint(
-        &mut self,
-        _id: Option<&GlobalElementId>,
-        _inspector_id: Option<&InspectorElementId>,
-        _bounds: Bounds<gpui::Pixels>,
-        _layout: &mut Self::RequestLayoutState,
-        state: &mut Self::PrepaintState,
-        window: &mut Window,
-        _cx: &mut App,
-    ) {
-        let _ = window.paint_image(
-            state.bounds,
-            Corners::default(),
-            Arc::clone(&state.image),
-            0,
-            false,
-        );
-    }
 }
 
 pub struct BackgroundPlugin {
@@ -243,7 +156,7 @@ impl Plugin for BackgroundPlugin {
     }
     fn render(&mut self, ctx: &mut crate::plugin::RenderContext) -> Option<gpui::AnyElement> {
         self.sync_raster(ctx);
-        let Some(image) = self.image.as_ref() else {
+        let Some(image) = self.image.as_ref().map(Arc::clone) else {
             return Some(
                 div()
                     .id("background")
@@ -254,13 +167,22 @@ impl Plugin for BackgroundPlugin {
             );
         };
 
+        let el = canvas(
+            move |_bounds, _win, _cx| image,
+            move |bounds, img, window, _cx| {
+                let _ = window.paint_image(bounds, Corners::default(), img, 0, false);
+            },
+        )
+        .absolute()
+        .size_full();
+
         Some(
             div()
                 .id("background")
                 .absolute()
                 .size_full()
                 .bg(gpui::rgb(ctx.theme.background))
-                .child(BackgroundDots::new(Arc::clone(image)))
+                .child(el)
                 .into_any(),
         )
     }
