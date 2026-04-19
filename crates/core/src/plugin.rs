@@ -936,6 +936,17 @@ impl<'a> RenderContext<'a> {
         self.port_offset_cache.get_offset(node_id, port_id)
     }
 
+    /// Port ids with layout cached for this node (see [`PortLayoutCache::cached_port_ids_for_node`]).
+    ///
+    /// Call [`Self::cache_port_offset_with_nodes`] (or other `cache_port_offset_*` helpers) first
+    /// so the list is complete for rendering.
+    pub fn cached_port_ids_for_node(
+        &self,
+        node_id: &NodeId,
+    ) -> impl Iterator<Item = PortId> + '_ {
+        self.port_offset_cache.cached_port_ids_for_node(node_id)
+    }
+
     /// Port center in screen pixels when you already have the owning [`Node`].
     /// *warning*: this is using port offset cache, so it will not be accurate if the port offset is not cached.
     pub fn port_screen_center(&self, node: &Node, port_id: PortId) -> Option<Point<Pixels>> {

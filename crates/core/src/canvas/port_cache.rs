@@ -24,6 +24,19 @@ impl PortLayoutCache {
         self.map.contains_key(node_id)
     }
 
+    /// Port ids whose offsets are cached for `node_id` (after [`Self::ensure_node_ports`]).
+    ///
+    /// Order follows the inner [`HashMap`] and is not guaranteed stable across runs.
+    pub fn cached_port_ids_for_node(
+        &self,
+        node_id: &NodeId,
+    ) -> impl Iterator<Item = PortId> + '_ {
+        self.map
+            .get(node_id)
+            .into_iter()
+            .flat_map(|ports| ports.keys().copied())
+    }
+
     pub fn replace_node_offsets(
         &mut self,
         node_id: NodeId,

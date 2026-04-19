@@ -30,7 +30,7 @@ fn main() {
                     .plugin(NodeInteractionPlugin::new())
                     .plugin(ViewportPlugin::new())
                     .plugin(NodePlugin::new())
-                    .plugin(PortInteractionPlugin::new())
+                    //.plugin(PortInteractionPlugin::new())
                     //.plugin(EdgePlugin::new())
                     // .plugin(DeletePlugin::new())
                     // .plugin(HistoryPlugin::new())
