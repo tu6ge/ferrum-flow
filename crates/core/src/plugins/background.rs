@@ -1,6 +1,6 @@
 use gpui::{
-    Element as _, ElementId, InteractiveElement as _, ParentElement, SharedString, Styled, div, px,
-    rgb,
+    BorderStyle, Bounds, Element as _, InteractiveElement as _, PaintQuad, ParentElement, Point,
+    Size, Styled, canvas, div, px,
 };
 
 use crate::plugin::Plugin;
@@ -17,14 +17,6 @@ impl Plugin for BackgroundPlugin {
     fn name(&self) -> &'static str {
         "background"
     }
-    fn setup(&mut self, _ctx: &mut crate::plugin::InitPluginContext) {}
-    fn on_event(
-        &mut self,
-        _event: &crate::plugin::FlowEvent,
-        _context: &mut crate::plugin::PluginContext,
-    ) -> crate::plugin::EventResult {
-        crate::plugin::EventResult::Continue
-    }
     fn priority(&self) -> i32 {
         0
     }
@@ -32,56 +24,55 @@ impl Plugin for BackgroundPlugin {
         crate::plugin::RenderLayer::Background
     }
     fn render(&mut self, ctx: &mut crate::plugin::RenderContext) -> Option<gpui::AnyElement> {
-        let base_grid = 40.0;
         let zoom = ctx.zoom();
-
-        let grid = base_grid * zoom;
-
         let offset = ctx.offset();
-
-        let start_x = f32::from(offset.x) % grid;
-        let start_y = f32::from(offset.y) % grid;
-
-        let mut dots = Vec::new();
-
         let bounds = ctx.window.bounds();
-        let width = f32::from(bounds.size.width);
-        let height = f32::from(bounds.size.height);
+        let theme = ctx.theme.clone();
+        let grid = 40.0_f32 * zoom;
 
-        let mut x = start_x;
+        let el = canvas(
+            move |_bounds, _window, _cx| (),
+            move |_bounds, _state, window, _cx| {
+                let width = f32::from(bounds.size.width);
+                let height = f32::from(bounds.size.height);
 
-        while x < width {
-            let mut y = start_y;
+                let start_x = f32::from(offset.x) % grid;
+                let start_y = f32::from(offset.y) % grid;
 
-            while y < height {
-                dots.push(
-                    div()
-                        .id(ElementId::Name(SharedString::from(format!(
-                            "background-dot-{}-{}",
-                            x, y
-                        ))))
-                        .absolute()
-                        .left(px(x))
-                        .top(px(y))
-                        .w(px(2.0))
-                        .h(px(2.0))
-                        .rounded_full()
-                        .bg(rgb(ctx.theme.background_grid_dot)),
-                );
+                let dot_size = px(2.0);
+                let dot_radius = px(1.0);
 
-                y += grid;
-            }
+                let mut x = start_x;
+                while x < width {
+                    let mut y = start_y;
+                    while y < height {
+                        window.paint_quad(PaintQuad {
+                            bounds: Bounds {
+                                origin: Point::new(px(x - 1.0), px(y - 1.0)),
+                                size: Size::new(dot_size, dot_size),
+                            },
+                            corner_radii: gpui::Corners::all(dot_radius),
+                            background: gpui::rgb(theme.background_grid_dot).into(),
+                            border_widths: gpui::Edges::all(px(0.0)),
+                            border_color: gpui::transparent_black(),
+                            border_style: BorderStyle::Solid,
+                        });
+                        y += grid;
+                    }
+                    x += grid;
+                }
+            },
+        )
+        .absolute()
+        .size_full();
 
-            x += grid;
-        }
         Some(
             div()
                 .id("background")
                 .absolute()
-                .w(px(width))
-                .h(px(height))
+                .size_full()
                 .bg(gpui::rgb(ctx.theme.background))
-                .children(dots)
+                .child(el)
                 .into_any(),
         )
     }
