@@ -109,6 +109,7 @@ impl NodeRenderer for DefaultNodeRenderer {
         ctx.node_card_shell(node, selected, NodeCardVariant::Default)
             .child(
                 div()
+                    .id(ElementId::Uuid(*node_id.as_uuid()))
                     .size_full()
                     .flex()
                     .items_center()
@@ -129,6 +130,7 @@ impl NodeRenderer for UndefinedNodeRenderer {
         ctx.node_card_shell(node, false, NodeCardVariant::UndefinedType)
             .child(
                 div()
+                    .id(ElementId::Uuid(*node.id().as_uuid()))
                     .size_full()
                     .flex()
                     .items_center()
