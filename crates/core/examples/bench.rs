@@ -31,7 +31,7 @@ fn main() {
                     .plugin(ViewportPlugin::new())
                     .plugin(NodePlugin::new())
                     .plugin(PortInteractionPlugin::new())
-                    .plugin(EdgePlugin::new())
+                    //.plugin(EdgePlugin::new())
                     // .plugin(DeletePlugin::new())
                     // .plugin(HistoryPlugin::new())
                     // .plugin(MinimapPlugin::new())

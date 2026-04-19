@@ -1,4 +1,7 @@
-use gpui::{Element, ParentElement, Styled, div, px, rgb};
+use gpui::{
+    Element as _, ElementId, InteractiveElement as _, ParentElement, SharedString, Styled, div, px,
+    rgb,
+};
 
 use crate::plugin::Plugin;
 
@@ -53,6 +56,10 @@ impl Plugin for BackgroundPlugin {
             while y < height {
                 dots.push(
                     div()
+                        .id(ElementId::Name(SharedString::from(format!(
+                            "background-dot-{}-{}",
+                            x, y
+                        ))))
                         .absolute()
                         .left(px(x))
                         .top(px(y))
@@ -69,6 +76,7 @@ impl Plugin for BackgroundPlugin {
         }
         Some(
             div()
+                .id("background")
                 .absolute()
                 .w(px(width))
                 .h(px(height))

@@ -1,8 +1,9 @@
 use std::{any::Any, collections::HashMap, time::Duration};
 
 use gpui::{
-    AnyElement, Bounds, Context, Div, KeyDownEvent, KeyUpEvent, MouseDownEvent, MouseMoveEvent,
-    MouseUpEvent, Pixels, Point, ScrollWheelEvent, Size, Styled, Window, div, px, rgb,
+    AnyElement, Bounds, Context, Div, ElementId, InteractiveElement as _, KeyDownEvent, KeyUpEvent,
+    MouseDownEvent, MouseMoveEvent, MouseUpEvent, Pixels, Point, ScrollWheelEvent, Size, Stateful,
+    Styled, Window, div, px, rgb,
 };
 
 use crate::{
@@ -299,6 +300,7 @@ impl<'a, 'b> InitPluginContext<'a, 'b> {
             center: self.port_screen_center(node, port.id())?,
             size: *port.size_ref(),
             zoom: self.viewport.zoom(),
+            port_id: port.id(),
         })
     }
 
@@ -685,6 +687,7 @@ impl<'a> PluginContext<'a> {
             center: self.port_screen_center(node, port.id())?,
             size: *port.size_ref(),
             zoom: self.viewport.zoom(),
+            port_id: port.id(),
         })
     }
 
@@ -872,10 +875,16 @@ impl<'a> RenderContext<'a> {
     /// Absolute-positioned node card shell: screen origin, zoom-scaled size, rounded rect and border.
     ///
     /// Chain `.child(...)` for the inner body, then `.into_any()` (see [`gpui::Element`]).
-    pub fn node_card_shell(&self, node: &Node, selected: bool, variant: NodeCardVariant) -> Div {
+    pub fn node_card_shell(
+        &self,
+        node: &Node,
+        selected: bool,
+        variant: NodeCardVariant,
+    ) -> Stateful<Div> {
         let screen = self.world_to_screen(node.point());
         let z = self.viewport.zoom();
         let base = div()
+            .id(ElementId::Uuid(*node.id().as_uuid()))
             .absolute()
             .left(screen.x)
             .top(screen.y)
@@ -950,6 +959,7 @@ impl<'a> RenderContext<'a> {
             center: self.port_screen_center(node, port.id())?,
             size: *port.size_ref(),
             zoom: self.viewport.zoom(),
+            port_id: port.id(),
         })
     }
 
@@ -958,7 +968,7 @@ impl<'a> RenderContext<'a> {
             .ensure_all_nodes_ports(self.graph, self.renderers);
     }
 
-    pub fn cache_port_offset_with_nodes(&mut self, node_ids: &Vec<NodeId>) {
+    pub fn cache_port_offset_with_nodes(&mut self, node_ids: &[NodeId]) {
         for node_id in node_ids {
             self.cache_node_port_offset(node_id);
         }

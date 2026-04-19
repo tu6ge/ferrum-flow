@@ -1,6 +1,10 @@
 //! Screen-space port layout for canvas rendering ([`PortScreenFrame`]).
 
-use gpui::{Div, Pixels, Point, Size, Styled as _, div};
+use gpui::{
+    Div, ElementId, InteractiveElement as _, Pixels, Point, Size, Stateful, Styled as _, div,
+};
+
+use crate::PortId;
 
 /// Screen-space layout for one port after the viewport transform.
 ///
@@ -19,6 +23,7 @@ pub struct PortScreenFrame {
     /// Logical port size from graph data (same units as on the node card).
     pub size: Size<Pixels>,
     pub zoom: f32,
+    pub(crate) port_id: PortId,
 }
 
 impl PortScreenFrame {
@@ -41,9 +46,15 @@ impl PortScreenFrame {
     }
 
     /// `absolute` container covering the default port hit box; chain GPUI styles and children.
-    pub fn anchor_div(self) -> Div {
+    pub fn anchor_div(self) -> Stateful<Div> {
         let s = self.scaled_size();
         let o = self.origin();
-        div().absolute().left(o.x).top(o.y).w(s.width).h(s.height)
+        div()
+            .id(ElementId::Uuid(*self.port_id.as_uuid()))
+            .absolute()
+            .left(o.x)
+            .top(o.y)
+            .w(s.width)
+            .h(s.height)
     }
 }

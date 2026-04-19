@@ -412,6 +412,7 @@ impl Render for FlowCanvas {
             .on_scroll_wheel(window.listener_for(&entity, Self::on_scroll_wheel))
             .children(RenderLayer::ALL.iter().map(|layer| {
                 div()
+                    .id(ElementId::Integer(layer.index() as u64))
                     .absolute()
                     .size_full()
                     .children(layers[layer.index()].drain(..))

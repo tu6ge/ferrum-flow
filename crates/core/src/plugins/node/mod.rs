@@ -4,7 +4,7 @@ mod interaction;
 
 pub use command::DragNodesCommand;
 pub use drag_events::{ActiveNodeDrag, NODE_DRAG_TICK_INTERVAL, NodeDragEvent};
-use gpui::{Element, ParentElement, div};
+use gpui::{Element as _, ElementId, InteractiveElement as _, ParentElement, div};
 pub use interaction::NodeInteractionPlugin;
 
 /// Renders the given nodes (and their ports) like [`NodePlugin`], for use on the interaction overlay.
@@ -12,7 +12,7 @@ pub(super) fn render_node_cards(
     ctx: &mut RenderContext,
     node_ids: &[crate::NodeId],
 ) -> gpui::AnyElement {
-    ctx.cache_port_offset_with_nodes(&node_ids.to_vec());
+    ctx.cache_port_offset_with_nodes(&node_ids);
     let list = node_ids.iter().filter_map(|node_id| {
         let node = ctx.graph.nodes().get(node_id)?;
         let render = ctx.renderers.get(node.renderer_key());
@@ -26,17 +26,22 @@ pub(super) fn render_node_cards(
             .filter(|(_, port)| port.node_id() == *node_id)
             .filter_map(|(_, port)| render.port_render(node, port, ctx));
 
-        Some(div().child(node_render).children(ports))
+        Some(
+            div()
+                .id(ElementId::Uuid(*node_id.as_uuid()))
+                .child(node_render)
+                .children(ports),
+        )
     });
 
-    div().children(list).into_any()
+    div().id("node-cards").children(list).into_any()
 }
 
 use std::sync::Arc;
 
+use crate::NodeId;
 use crate::plugin::{Plugin, RenderContext};
 use crate::viewport::ViewportVisibilityCacheKey;
-use crate::NodeId;
 
 /// Invalidates [`NodePlugin::static_layer_node_ids`] when the viewport changes **or** the active
 /// node-drag overlay set changes ([`ActiveNodeDrag`] `Arc` identity + length).
@@ -104,10 +109,8 @@ impl Plugin for NodePlugin {
                 .node_order()
                 .iter()
                 .filter(|node_id| ctx.is_node_visible(node_id))
-                .filter(|node_id| {
-                    !active.is_some_and(|d| d.0.contains(node_id))
-                })
-                .cloned()
+                .filter(|node_id| !active.is_some_and(|d| d.0.contains(node_id)))
+                .copied()
                 .collect();
         }
 
