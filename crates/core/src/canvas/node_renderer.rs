@@ -107,6 +107,8 @@ impl NodeRenderer for DefaultNodeRenderer {
             .is_some();
 
         ctx.node_card_shell(node, selected, NodeCardVariant::Default)
+            .rounded(px(6.0))
+            .border(px(1.5))
             .child(
                 div()
                     .id(ElementId::Uuid(*node_id.as_uuid()))
@@ -128,6 +130,8 @@ struct UndefinedNodeRenderer;
 impl NodeRenderer for UndefinedNodeRenderer {
     fn render(&self, node: &Node, ctx: &mut RenderContext) -> AnyElement {
         ctx.node_card_shell(node, false, NodeCardVariant::UndefinedType)
+            .rounded(px(6.0))
+            .border(px(1.5))
             .child(
                 div()
                     .id(ElementId::Uuid(*node.id().as_uuid()))

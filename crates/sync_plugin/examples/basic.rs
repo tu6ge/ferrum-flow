@@ -14,6 +14,8 @@ impl NodeRenderer for SyncBasicNodeRenderer {
         let selected = ctx.graph.selected_node().contains(&node_id);
 
         ctx.node_card_shell(node, selected, NodeCardVariant::Default)
+            .rounded(px(6.0))
+            .border(px(1.5))
             .child(
                 div()
                     .size_full()

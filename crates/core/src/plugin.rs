@@ -3,7 +3,7 @@ use std::{any::Any, collections::HashMap, time::Duration};
 use gpui::{
     AnyElement, Bounds, Context, Div, ElementId, InteractiveElement as _, KeyDownEvent, KeyUpEvent,
     MouseDownEvent, MouseMoveEvent, MouseUpEvent, Pixels, Point, ScrollWheelEvent, Size, Stateful,
-    Styled, Window, div, px, rgb,
+    Styled, Window, div, rgb,
 };
 
 use crate::{
@@ -889,9 +889,7 @@ impl<'a> RenderContext<'a> {
             .left(screen.x)
             .top(screen.y)
             .w(node.size_ref().width * z)
-            .h(node.size_ref().height * z)
-            .rounded(px(6.0))
-            .border(px(1.5));
+            .h(node.size_ref().height * z);
         let t = self.theme;
         match variant {
             NodeCardVariant::Default => {
@@ -940,10 +938,7 @@ impl<'a> RenderContext<'a> {
     ///
     /// Call [`Self::cache_port_offset_with_nodes`] (or other `cache_port_offset_*` helpers) first
     /// so the list is complete for rendering.
-    pub fn cached_port_ids_for_node(
-        &self,
-        node_id: &NodeId,
-    ) -> impl Iterator<Item = PortId> + '_ {
+    pub fn cached_port_ids_for_node(&self, node_id: &NodeId) -> impl Iterator<Item = PortId> + '_ {
         self.port_offset_cache.cached_port_ids_for_node(node_id)
     }
 
