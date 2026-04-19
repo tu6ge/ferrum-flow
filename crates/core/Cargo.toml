@@ -15,7 +15,9 @@ testing = []
 [dependencies]
 anyhow = { workspace = true }
 gpui = { workspace = true }
+# used by background plugin
 image = { workspace = true }
+# used by background plugin
 smallvec = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }

@@ -3,7 +3,8 @@
 members = [
   "crates/core",
   "crates/executor",
-  "crates/meili", "crates/shader",
+  "crates/meili",
+  "crates/shader",
   "crates/sync_plugin",
 ]
 resolver = "2"
@@ -19,5 +20,7 @@ futures = "0.3"
 uuid = { version = "1.23.0", features = ["v4"] }
 rust-embed = "8"
 serde = { version = "1" }
+# used by background plugin in core crate
 image = { version = "0.25.1", default-features = false, features = [] }
+# used by background plugin in core crate
 smallvec = "1.15"
