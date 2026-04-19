@@ -32,13 +32,47 @@ pub(super) fn render_node_cards(
     div().children(list).into_any()
 }
 
-use crate::plugin::{Plugin, RenderContext};
+use std::sync::Arc;
 
-pub struct NodePlugin {}
+use crate::plugin::{Plugin, RenderContext};
+use crate::viewport::ViewportVisibilityCacheKey;
+use crate::NodeId;
+
+/// Invalidates [`NodePlugin::static_layer_node_ids`] when the viewport changes **or** the active
+/// node-drag overlay set changes ([`ActiveNodeDrag`] `Arc` identity + length).
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct NodeStaticLayerCacheKey {
+    viewport: ViewportVisibilityCacheKey,
+    /// `None` when not dragging; else [`Arc::as_ptr`] + len of the shared drag id list.
+    drag_arc: Option<(usize, usize)>,
+}
+
+impl NodeStaticLayerCacheKey {
+    fn from_render_ctx(ctx: &RenderContext) -> Self {
+        let drag = ctx.get_shared_state::<ActiveNodeDrag>();
+        Self {
+            viewport: ctx.viewport().visibility_cache_key(),
+            drag_arc: drag.map(|d| {
+                let p = Arc::as_ptr(&d.0);
+                (p.cast::<NodeId>() as usize, d.0.len())
+            }),
+        }
+    }
+}
+
+pub struct NodePlugin {
+    static_layer_cache_key: Option<NodeStaticLayerCacheKey>,
+    /// Viewport-visible nodes for the static [`RenderLayer::Nodes`] layer, already excluding
+    /// [`ActiveNodeDrag`] ids (those render on the interaction overlay).
+    static_layer_node_ids: Vec<NodeId>,
+}
 
 impl NodePlugin {
     pub fn new() -> Self {
-        Self {}
+        Self {
+            static_layer_cache_key: None,
+            static_layer_node_ids: Vec::new(),
+        }
     }
 }
 
@@ -61,19 +95,22 @@ impl Plugin for NodePlugin {
         crate::plugin::RenderLayer::Nodes
     }
     fn render(&mut self, ctx: &mut RenderContext) -> Option<gpui::AnyElement> {
-        let node_ids: Vec<_> = ctx
-            .graph
-            .node_order()
-            .iter()
-            .filter(|node_id| {
-                ctx.is_node_visible(node_id)
-                    && !ctx
-                        .get_shared_state::<ActiveNodeDrag>()
-                        .is_some_and(|d| d.0.contains(node_id))
-            })
-            .cloned()
-            .collect();
+        let key = NodeStaticLayerCacheKey::from_render_ctx(ctx);
+        if self.static_layer_cache_key != Some(key) {
+            self.static_layer_cache_key = Some(key);
+            let active = ctx.get_shared_state::<ActiveNodeDrag>();
+            self.static_layer_node_ids = ctx
+                .graph
+                .node_order()
+                .iter()
+                .filter(|node_id| ctx.is_node_visible(node_id))
+                .filter(|node_id| {
+                    !active.is_some_and(|d| d.0.contains(node_id))
+                })
+                .cloned()
+                .collect();
+        }
 
-        Some(render_node_cards(ctx, &node_ids))
+        Some(render_node_cards(ctx, &self.static_layer_node_ids))
     }
 }

@@ -2,6 +2,18 @@ use gpui::{Bounds, Pixels, Point, Size, Window, px};
 
 use crate::{Node, PortPosition};
 
+/// Fingerprint of [`Viewport`] fields that affect [`Viewport::is_node_visible`].
+/// Used by [`crate::NodePlugin`] to avoid rescanning the full node list every frame.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(crate) struct ViewportVisibilityCacheKey {
+    pub zoom: f32,
+    pub offset_x: f32,
+    pub offset_y: f32,
+    pub has_window: bool,
+    pub window_w: f32,
+    pub window_h: f32,
+}
+
 #[derive(Debug, Clone)]
 pub struct Viewport {
     zoom: f32,
@@ -142,5 +154,26 @@ impl Viewport {
             && screen.x < window_bounds.size.width
             && screen.y + self.world_length_to_screen(size.height) > px(0.0)
             && screen.y < window_bounds.size.height
+    }
+
+    pub(crate) fn visibility_cache_key(&self) -> ViewportVisibilityCacheKey {
+        match self.window_bounds {
+            Some(b) => ViewportVisibilityCacheKey {
+                zoom: self.zoom,
+                offset_x: self.offset.x.into(),
+                offset_y: self.offset.y.into(),
+                has_window: true,
+                window_w: b.size.width.into(),
+                window_h: b.size.height.into(),
+            },
+            None => ViewportVisibilityCacheKey {
+                zoom: self.zoom,
+                offset_x: self.offset.x.into(),
+                offset_y: self.offset.y.into(),
+                has_window: false,
+                window_w: 0.0,
+                window_h: 0.0,
+            },
+        }
     }
 }
