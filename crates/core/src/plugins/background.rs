@@ -1,24 +1,26 @@
-use std::sync::Arc;
-
+use crate::plugin::Plugin;
 use gpui::{
-    Corners, Element as _, InteractiveElement as _, ParentElement, RenderImage, Styled, canvas, div,
+    Bounds, Corners, Element as _, InteractiveElement as _, ParentElement, RenderImage, Size,
+    Styled, canvas, div, px,
 };
 use image::{Frame, RgbaImage};
 use smallvec::smallvec;
-
-use crate::plugin::Plugin;
+use std::sync::Arc;
 
 const BASE_GRID: f32 = 40.0;
 
-fn rgb_components(c: u32) -> (u8, u8, u8) {
-    let r = ((c >> 16) & 0xFF) as u8;
-    let g = ((c >> 8) & 0xFF) as u8;
-    let b = (c & 0xFF) as u8;
-    (r, g, b)
+#[derive(Clone, Copy, PartialEq)]
+struct BitmapKey {
+    offset_x_mod: i32, // (offset_x % grid * 1000) as i32
+    offset_y_mod: i32,
+    grid_i: i32, // (grid * 1000) as i32
+    width: u32,
+    height: u32,
+    bg_color: u32,
+    dot_color: u32,
 }
 
-/// Raster aligned to the same grid math as the old `paint_quad` loop; returns BGRA bytes in a [`RenderImage`].
-fn rasterize_dot_grid(
+fn generate_fullscreen_bitmap(
     width: u32,
     height: u32,
     grid: f32,
@@ -26,41 +28,45 @@ fn rasterize_dot_grid(
     start_y: f32,
     bg_color: u32,
     dot_color: u32,
-) -> Option<Arc<RenderImage>> {
-    if width == 0 || height == 0 || grid <= 0.0 {
-        return None;
-    }
+) -> Arc<RenderImage> {
     let w = width as usize;
     let h = height as usize;
-    let (br, bg, bb) = rgb_components(bg_color);
-    let (dr, dg, db) = rgb_components(dot_color);
+
+    let bg = [
+        ((bg_color >> 16) & 0xFF) as u8,
+        ((bg_color >> 8) & 0xFF) as u8,
+        (bg_color & 0xFF) as u8,
+        255u8,
+    ];
+    let dot = [
+        ((dot_color >> 16) & 0xFF) as u8,
+        ((dot_color >> 8) & 0xFF) as u8,
+        (dot_color & 0xFF) as u8,
+        255u8,
+    ];
 
     let mut data = vec![0u8; w * h * 4];
     for i in 0..w * h {
         let p = i * 4;
-        data[p] = br;
-        data[p + 1] = bg;
-        data[p + 2] = bb;
+        data[p] = bg[0];
+        data[p + 1] = bg[1];
+        data[p + 2] = bg[2];
         data[p + 3] = 255;
     }
 
-    let wf = width as f32;
-    let hf = height as f32;
     let mut x = start_x;
-    while x < wf {
+    while x < width as f32 {
         let mut y = start_y;
-        while y < hf {
-            let lx = x - 1.0;
-            let ly = y - 1.0;
-            for dy in 0..2 {
-                for dx in 0..2 {
-                    let px = (lx + dx as f32).floor() as isize;
-                    let py = (ly + dy as f32).floor() as isize;
+        while y < height as f32 {
+            for dy in 0..2i32 {
+                for dx in 0..2i32 {
+                    let px = (x - 1.0 + dx as f32).floor() as isize;
+                    let py = (y - 1.0 + dy as f32).floor() as isize;
                     if px >= 0 && py >= 0 && (px as usize) < w && (py as usize) < h {
                         let i = ((py as usize) * w + (px as usize)) * 4;
-                        data[i] = dr;
-                        data[i + 1] = dg;
-                        data[i + 2] = db;
+                        data[i] = dot[0];
+                        data[i + 1] = dot[1];
+                        data[i + 2] = dot[2];
                         data[i + 3] = 255;
                     }
                 }
@@ -74,73 +80,64 @@ fn rasterize_dot_grid(
         chunk.swap(0, 2);
     }
 
-    let img = RgbaImage::from_raw(width, height, data)?;
-    let frame = Frame::new(img);
-    Some(Arc::new(RenderImage::new(smallvec![frame])))
-}
-
-#[derive(Clone, Copy, Debug, PartialEq)]
-struct BackgroundLayoutCacheKey {
-    zoom: f32,
-    offset_x: f32,
-    offset_y: f32,
-    width: f32,
-    height: f32,
-    bg_color: u32,
-    dot_color: u32,
+    let img = RgbaImage::from_raw(width, height, data).unwrap();
+    Arc::new(RenderImage::new(smallvec![Frame::new(img)]))
 }
 
 pub struct BackgroundPlugin {
-    cache_key: Option<BackgroundLayoutCacheKey>,
-    image: Option<Arc<RenderImage>>,
+    bitmap_key: Option<BitmapKey>,
+    bitmap: Option<Arc<RenderImage>>,
 }
 
 impl BackgroundPlugin {
     pub fn new() -> Self {
         Self {
-            cache_key: None,
-            image: None,
+            bitmap_key: None,
+            bitmap: None,
         }
     }
 
-    fn sync_raster(&mut self, ctx: &crate::plugin::RenderContext) {
-        let bounds = ctx.window.bounds();
-        let w = f32::from(bounds.size.width);
-        let h = f32::from(bounds.size.height);
+    fn sync_bitmap(&mut self, ctx: &crate::plugin::RenderContext) {
         let zoom = ctx.zoom();
         let grid = BASE_GRID * zoom;
         let offset = ctx.offset();
-        let offset_x: f32 = offset.x.into();
-        let offset_y: f32 = offset.y.into();
-        let start_x = offset_x % grid;
-        let start_y = offset_y % grid;
-        let bg = ctx.theme.background;
-        let dot = ctx.theme.background_grid_dot;
+        let offset_x = f32::from(offset.x);
+        let offset_y = f32::from(offset.y);
+        let bounds = ctx.window.bounds();
+        let width = f32::from(bounds.size.width) as u32;
+        let height = f32::from(bounds.size.height) as u32;
 
-        let key = BackgroundLayoutCacheKey {
-            zoom,
-            offset_x,
-            offset_y,
-            width: w,
-            height: h,
-            bg_color: bg,
-            dot_color: dot,
+        if grid <= 0.0 || width == 0 || height == 0 {
+            return;
+        }
+
+        let ox_mod = offset_x % grid;
+        let oy_mod = offset_y % grid;
+
+        let key = BitmapKey {
+            offset_x_mod: (ox_mod * 1000.0) as i32,
+            offset_y_mod: (oy_mod * 1000.0) as i32,
+            grid_i: (grid * 1000.0) as i32,
+            width,
+            height,
+            bg_color: ctx.theme.background,
+            dot_color: ctx.theme.background_grid_dot,
         };
 
-        if self.cache_key != Some(key) {
-            self.cache_key = Some(key);
-            let width_u = w.max(0.0) as u32;
-            let height_u = h.max(0.0) as u32;
-            self.image = rasterize_dot_grid(
-                width_u,
-                height_u,
-                grid,
-                start_x,
-                start_y,
-                bg,
-                dot,
-            );
+        if self.bitmap_key == Some(key) {
+            return;
         }
+
+        self.bitmap_key = Some(key);
+        self.bitmap = Some(generate_fullscreen_bitmap(
+            width,
+            height,
+            grid,
+            ox_mod,
+            oy_mod,
+            ctx.theme.background,
+            ctx.theme.background_grid_dot,
+        ));
     }
 }
 
@@ -154,9 +151,11 @@ impl Plugin for BackgroundPlugin {
     fn render_layer(&self) -> crate::plugin::RenderLayer {
         crate::plugin::RenderLayer::Background
     }
+
     fn render(&mut self, ctx: &mut crate::plugin::RenderContext) -> Option<gpui::AnyElement> {
-        self.sync_raster(ctx);
-        let Some(image) = self.image.as_ref().map(Arc::clone) else {
+        self.sync_bitmap(ctx);
+
+        let Some(bitmap) = self.bitmap.as_ref().map(Arc::clone) else {
             return Some(
                 div()
                     .id("background")
@@ -167,10 +166,23 @@ impl Plugin for BackgroundPlugin {
             );
         };
 
+        let bounds = ctx.window.bounds();
+        let width = f32::from(bounds.size.width);
+        let height = f32::from(bounds.size.height);
+
         let el = canvas(
-            move |_bounds, _win, _cx| image,
-            move |bounds, img, window, _cx| {
-                let _ = window.paint_image(bounds, Corners::default(), img, 0, false);
+            move |_, _, _| bitmap,
+            move |bounds, bitmap, window, _cx| {
+                let _ = window.paint_image(
+                    Bounds {
+                        origin: bounds.origin,
+                        size: Size::new(px(width), px(height)),
+                    },
+                    Corners::default(),
+                    Arc::clone(&bitmap),
+                    0,
+                    false,
+                );
             },
         )
         .absolute()
@@ -181,7 +193,6 @@ impl Plugin for BackgroundPlugin {
                 .id("background")
                 .absolute()
                 .size_full()
-                .bg(gpui::rgb(ctx.theme.background))
                 .child(el)
                 .into_any(),
         )
