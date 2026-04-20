@@ -85,14 +85,6 @@ impl Plugin for NodePlugin {
     fn name(&self) -> &'static str {
         "node"
     }
-    fn setup(&mut self, _ctx: &mut crate::plugin::InitPluginContext) {}
-    fn on_event(
-        &mut self,
-        _event: &crate::plugin::FlowEvent,
-        _context: &mut crate::plugin::PluginContext,
-    ) -> crate::plugin::EventResult {
-        crate::plugin::EventResult::Continue
-    }
     fn priority(&self) -> i32 {
         60
     }
