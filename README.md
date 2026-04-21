@@ -200,14 +200,14 @@ div()
 
 ```rust
 pub struct Node {
-    pub id: NodeId,
-    pub node_type: String,
-    pub x: Pixels,
-    pub y: Pixels,
-    pub size: Size<Pixels>,
-    pub inputs: Vec<PortId>,
-    pub outputs: Vec<PortId>,
-    pub data: serde_json::Value,
+    id: NodeId,
+    node_type: String,
+    x: Pixels,
+    y: Pixels,
+    size: Size<Pixels>,
+    inputs: Vec<PortId>,
+    outputs: Vec<PortId>,
+    data: serde_json::Value,
 }
 ```
 
@@ -218,7 +218,7 @@ graph.create_node("math.add")
     .position(100.0, 100.0)
     .input()
     .output()
-    .build(&mut graph);
+    .build();
 ```
 
 ### Performance
