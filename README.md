@@ -187,13 +187,10 @@ pub trait NodeRenderer {
 Render example:
 
 ```rust
-div()
-    .absolute()
-    .left(x)
-    .top(y)
-    .w(width)
-    .h(height)
-    .bg(white())
+// Absolute-positioned node card shell: screen origin, zoom-scaled size.
+ctx.node_card_shell(node, false, NodeCardVariant::Custom)
+    .rounded(px(6.0))
+    .border(px(1.5))
 ```
 
 ### Graph Model

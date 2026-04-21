@@ -872,7 +872,7 @@ impl<'a> RenderContext<'a> {
         self.viewport.world_to_screen(p)
     }
 
-    /// Absolute-positioned node card shell: screen origin, zoom-scaled size, rounded rect and border.
+    /// Absolute-positioned node card shell: screen origin, zoom-scaled size.
     ///
     /// Chain `.child(...)` for the inner body, then `.into_any()` (see [`gpui::Element`]).
     pub fn node_card_shell(
