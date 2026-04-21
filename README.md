@@ -242,6 +242,7 @@ We want an explicit, maintained view of **supported vs partial vs missing** rela
 - [ ] **Audit** — Walk the React Flow feature list and map each item to FerrumFlow (plugin, core graph, or N/A by design).
 - [ ] **Gap list** — For every row, mark *done*, *partial*, *missing*, or *different by design* (short rationale).
 - [ ] **Surface in this README** — Add a compact table or bullet matrix here (or link to `docs/react-flow-parity.md` if it grows large).
+- [ ] change `port_type` of Port struct to custom enum type.
 
 Contributions welcome: propose a matrix in an issue or open a PR that extends this section.
 
