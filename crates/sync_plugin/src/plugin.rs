@@ -6,7 +6,6 @@ use std::{
 use futures::channel::mpsc::UnboundedSender;
 use gpui::{Element as _, MouseMoveEvent, ParentElement, Pixels, Point, Styled as _, div, px};
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use uuid::Uuid;
 use yrs::{
     Any, Array as _, ArrayRef, DeepObservable, Doc, Map, MapPrelim, MapRef, Observable as _,
@@ -19,7 +18,7 @@ use yrs::{
 
 use ferrum_flow::{
     ChangeSource, Edge, EdgeId, Graph, GraphChange, GraphChangeKind, GraphOp, Node, NodeBuilder,
-    NodeId, Port, PortBuilder, PortId, PortKind, PortPosition, SyncPlugin,
+    NodeId, Port, PortBuilder, PortId, PortKind, PortPosition, PortType, SyncPlugin,
 };
 
 use crate::server::{WsSyncConfig, start_sync_thread};
@@ -568,8 +567,8 @@ fn read_port_from_map(txn: &yrs::TransactionMut, node_map: &MapRef, id: PortId) 
     let width: f32 = node_map.get_as(txn, "width").unwrap_or_default();
     let height: f32 = node_map.get_as(txn, "height").unwrap_or_default();
     let port_type = match node_map.get_as::<_, Any>(txn, "port_type") {
-        Ok(any) => from_any::<Value>(&any).unwrap_or(Value::Null),
-        Err(_) => Value::Null,
+        Ok(any) => from_any::<PortType>(&any).unwrap_or(PortType::Any),
+        Err(_) => PortType::Any,
     };
 
     let kind = if kind == "input" {

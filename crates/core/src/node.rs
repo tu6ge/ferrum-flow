@@ -280,6 +280,19 @@ pub enum PortPosition {
     Bottom,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum PortType {
+    Any,
+    Bool,
+    Int,
+    Float,
+    String,
+    List(Box<PortType>),
+    Map(Box<PortType>, Box<PortType>),
+    Custom(String),
+    Union(Vec<PortType>),
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Port {
     // Transitional API: these fields stay public for compatibility in this release.
@@ -305,7 +318,7 @@ pub struct Port {
     #[deprecated(
         note = "Use `Port::port_type_ref()` / `Port::port_type_mut()` instead; fields will be private in next release."
     )]
-    pub port_type: serde_json::Value,
+    pub port_type: PortType,
 }
 
 impl Port {
@@ -318,7 +331,7 @@ impl Port {
         node_id: NodeId,
         position: PortPosition,
         size: Size<Pixels>,
-        port_type: serde_json::Value,
+        port_type: PortType,
     ) -> Self {
         Self {
             id,
@@ -362,12 +375,12 @@ impl Port {
     }
 
     #[allow(deprecated)]
-    pub fn port_type_ref(&self) -> &serde_json::Value {
+    pub fn port_type_ref(&self) -> &PortType {
         &self.port_type
     }
 
     #[allow(deprecated)]
-    pub fn port_type_mut(&mut self) -> &mut serde_json::Value {
+    pub fn port_type_mut(&mut self) -> &mut PortType {
         &mut self.port_type
     }
 
@@ -434,7 +447,7 @@ pub struct NodeBuilder<'a> {
 pub struct PortSpec {
     position: PortPosition,
     size: Size<Pixels>,
-    port_type: serde_json::Value,
+    port_type: PortType,
 }
 
 impl PortSpec {
@@ -442,7 +455,7 @@ impl PortSpec {
         Self {
             position,
             size: DEFAULT_PORT_SIZE,
-            port_type: serde_json::Value::Null,
+            port_type: PortType::Any,
         }
     }
 
@@ -450,7 +463,7 @@ impl PortSpec {
         Self {
             position,
             size: DEFAULT_PORT_SIZE,
-            port_type: serde_json::Value::Null,
+            port_type: PortType::Any,
         }
     }
 
@@ -459,8 +472,8 @@ impl PortSpec {
         self
     }
 
-    pub fn with_type(mut self, port_type: impl Into<Value>) -> Self {
-        self.port_type = port_type.into();
+    pub fn with_type(mut self, port_type: PortType) -> Self {
+        self.port_type = port_type;
         self
     }
 }
@@ -477,7 +490,7 @@ pub struct PortBuilder {
     node_id: NodeId,
     position: PortPosition,
     size: Size<Pixels>,
-    port_type: serde_json::Value,
+    port_type: PortType,
 }
 
 impl PortBuilder {
@@ -489,7 +502,7 @@ impl PortBuilder {
             node_id: NodeId::from_uuid(Uuid::nil()),
             position: PortPosition::Left,
             size: DEFAULT_PORT_SIZE,
-            port_type: serde_json::Value::Null,
+            port_type: PortType::Any,
         }
     }
 
@@ -518,7 +531,7 @@ impl PortBuilder {
         self
     }
 
-    pub fn port_type(mut self, port_type: serde_json::Value) -> Self {
+    pub fn port_type(mut self, port_type: PortType) -> Self {
         self.port_type = port_type;
         self
     }

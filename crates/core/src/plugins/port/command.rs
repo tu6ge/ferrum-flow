@@ -87,7 +87,7 @@ mod command_interop_tests {
     use serde_json::json;
 
     use crate::{
-        CreateEdge, CreateNode, CreatePort, Graph, PortBuilder, PortKind, PortPosition,
+        CreateEdge, CreateNode, CreatePort, Graph, PortBuilder, PortKind, PortPosition, PortType,
         command_interop::assert_command_interop,
     };
 
@@ -117,7 +117,7 @@ mod command_interop_tests {
             .index(0)
             .position(PortPosition::Right)
             .size(12.0, 12.0)
-            .port_type(serde_json::Value::Null)
+            .port_type(PortType::Any)
             .build();
 
         assert_command_interop(
