@@ -265,6 +265,25 @@ Current mapping snapshot (as of this README update):
 | Devtools-style state inspector parity | N/A (currently) | missing |  |
 | Collaboration / multi-user awareness | Plugin: `sync_plugin` (Yrs + awareness) | different by design (done) | Implemented via plugin architecture, not RF-style built-in surface. |
 
+### Beyond React Flow (FerrumFlow-specific strengths)
+
+FerrumFlow is not only targeting parity. Some capabilities are intentionally stronger or more explicit than typical React Flow usage patterns:
+
+- **Command interop guarantees (execute / undo / to_ops consistency)**  
+  The `Command` pipeline is designed so local execution, undo/redo, and operation replay can be tested for equivalence (`command_interop`), reducing divergence bugs.
+
+- **Plugin-first architecture across behavior and rendering**  
+  Core editor capabilities (selection, viewport, minimap, clipboard, context menu, alignment, collaboration) are modeled as plugins instead of hardcoded monolith behavior.
+
+- **CRDT collaboration as a first-class extension path**  
+  `sync_plugin` integrates Yrs awareness + graph ops, giving a concrete multi-user architecture beyond single-user canvas editing.
+
+- **Clear separation of graph model, interaction lifecycle, and rendering**  
+  `Graph` / `Viewport` / `Interaction` / `PluginContext` boundaries are explicit, making it easier to evolve editor features without coupling everything into UI callbacks.
+
+- **Rust-native integration potential**  
+  FerrumFlow can align with native Rust systems (state machines, persistence, sync backends, tooling) without requiring a browser-first runtime assumption.
+
 Contributions welcome: propose a matrix in an issue or open a PR that extends this section.
 
 ### Mid-term design goals
