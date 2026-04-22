@@ -18,22 +18,22 @@ fn main() {
             }
         }
 
-        //let node_ids = graph.nodes().iter().map(|(id, _)| *id).collect::<Vec<_>>();
+        let node_ids = graph.nodes().iter().map(|(id, _)| *id).collect::<Vec<_>>();
 
-        //generate_chain_edges(&mut graph, node_ids);
+        generate_chain_edges(&mut graph, node_ids);
 
         cx.open_window(WindowOptions::default(), |window, cx| {
             cx.new(|ctx| {
                 FlowCanvas::builder(graph, ctx, window)
                     .plugin(BackgroundPlugin::new())
-                    // .plugin(SelectionPlugin::new())
+                    .plugin(SelectionPlugin::new())
                     .plugin(NodeInteractionPlugin::new())
                     .plugin(ViewportPlugin::new())
                     .plugin(NodePlugin::new())
-                    //.plugin(PortInteractionPlugin::new())
-                    //.plugin(EdgePlugin::new())
-                    // .plugin(DeletePlugin::new())
-                    // .plugin(HistoryPlugin::new())
+                    .plugin(PortInteractionPlugin::new())
+                    .plugin(EdgePlugin::new())
+                    .plugin(DeletePlugin::new())
+                    .plugin(HistoryPlugin::new())
                     // .plugin(MinimapPlugin::new())
                     // .plugin(ClipboardPlugin::new())
                     // .plugin(ContextMenuPlugin::new())
