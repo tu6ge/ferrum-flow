@@ -21,6 +21,11 @@ https://github.com/user-attachments/assets/1d275e79-fcbf-4a4e-aba5-a1e3f3ff6029
 
 [GitHub](https://github.com/tu6ge/ferrum-flow)
 
+## Crate Layout
+
+- [`crates/core`](./crates/core/) - FerrumFlow editor core (graph model, plugins, interaction, rendering contracts)
+- [`crates/sync_plugin`](./crates/sync_plugin/) - Yrs-based collaboration plugin (sync, awareness, multi-user workflows)
+
 ## Usage
 
 ```bash

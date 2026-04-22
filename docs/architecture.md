@@ -175,3 +175,19 @@ Designed to scale to large graphs:
 - Explicit state transitions
 - Performance-first rendering
 - Composable architecture
+
+## Data Flow (end-to-end)
+
+Typical frame/event flow in FerrumFlow:
+
+1. **Input arrives** (`MouseDown`, `MouseMove`, `MouseUp`, `ScrollWheel`, `KeyDown`, etc.).
+2. **Plugins handle events** in priority order via `Plugin::on_event`.
+3. A plugin may:
+   - update graph state directly via `PluginContext`, or
+   - start/advance an `Interaction`, or
+   - dispatch a `Command` (recordable undo/redo unit).
+4. **Command execution** mutates `Graph` through `CommandContext`; undo/redo can replay the inverse or op stream.
+5. **Render pass** constructs layer elements via `Plugin::render` and `RenderContext`.
+6. **Viewport mapping** (`world <-> screen`) is applied during render/hit-testing, then GPUI paints the scene.
+
+This separation is intentional: input logic, state mutation, and paint composition remain decoupled and testable.
