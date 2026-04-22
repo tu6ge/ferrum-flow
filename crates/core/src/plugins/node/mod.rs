@@ -48,6 +48,9 @@ use crate::viewport::ViewportVisibilityCacheKey;
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct NodeStaticLayerCacheKey {
     viewport: ViewportVisibilityCacheKey,
+    nodes_len: usize,
+    node_order_len: usize,
+    node_order_tail: Option<u128>,
     /// `None` when not dragging; else [`Arc::as_ptr`] + len of the shared drag id list.
     drag_arc: Option<(usize, usize)>,
 }
@@ -57,6 +60,9 @@ impl NodeStaticLayerCacheKey {
         let drag = ctx.get_shared_state::<ActiveNodeDrag>();
         Self {
             viewport: ctx.viewport().visibility_cache_key(),
+            nodes_len: ctx.graph.nodes().len(),
+            node_order_len: ctx.graph.node_order().len(),
+            node_order_tail: ctx.graph.node_order().last().map(|id| id.as_uuid().as_u128()),
             drag_arc: drag.map(|d| {
                 let p = Arc::as_ptr(&d.0);
                 (p.cast::<NodeId>() as usize, d.0.len())
