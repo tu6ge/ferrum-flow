@@ -736,4 +736,41 @@ mod tests {
             "semantic json mismatch:\nleft: {restored_data:?}\nright: {original_data:?}"
         );
     }
+
+    #[test]
+    fn port_roundtrip_through_yrs_map_preserves_all_fields() {
+        let plugin = YrsSyncPlugin::new(Graph::new(), "ws://localhost:0");
+
+        let port_id = PortId::new();
+        let node_id = NodeId::new();
+        let original = PortBuilder::new(port_id)
+            .kind(PortKind::Input)
+            .node_id(node_id)
+            .index(3)
+            .position(PortPosition::Bottom)
+            .size(17.5, 9.25)
+            .port_type(PortType::String)
+            .build();
+
+        {
+            let mut txn = plugin.doc.transact_mut();
+            plugin.add_port(&mut txn, &original);
+        }
+
+        let txn = plugin.doc.transact_mut();
+        let Some(Out::YMap(port_map)) = plugin.ports.get(&txn, &original.id().to_string()) else {
+            panic!("expected port map to be present in yrs document");
+        };
+
+        let restored = read_port_from_map(&txn, &port_map, original.id());
+
+        assert_eq!(restored.id(), original.id());
+        assert_eq!(restored.kind(), original.kind());
+        assert_eq!(restored.node_id(), original.node_id());
+        assert_eq!(restored.index(), original.index());
+        assert_eq!(restored.position(), original.position());
+        assert_eq!(restored.size_ref().width, original.size_ref().width);
+        assert_eq!(restored.size_ref().height, original.size_ref().height);
+        assert_eq!(restored.port_type_ref(), original.port_type_ref());
+    }
 }

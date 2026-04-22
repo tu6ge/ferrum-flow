@@ -2,7 +2,7 @@ use std::{collections::HashMap, fmt::Display, str::FromStr};
 
 use gpui::{Bounds, Pixels, Point, Size, px};
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
+use serde_json::json;
 use uuid::Uuid;
 
 use crate::Graph;
