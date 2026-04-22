@@ -6,6 +6,7 @@ use std::{
 use futures::channel::mpsc::UnboundedSender;
 use gpui::{Element as _, MouseMoveEvent, ParentElement, Pixels, Point, Styled as _, div, px};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use uuid::Uuid;
 use yrs::{
     Any, Array as _, ArrayRef, DeepObservable, Doc, Map, MapPrelim, MapRef, Observable as _,
@@ -121,14 +122,14 @@ impl YrsSyncPlugin {
 
         let inputs = node_ref.insert(txn, "inputs", ArrayRef::default_prelim());
         for port_id in node.inputs() {
-            inputs.push_front(txn, port_id.to_string());
+            inputs.push_back(txn, port_id.to_string());
         }
         let outputs = node_ref.insert(txn, "outputs", ArrayRef::default_prelim());
         for port_id in node.outputs() {
-            outputs.push_front(txn, port_id.to_string());
+            outputs.push_back(txn, port_id.to_string());
         }
 
-        let data_json = serde_json::to_string(&node.data_ref()).unwrap_or_default();
+        let data_json = to_any(&node.data_ref()).unwrap_or_else(|_| Any::Null);
         node_ref.insert(txn, "data", data_json);
     }
 
@@ -460,8 +461,9 @@ fn handler_node_change(
                 }
             }
             if data_dirty {
-                let json: String = node_map.get_as(txn, "data").unwrap_or_default();
-                if let Ok(data) = serde_json::from_str(&json) {
+                if let Ok(data) =
+                    from_any(&node_map.get_as(txn, "data").unwrap_or_else(|_| Any::Null))
+                {
                     kind.push(GraphChangeKind::NodeDataUpdated { id, data });
                 }
             }
@@ -500,8 +502,8 @@ fn read_node_from_map(txn: &yrs::TransactionMut, node_map: &MapRef, id: NodeId) 
     let y = read_map_f32(txn, node_map, "y").unwrap_or_default();
     let width = read_map_f32(txn, node_map, "width").unwrap_or_default();
     let height = read_map_f32(txn, node_map, "height").unwrap_or_default();
-    let json: String = node_map.get_as(txn, "data").unwrap_or_default();
-    let data = serde_json::from_str(&json).unwrap_or_default();
+    let data = from_any(&node_map.get_as(txn, "data").unwrap_or_else(|_| Any::Null))
+        .unwrap_or_else(|_| Value::Null);
 
     let out_inputs = node_map.get(txn, "inputs");
     let mut inputs = vec![];
@@ -626,4 +628,112 @@ fn read_edge_from_map(txn: &yrs::TransactionMut, node_map: &MapRef, id: EdgeId) 
 
 fn read_map_f32<T: ReadTxn>(txn: &T, map: &MapRef, key: &str) -> Option<f32> {
     map.get_as::<_, f64>(txn, key).ok().map(|v| v as f32)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::{Number, Value, json};
+    use std::collections::BTreeMap;
+
+    fn canonicalize_json(value: &Value) -> Value {
+        match value {
+            Value::Object(map) => {
+                let sorted = map
+                    .iter()
+                    .map(|(k, v)| (k.clone(), canonicalize_json(v)))
+                    .collect::<BTreeMap<_, _>>();
+                Value::Object(sorted.into_iter().collect())
+            }
+            Value::Array(arr) => Value::Array(arr.iter().map(canonicalize_json).collect()),
+            _ => value.clone(),
+        }
+    }
+
+    fn json_numbers_equal(a: &Number, b: &Number) -> bool {
+        match (a.as_i64(), b.as_i64()) {
+            (Some(x), Some(y)) => return x == y,
+            _ => {}
+        }
+        match (a.as_u64(), b.as_u64()) {
+            (Some(x), Some(y)) => return x == y,
+            _ => {}
+        }
+        match (a.as_f64(), b.as_f64()) {
+            (Some(x), Some(y)) => (x - y).abs() < f64::EPSILON,
+            _ => false,
+        }
+    }
+
+    fn json_semantically_equal(a: &Value, b: &Value) -> bool {
+        match (a, b) {
+            (Value::Null, Value::Null) => true,
+            (Value::Bool(x), Value::Bool(y)) => x == y,
+            (Value::String(x), Value::String(y)) => x == y,
+            (Value::Number(x), Value::Number(y)) => json_numbers_equal(x, y),
+            (Value::Array(xs), Value::Array(ys)) => {
+                xs.len() == ys.len()
+                    && xs
+                        .iter()
+                        .zip(ys.iter())
+                        .all(|(x, y)| json_semantically_equal(x, y))
+            }
+            (Value::Object(xm), Value::Object(ym)) => {
+                xm.len() == ym.len()
+                    && xm.iter().all(|(k, xv)| {
+                        ym.get(k)
+                            .map(|yv| json_semantically_equal(xv, yv))
+                            .unwrap_or(false)
+                    })
+            }
+            _ => false,
+        }
+    }
+
+    #[test]
+    fn node_roundtrip_through_yrs_map_preserves_all_fields() {
+        let plugin = YrsSyncPlugin::new(Graph::new(), "ws://localhost:0");
+
+        let node_id = NodeId::new();
+        let input_ports = vec![PortId::new(), PortId::new()];
+        let output_ports = vec![PortId::new(), PortId::new()];
+        let original = NodeBuilder::new("math/add")
+            .execute_type("sync")
+            .position(123.5, -45.25)
+            .size(222.0, 88.0)
+            .data(json!({
+                "label": "Adder",
+                "params": { "a": 1, "b": 2, "ratio": 1.25, "eps": 0.0001 },
+                "flags": [true, false, true]
+            }))
+            .build_raw_with_port_ids(node_id, input_ports.clone(), output_ports.clone());
+
+        {
+            let mut txn = plugin.doc.transact_mut();
+            plugin.insert_node(&mut txn, &original);
+        }
+
+        let txn = plugin.doc.transact_mut();
+        let Some(Out::YMap(node_map)) = plugin.nodes.get(&txn, &original.id().to_string()) else {
+            panic!("expected node map to be present in yrs document");
+        };
+
+        let restored = read_node_from_map(&txn, &node_map, original.id());
+
+        assert_eq!(restored.id(), original.id());
+        assert_eq!(restored.renderer_key(), original.renderer_key());
+        assert_eq!(restored.execute_type_ref(), original.execute_type_ref());
+        assert_eq!(restored.position().0, original.position().0);
+        assert_eq!(restored.position().1, original.position().1);
+        assert_eq!(restored.size_ref().width, original.size_ref().width);
+        assert_eq!(restored.size_ref().height, original.size_ref().height);
+        assert_eq!(restored.inputs(), original.inputs());
+        assert_eq!(restored.outputs(), original.outputs());
+        let restored_data = canonicalize_json(restored.data_ref());
+        let original_data = canonicalize_json(original.data_ref());
+        assert!(
+            json_semantically_equal(&restored_data, &original_data),
+            "semantic json mismatch:\nleft: {restored_data:?}\nright: {original_data:?}"
+        );
+    }
 }
