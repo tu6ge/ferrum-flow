@@ -7,7 +7,7 @@ use gpui::{
 };
 
 use crate::{
-    Edge, EdgeBuilder, EdgeId, FlowCanvas, FlowTheme, Graph, Node, NodeBuilder, NodeId,
+    Edge, EdgeBuilder, EdgeId, FlowCanvas, FlowTheme, Graph, GraphOp, Node, NodeBuilder, NodeId,
     NodeRenderer, Port, PortId, PortPosition, RendererRegistry, SharedState, Viewport,
     canvas::{
         Command, CommandContext, HistoryProvider, Interaction, InteractionState, PortLayoutCache,
@@ -422,10 +422,8 @@ impl<'a> PluginContext<'a> {
             self.notify,
         );
         if let Some(sync) = &mut self.sync_plugin {
-            let ops = command.to_ops(&mut ctx);
-            for op in ops.into_iter() {
-                sync.process_intent(op);
-            }
+            sync.process_intent(GraphOp::Batch(command.to_ops(&mut ctx)));
+
             self.notify();
         } else {
             self.history.push(Box::new(command), &mut ctx);
