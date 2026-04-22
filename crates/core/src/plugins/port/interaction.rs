@@ -25,10 +25,6 @@ struct PendingLinkCommitted {
     end_world: Point<Pixels>,
 }
 
-/// Broadcast while a temporary port-connection preview wire is active.
-#[derive(Clone, Copy)]
-pub struct PortPreviewActive(pub bool);
-
 pub struct PortInteractionPlugin {
     pending: Option<PendingPortLink>,
     validator: Arc<dyn EdgeValidator>,
@@ -190,7 +186,6 @@ impl Plugin for PortInteractionPlugin {
 
             if let Some((port_id, position)) = port_hit {
                 self.pending = None;
-                ctx.emit(FlowEvent::custom(PortPreviewActive(true)));
                 ctx.start_interaction(PortConnecting {
                     port_id,
                     position,
@@ -321,11 +316,9 @@ impl Interaction for PortConnecting {
         {
             let port_id = candidate.id;
             let Some(target_port) = ctx.graph.get_port(&port_id) else {
-                ctx.emit(FlowEvent::custom(PortPreviewActive(false)));
                 return crate::canvas::InteractionResult::End;
             };
             let Some(soruce_port) = ctx.graph.get_port(&self.port_id) else {
-                ctx.emit(FlowEvent::custom(PortPreviewActive(false)));
                 return crate::canvas::InteractionResult::End;
             };
 
@@ -340,11 +333,9 @@ impl Interaction for PortConnecting {
                         .new_edge()
                         .source(soruce_port.id())
                         .target(target_port.id());
-                    ctx.emit(FlowEvent::custom(PortPreviewActive(false)));
                     ctx.execute_command(CreateEdge::new(edge));
                 }
                 Err(err) => {
-                    ctx.emit(FlowEvent::custom(PortPreviewActive(false)));
                     ctx.emit(FlowEvent::custom(ToastMessage::error(
                         err.message().to_string(),
                     )));
@@ -354,7 +345,6 @@ impl Interaction for PortConnecting {
             return crate::canvas::InteractionResult::End;
         }
 
-        ctx.emit(FlowEvent::custom(PortPreviewActive(false)));
         ctx.emit(FlowEvent::custom(PendingLinkCommitted {
             source_port: self.port_id,
             end_world: mouse_world,
