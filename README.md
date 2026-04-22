@@ -235,14 +235,35 @@ Designed to scale to large graphs:
 - Performance-first rendering
 - Composable architecture
 
-### Feature parity & gap analysis (TODO)
+### Feature parity & gap analysis (React Flow -> FerrumFlow)
 
 We want an explicit, maintained view of **supported vs partial vs missing** relative to React Flow’s documented capabilities (nodes, edges, handles, selection, keyboard, minimap, controls, snapping, grouping/subflows, accessibility, etc.):
 
-- [ ] **Audit** — Walk the React Flow feature list and map each item to FerrumFlow (plugin, core graph, or N/A by design).
-- [ ] **Gap list** — For every row, mark *done*, *partial*, *missing*, or *different by design* (short rationale).
-- [ ] **Surface in this README** — Add a compact table or bullet matrix here (or link to `docs/react-flow-parity.md` if it grows large).
+- [x] **Audit** — Walk the React Flow feature list and map each item to FerrumFlow (plugin, core graph, or N/A by design).
+- [x] **Gap list** — For every row, mark *done*, *partial*, *missing*, or *different by design* (short rationale).
+- [x] **Surface in this README** — Add a compact table or bullet matrix here (or link to `docs/react-flow-parity.md` if it grows large).
 - [x] change `port_type` of Port struct to custom enum type.
+
+Current mapping snapshot (as of this README update):
+
+| React Flow capability | FerrumFlow mapping | Status | Notes |
+| --- | --- | --- | --- |
+| Canvas / viewport (zoom, pan, fit, controls) | Plugin: `ViewportPlugin`, `ZoomControlsPlugin`, `FitAllPlugin`; Core: `Viewport` | done/partial | Core zoom/pan done; behavior parity tuning ongoing. |
+| Nodes (custom node UI, drag, multi-select drag) | Plugin: `NodePlugin`, `NodeInteractionPlugin`, `SelectionPlugin`; Core graph: `Node` | done |  |
+| Handles/ports (typed endpoints, connectability rules) | Plugin: `PortInteractionPlugin`; Core graph: `Port`, `PortType` | done/partial | Typed ports and validator path exist; full RF handle-option parity not complete. |
+| Edges (rendering, interaction, visibility) | Plugin: `EdgePlugin`; Core graph: `Edge` | done/partial |  |
+| Selection (box select, additive selection, select-all viewport) | Plugin: `SelectionPlugin`, `SelectAllViewportPlugin`; Core selected sets | done |  |
+| Delete / keyboard editing | Plugin: `DeletePlugin`, `HistoryPlugin`; Command system | done |  |
+| Undo/redo command stack | Core: `canvas::undo`, `Command`, `LocalHistory`; Plugin: `HistoryPlugin` | done |  |
+| Clipboard copy/paste | Plugin: `ClipboardPlugin` | done/partial | Core flow present; parity on all RF clipboard scenarios not fully audited. |
+| Minimap | Plugin: `MinimapPlugin` | done |  |
+| Context menu / node creation UX | Plugin: `ContextMenuPlugin` | done/partial |  |
+| Alignment / layout helpers / focus selection | Plugin: `AlignPlugin`, `FocusSelectionPlugin` | done/partial |  |
+| Background grid / viewport frame / chrome | Plugin: `BackgroundPlugin`, `ViewportFramePlugin` | done |  |
+| Subflows / parent-child grouping | N/A by design (currently) | missing/different by design | No explicit parent node/group graph model yet. |
+| Accessibility API parity (ARIA, keyboard nav parity) | N/A (currently) | partial/missing |  |
+| Devtools-style state inspector parity | N/A (currently) | missing |  |
+| Collaboration / multi-user awareness | Plugin: `sync_plugin` (Yrs + awareness) | different by design (done) | Implemented via plugin architecture, not RF-style built-in surface. |
 
 Contributions welcome: propose a matrix in an issue or open a PR that extends this section.
 
