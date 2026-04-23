@@ -742,6 +742,8 @@ pub enum InputEvent {
     MouseUp(MouseUpEvent),
 
     Wheel(ScrollWheelEvent),
+
+    Hover(bool),
 }
 
 pub struct RenderContext<'a> {
