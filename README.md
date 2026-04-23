@@ -28,8 +28,11 @@ https://github.com/user-attachments/assets/1d275e79-fcbf-4a4e-aba5-a1e3f3ff6029
 
 ## Usage
 
-```bash
-cargo add ferrum-flow
+```toml
+[dependencies]
+gpui = "0.2.2"
+serde_json = "1.0"
+ferrum-flow = { git = "https://github.com/tu6ge/ferrum-flow", branch = "master" }
 ```
 
 This is a hello world example:
