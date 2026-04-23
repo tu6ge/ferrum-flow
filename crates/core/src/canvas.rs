@@ -316,6 +316,9 @@ impl FlowCanvas {
     }
 
     fn on_canvas_hover(&mut self, hovered: &bool, _: &mut Window, cx: &mut Context<Self>) {
+        self.handle_event(FlowEvent::Input(InputEvent::Hover(*hovered)), cx);
+        self.process_event_queue(cx);
+
         if !*hovered {
             if let Some(sync_plugin) = &mut self.sync_plugin {
                 sync_plugin.on_mouse_leave();
