@@ -26,7 +26,7 @@ pub use graph::*;
 pub use node::*;
 pub use plugin::{
     EventResult, FlowEvent, InitPluginContext, InputEvent, NodeCardVariant, Plugin, PluginContext,
-    RenderContext, RenderLayer, SyncPlugin, primary_platform_modifier,
+    RenderContext, RenderLayer, SyncPlugin, SyncPluginContext, primary_platform_modifier,
 };
 pub use plugins::*;
 pub use port_screen::PortScreenFrame;

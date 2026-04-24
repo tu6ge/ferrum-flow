@@ -18,7 +18,7 @@ use crate::{
 mod sync;
 mod utils;
 
-pub use sync::SyncPlugin;
+pub use sync::{SyncPlugin, SyncPluginContext};
 
 pub use utils::{
     invalidate_port_layout_cache_for_graph_change, is_edge_visible, is_node_visible,
