@@ -13,7 +13,7 @@ use std::thread;
 use std::time::Duration;
 
 use ferrum_flow::*;
-use ferrum_flow_sync_plugin::{Assets, YrsSyncPlugin, run_dev_ws_relay};
+use ferrum_flow_sync_plugin::{YrsSyncPlugin, run_dev_ws_relay};
 use gpui::{
     AnyElement, AppContext as _, Application, Bounds, Element as _, ParentElement as _, Pixels,
     Point, Size, Styled as _, TitlebarOptions, WindowBounds, WindowOptions, div, px, rgb,
@@ -137,7 +137,7 @@ fn main() {
     };
     let right_initial = Graph::new();
 
-    Application::new().with_assets(Assets).run(|cx| {
+    Application::new().run(|cx| {
         let build_canvas = |sync_seed: Graph| {
             move |window: &mut gpui::Window, cx: &mut gpui::App| {
                 cx.new(|ctx| {

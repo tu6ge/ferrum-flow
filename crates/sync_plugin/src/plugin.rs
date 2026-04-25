@@ -4,7 +4,7 @@ use std::{
 };
 
 use futures::channel::mpsc::UnboundedSender;
-use gpui::{Element as _, MouseMoveEvent, ParentElement, Pixels, Point, Styled as _, div, px};
+use gpui::{Element as _, ParentElement, PathBuilder, Pixels, Point, Styled as _, div, px, rgb};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
@@ -364,17 +364,94 @@ impl SyncPlugin for YrsSyncPlugin {
                 continue;
             };
             let screen = ctx.world_to_screen(Point::new(px(cursor.x), px(cursor.y)));
+            let color = color_for_client(client_id);
             out.push(
                 div()
                     .absolute()
                     .left(screen.x)
                     .top(screen.y)
-                    .child(gpui::img("./cursor.png").w(px(16.0)).h(px(16.0)))
+                    .w(px(18.0))
+                    .h(px(24.0))
+                    .child(
+                        gpui::canvas(
+                            move |_, _, _| color,
+                            move |bounds, fill_rgb, win, _| {
+                                let ox = bounds.origin.x;
+                                let oy = bounds.origin.y;
+                                let p0 = Point::new(ox + px(1.0), oy + px(1.0));
+                                let p1 = Point::new(ox + px(1.0), oy + px(21.0));
+                                let p2 = Point::new(ox + px(6.8), oy + px(15.8));
+                                let p3 = Point::new(ox + px(10.4), oy + px(23.0));
+                                let p4 = Point::new(ox + px(13.6), oy + px(21.4));
+                                let p5 = Point::new(ox + px(10.0), oy + px(14.2));
+                                let p6 = Point::new(ox + px(17.0), oy + px(14.0));
+
+                                let mut fill = PathBuilder::fill();
+                                fill.move_to(p0);
+                                fill.line_to(p1);
+                                fill.line_to(p2);
+                                fill.line_to(p3);
+                                fill.line_to(p4);
+                                fill.line_to(p5);
+                                fill.line_to(p6);
+                                fill.line_to(p0);
+                                if let Ok(path) = fill.build() {
+                                    win.paint_path(path, rgb(fill_rgb));
+                                }
+
+                                let mut stroke = PathBuilder::stroke(px(1.2));
+                                stroke.move_to(p0);
+                                stroke.line_to(p1);
+                                stroke.line_to(p2);
+                                stroke.line_to(p3);
+                                stroke.line_to(p4);
+                                stroke.line_to(p5);
+                                stroke.line_to(p6);
+                                stroke.line_to(p0);
+                                if let Ok(path) = stroke.build() {
+                                    win.paint_path(path, rgb(0xFFFFFF));
+                                }
+                            },
+                        )
+                        .size_full(),
+                    )
                     .into_any(),
             );
         }
         out
     }
+}
+
+fn color_for_client(client_id: u64) -> u32 {
+    // Keep colors bright and deterministic per awareness client id.
+    let hue = client_id.wrapping_mul(2654435761) % 360;
+    hsl_to_rgb_u32(hue as f32, 72.0, 55.0)
+}
+
+fn hsl_to_rgb_u32(h: f32, s: f32, l: f32) -> u32 {
+    let s = (s / 100.0).clamp(0.0, 1.0);
+    let l = (l / 100.0).clamp(0.0, 1.0);
+    let c = (1.0 - (2.0 * l - 1.0).abs()) * s;
+    let hp = (h / 60.0).rem_euclid(6.0);
+    let x = c * (1.0 - (hp % 2.0 - 1.0).abs());
+    let (r1, g1, b1) = if hp < 1.0 {
+        (c, x, 0.0)
+    } else if hp < 2.0 {
+        (x, c, 0.0)
+    } else if hp < 3.0 {
+        (0.0, c, x)
+    } else if hp < 4.0 {
+        (0.0, x, c)
+    } else if hp < 5.0 {
+        (x, 0.0, c)
+    } else {
+        (c, 0.0, x)
+    };
+    let m = l - c / 2.0;
+    let r = ((r1 + m) * 255.0).round().clamp(0.0, 255.0) as u32;
+    let g = ((g1 + m) * 255.0).round().clamp(0.0, 255.0) as u32;
+    let b = ((b1 + m) * 255.0).round().clamp(0.0, 255.0) as u32;
+    (r << 16) | (g << 8) | b
 }
 
 /// Cursor position in graph (world) coordinates; stored in Yjs awareness as JSON.

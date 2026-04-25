@@ -1,5 +1,5 @@
 use ferrum_flow::*;
-use ferrum_flow_sync_plugin::{Assets, YrsSyncPlugin};
+use ferrum_flow_sync_plugin::YrsSyncPlugin;
 use gpui::{
     AnyElement, AppContext as _, Application, Element as _, ParentElement as _, Size, Styled as _,
     WindowOptions, div, px, rgb,
@@ -49,7 +49,7 @@ impl NodeRenderer for SyncBasicNodeRenderer {
 }
 
 fn main() {
-    Application::new().with_assets(Assets).run(|cx| {
+    Application::new().run(|cx| {
         let mut graph = Graph::new();
 
         graph
