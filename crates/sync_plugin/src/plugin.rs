@@ -18,8 +18,9 @@ use yrs::{
 };
 
 use ferrum_flow::{
-    ChangeSource, Edge, EdgeId, Graph, GraphChange, GraphChangeKind, GraphOp, Node, NodeBuilder,
-    NodeId, Port, PortBuilder, PortId, PortKind, PortPosition, PortType, SyncPlugin,
+    ChangeSource, Edge, EdgeId, FlowEvent, Graph, GraphChange, GraphChangeKind, GraphOp,
+    InputEvent, Node, NodeBuilder, NodeId, Port, PortBuilder, PortId, PortKind, PortPosition,
+    PortType, SyncPlugin, SyncPluginContext,
 };
 
 use crate::server::{WsSyncConfig, start_sync_thread};
@@ -197,6 +198,22 @@ impl YrsSyncPlugin {
             }
         }
     }
+
+    fn on_mouse_move(&mut self, _event: &MouseMoveEvent, world: Point<Pixels>) {
+        const MIN_INTERVAL: Duration = Duration::from_millis(33);
+        let now = Instant::now();
+        if let Some(prev) = self.last_awareness_push {
+            if now.saturating_duration_since(prev) < MIN_INTERVAL {
+                return;
+            }
+        }
+        self.last_awareness_push = Some(now);
+        let state = RemoteCursorState {
+            x: world.x.into(),
+            y: world.y.into(),
+        };
+        let _ = self.awareness.set_local_state(&state);
+    }
 }
 
 impl SyncPlugin for YrsSyncPlugin {
@@ -317,25 +334,19 @@ impl SyncPlugin for YrsSyncPlugin {
         self.undo_manager.redo_blocking();
     }
 
-    fn on_mouse_move(&mut self, _event: &MouseMoveEvent, world: Point<Pixels>) {
-        const MIN_INTERVAL: Duration = Duration::from_millis(33);
-        let now = Instant::now();
-        if let Some(prev) = self.last_awareness_push {
-            if now.saturating_duration_since(prev) < MIN_INTERVAL {
-                return;
+    fn on_event(&mut self, event: &FlowEvent, ctx: &mut SyncPluginContext) {
+        match event {
+            FlowEvent::Input(InputEvent::MouseMove(event)) => {
+                self.on_mouse_move(&event, ctx.screen_to_world(event.position));
             }
+            FlowEvent::Input(InputEvent::Hover(hovered)) => {
+                if !*hovered {
+                    self.last_awareness_push = None;
+                    self.awareness.clean_local_state();
+                }
+            }
+            _ => {}
         }
-        self.last_awareness_push = Some(now);
-        let state = RemoteCursorState {
-            x: world.x.into(),
-            y: world.y.into(),
-        };
-        let _ = self.awareness.set_local_state(&state);
-    }
-
-    fn on_mouse_leave(&mut self) {
-        self.last_awareness_push = None;
-        self.awareness.clean_local_state();
     }
 
     fn render(&mut self, ctx: &mut ferrum_flow::RenderContext) -> Vec<gpui::AnyElement> {

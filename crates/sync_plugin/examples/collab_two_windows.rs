@@ -23,10 +23,12 @@ struct SyncBasicNodeRenderer;
 
 impl NodeRenderer for SyncBasicNodeRenderer {
     fn render(&self, node: &Node, ctx: &mut RenderContext) -> AnyElement {
-        let node_id = node.id;
+        let node_id = node.id();
         let selected = ctx.graph.selected_node().contains(&node_id);
 
         ctx.node_card_shell(node, selected, NodeCardVariant::Default)
+            .rounded(px(6.0))
+            .border(px(1.5))
             .child(
                 div()
                     .size_full()
@@ -52,7 +54,7 @@ impl NodeRenderer for SyncBasicNodeRenderer {
                             .text_color(rgb(0x7a7a88))
                             .overflow_hidden()
                             .text_ellipsis()
-                            .child(node.id.to_string()),
+                            .child(node.id().to_string()),
                     ),
             )
             .into_any()

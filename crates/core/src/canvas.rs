@@ -5,7 +5,7 @@ use std::time::Duration;
 use crate::{
     BackgroundPlugin, DeletePlugin, EdgePlugin, FlowTheme, GraphChange, HistoryPlugin,
     NodeInteractionPlugin, NodePlugin, PortInteractionPlugin, SelectionPlugin, SharedState,
-    SyncPlugin, ViewportPlugin,
+    SyncPlugin, SyncPluginContext, ViewportPlugin,
     graph::Graph,
     plugin::{
         EventResult, FlowEvent, InitPluginContext, InputEvent, Plugin, PluginContext,
@@ -197,6 +197,11 @@ impl FlowCanvas {
     }
 
     pub fn handle_event(&mut self, event: FlowEvent, cx: &mut Context<Self>) {
+        if let Some(sync_plugin) = &mut self.sync_plugin {
+            let mut ctx = SyncPluginContext::new(&self.viewport);
+            sync_plugin.on_event(&event, &mut ctx);
+        }
+
         // Pointer stream is owned by the active [`Interaction`]; do not also give Move/Up to plugins.
         if self.dispatch_interaction_pointer(&event, cx) {
             return;
@@ -240,6 +245,11 @@ impl FlowCanvas {
 
     fn process_event_queue(&mut self, cx: &mut Context<Self>) {
         while let Some(event) = self.event_queue.pop() {
+            if let Some(sync_plugin) = &mut self.sync_plugin {
+                let mut ctx = SyncPluginContext::new(&self.viewport);
+                sync_plugin.on_event(&event, &mut ctx);
+            }
+
             if self.dispatch_interaction_pointer(&event, cx) {
                 continue;
             }
@@ -298,10 +308,6 @@ impl FlowCanvas {
 
     fn on_mouse_move(&mut self, ev: &MouseMoveEvent, _: &mut Window, cx: &mut Context<Self>) {
         self.handle_event(FlowEvent::Input(InputEvent::MouseMove(ev.clone())), cx);
-        if let Some(sync_plugin) = &mut self.sync_plugin {
-            let world = self.viewport.screen_to_world(ev.position);
-            sync_plugin.on_mouse_move(ev, world);
-        }
         self.process_event_queue(cx);
     }
 
@@ -318,13 +324,6 @@ impl FlowCanvas {
     fn on_canvas_hover(&mut self, hovered: &bool, _: &mut Window, cx: &mut Context<Self>) {
         self.handle_event(FlowEvent::Input(InputEvent::Hover(*hovered)), cx);
         self.process_event_queue(cx);
-
-        if !*hovered {
-            if let Some(sync_plugin) = &mut self.sync_plugin {
-                sync_plugin.on_mouse_leave();
-            }
-            cx.notify();
-        }
     }
 }
 
