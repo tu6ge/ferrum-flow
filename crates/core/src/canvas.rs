@@ -512,7 +512,10 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
         for plugin in self.plugins.iter() {
             *duplicate_plugins.entry(plugin.name()).or_insert(0) += 1;
         }
-        for (name, count) in duplicate_plugins.into_iter().filter(|(_, count)| *count > 1) {
+        for (name, count) in duplicate_plugins
+            .into_iter()
+            .filter(|(_, count)| *count > 1)
+        {
             eprintln!(
                 "warning: plugin '{name}' is registered {count} times; this can cause duplicated event handling"
             );

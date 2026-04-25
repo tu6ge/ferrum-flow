@@ -55,10 +55,7 @@ fn selected_nodes_ordered(ctx: &PluginContext) -> Vec<NodeId> {
         .collect()
 }
 
-fn build_aligned_positions(
-    ctx: &PluginContext,
-    kind: AlignKind,
-) -> Option<AlignFromTo> {
+fn build_aligned_positions(ctx: &PluginContext, kind: AlignKind) -> Option<AlignFromTo> {
     let ids = selected_nodes_ordered(ctx);
     if ids.len() < 2 {
         return None;
