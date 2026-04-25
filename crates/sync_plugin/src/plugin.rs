@@ -161,7 +161,7 @@ impl YrsSyncPlugin {
             outputs.push_back(txn, port_id.to_string());
         }
 
-        let data_json = to_any(&node.data_ref()).unwrap_or_else(|_| Any::Null);
+        let data_json = to_any(&node.data_ref()).unwrap_or(Any::Null);
         node_ref.insert(txn, "data", data_json);
     }
 
@@ -234,10 +234,10 @@ impl YrsSyncPlugin {
     fn on_mouse_move(&mut self, world: Point<Pixels>) {
         const MIN_INTERVAL: Duration = Duration::from_millis(33);
         let now = Instant::now();
-        if let Some(prev) = self.last_awareness_push {
-            if now.saturating_duration_since(prev) < MIN_INTERVAL {
-                return;
-            }
+        if let Some(prev) = self.last_awareness_push
+            && now.saturating_duration_since(prev) < MIN_INTERVAL
+        {
+            return;
         }
         self.last_awareness_push = Some(now);
         let state = RemoteCursorState {
@@ -329,10 +329,10 @@ impl SyncPlugin for YrsSyncPlugin {
 
             let mut list = vec![];
             for item in array.iter(txn) {
-                if let Out::Any(Any::String(str)) = item {
-                    if let Ok(uuid) = str.to_string().parse() {
-                        list.push(NodeId::from_uuid(uuid));
-                    }
+                if let Out::Any(Any::String(str)) = item
+                    && let Ok(uuid) = str.to_string().parse()
+                {
+                    list.push(NodeId::from_uuid(uuid));
                 }
             }
 
@@ -536,7 +536,7 @@ fn write_port_to_map(txn: &mut TransactionMut, port_map: &MapRef, port: &Port) {
     port_map.insert(
         txn,
         "port_type",
-        to_any(&port.port_type_ref()).unwrap_or_else(|_| Any::Null),
+        to_any(&port.port_type_ref()).unwrap_or(Any::Null),
     );
 }
 
@@ -549,19 +549,19 @@ fn node_id_for_map_event(
     ev: &yrs::types::map::MapEvent,
 ) -> Option<NodeId> {
     for segment in ev.path().iter().rev() {
-        if let PathSegment::Key(key) = segment {
-            if let Ok(id) = key.to_string().parse::<Uuid>() {
-                return Some(NodeId::from_uuid(id));
-            }
+        if let PathSegment::Key(key) = segment
+            && let Ok(id) = key.to_string().parse::<Uuid>()
+        {
+            return Some(NodeId::from_uuid(id));
         }
     }
 
     let target = ev.target();
     for (key, out) in nodes.iter(txn) {
-        if let Out::YMap(m) = out {
-            if m == *target {
-                return key.to_string().parse::<Uuid>().ok().map(NodeId::from_uuid);
-            }
+        if let Out::YMap(m) = out
+            && m == *target
+        {
+            return key.to_string().parse::<Uuid>().ok().map(NodeId::from_uuid);
         }
     }
 
@@ -589,38 +589,31 @@ fn handler_node_change(
     }
 
     let pos_dirty = changed_keys.iter().any(|k| *k == "x" || *k == "y");
-    let width_dirty = changed_keys.iter().any(|k| *k == "width");
-    let height_dirty = changed_keys.iter().any(|k| *k == "height");
-    let data_dirty = changed_keys.iter().any(|k| *k == "data");
+    let width_dirty = changed_keys.contains(&"width");
+    let height_dirty = changed_keys.contains(&"height");
+    let data_dirty = changed_keys.contains(&"data");
 
-    if pos_dirty || width_dirty || height_dirty || data_dirty {
-        if let Some(id) = node_id {
-            let node_map = ev.target();
-            if pos_dirty {
-                if let (Some(x), Some(y)) = (
-                    read_map_f32(txn, node_map, "x"),
-                    read_map_f32(txn, node_map, "y"),
-                ) {
-                    kind.push(GraphChangeKind::NodeMoved { id, x, y });
-                }
-            }
-            if width_dirty {
-                if let Some(width) = read_map_f32(txn, node_map, "width") {
-                    kind.push(GraphChangeKind::NodeSetWidthed { id, width });
-                }
-            }
-            if height_dirty {
-                if let Some(height) = read_map_f32(txn, node_map, "height") {
-                    kind.push(GraphChangeKind::NodeSetHeighted { id, height });
-                }
-            }
-            if data_dirty {
-                if let Ok(data) =
-                    from_any(&node_map.get_as(txn, "data").unwrap_or_else(|_| Any::Null))
-                {
-                    kind.push(GraphChangeKind::NodeDataUpdated { id, data });
-                }
-            }
+    if (pos_dirty || width_dirty || height_dirty || data_dirty)
+        && let Some(id) = node_id
+    {
+        let node_map = ev.target();
+        if pos_dirty
+            && let (Some(x), Some(y)) = (
+                read_map_f32(txn, node_map, "x"),
+                read_map_f32(txn, node_map, "y"),
+            )
+        {
+            kind.push(GraphChangeKind::NodeMoved { id, x, y });
+        }
+        if width_dirty && let Some(width) = read_map_f32(txn, node_map, "width") {
+            kind.push(GraphChangeKind::NodeSetWidthed { id, width });
+        }
+        if height_dirty && let Some(height) = read_map_f32(txn, node_map, "height") {
+            kind.push(GraphChangeKind::NodeSetHeighted { id, height });
+        }
+        if data_dirty && let Ok(data) = from_any(&node_map.get_as(txn, "data").unwrap_or(Any::Null))
+        {
+            kind.push(GraphChangeKind::NodeDataUpdated { id, data });
         }
     }
 
@@ -656,17 +649,17 @@ fn read_node_from_map(txn: &yrs::TransactionMut, node_map: &MapRef, id: NodeId) 
     let y = read_map_f32(txn, node_map, "y").unwrap_or_default();
     let width = read_map_f32(txn, node_map, "width").unwrap_or_default();
     let height = read_map_f32(txn, node_map, "height").unwrap_or_default();
-    let data = from_any(&node_map.get_as(txn, "data").unwrap_or_else(|_| Any::Null))
+    let data = from_any(&node_map.get_as(txn, "data").unwrap_or(Any::Null))
         .unwrap_or_else(|_| Value::Null);
 
     let out_inputs = node_map.get(txn, "inputs");
     let mut inputs = vec![];
     if let Some(Out::YArray(arr)) = out_inputs {
         for item in arr.iter(txn) {
-            if let Out::Any(Any::String(str)) = item {
-                if let Ok(uuid) = str.to_string().parse() {
-                    inputs.push(PortId::from_uuid(uuid));
-                }
+            if let Out::Any(Any::String(str)) = item
+                && let Ok(uuid) = str.to_string().parse()
+            {
+                inputs.push(PortId::from_uuid(uuid));
             }
         }
     }
@@ -675,10 +668,10 @@ fn read_node_from_map(txn: &yrs::TransactionMut, node_map: &MapRef, id: NodeId) 
     let mut outputs = vec![];
     if let Some(Out::YArray(arr)) = out_outputs {
         for item in arr.iter(txn) {
-            if let Out::Any(Any::String(str)) = item {
-                if let Ok(uuid) = str.to_string().parse() {
-                    outputs.push(PortId::from_uuid(uuid));
-                }
+            if let Out::Any(Any::String(str)) = item
+                && let Ok(uuid) = str.to_string().parse()
+            {
+                outputs.push(PortId::from_uuid(uuid));
             }
         }
     }
