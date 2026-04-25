@@ -71,6 +71,8 @@ impl NodeRenderer for ShaderNodeRenderer {
         });
 
         ctx.node_card_shell(node, selected, NodeCardVariant::Custom)
+            .rounded(px(6.0))
+            .border(px(1.0))
             .bg(rgb(bg))
             .border_color(rgb(border))
             .child(
