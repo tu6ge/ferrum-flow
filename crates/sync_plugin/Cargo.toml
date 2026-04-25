@@ -10,15 +10,11 @@ description = "A high-performance node-based editor framework built with Rust an
 [features]
 default = []
 ## Sample WebSocket relay (`run_dev_ws_relay`) for local demos; enables `tokio/net`.
-dev-ws-relay = ["tokio/net"]
+dev-ws-relay = ["tokio/net", "tokio/macros"]
 
 [dependencies]
 ferrum-flow = { workspace = true }
-tokio = { version = "1.50.0", features = [
-    "rt-multi-thread",
-    "macros",
-    "time",
-], default-features = false }
+tokio = { version = "1.50.0", features = [], default-features = false }
 yrs = { version = "0.25.0", features = ["sync"] }
 
 tokio-tungstenite = "0.21"
