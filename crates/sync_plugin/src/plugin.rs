@@ -196,6 +196,7 @@ impl YrsSyncPlugin {
                     self.inner_process_intent(txn, op);
                 }
             }
+            _ => unimplemented!("GraphOp: {:?}", intent),
         }
     }
 

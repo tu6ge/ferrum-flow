@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use crate::{Edge, EdgeId, Node, NodeId, Port, PortId};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[non_exhaustive]
 pub enum GraphOp {
     // --- Node ---
     AddNode(Node),
@@ -54,6 +55,7 @@ pub enum ChangeSource {
 }
 
 #[derive(Debug, Clone)]
+#[non_exhaustive]
 pub enum GraphChangeKind {
     // --- Node ---
     NodeAdded(Node),
