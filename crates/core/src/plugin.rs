@@ -1062,4 +1062,8 @@ impl PluginRegistry {
     pub fn iter_mut(&mut self) -> std::slice::IterMut<'_, Box<dyn Plugin>> {
         self.plugins.iter_mut()
     }
+
+    pub fn iter(&self) -> std::slice::Iter<'_, Box<dyn Plugin>> {
+        self.plugins.iter()
+    }
 }
