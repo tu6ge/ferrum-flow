@@ -27,6 +27,7 @@ jobs:
           sudo apt-get install -y \
             pkg-config \
             cmake \
+            libssl-dev \
             libasound2-dev \
             libfontconfig1-dev \
             libfreetype6-dev \
