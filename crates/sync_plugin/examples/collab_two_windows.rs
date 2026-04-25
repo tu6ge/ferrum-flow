@@ -13,7 +13,7 @@ use std::thread;
 use std::time::Duration;
 
 use ferrum_flow::*;
-use ferrum_flow_sync_plugin::{YrsSyncPlugin, run_dev_ws_relay};
+use ferrum_flow_sync_plugin::{PresenceConfig, YrsSyncPlugin, run_dev_ws_relay};
 use gpui::{
     AnyElement, AppContext as _, Application, Bounds, Element as _, ParentElement as _, Pixels,
     Point, Size, Styled as _, TitlebarOptions, WindowBounds, WindowOptions, div, px, rgb,
@@ -138,9 +138,13 @@ fn main() {
     let right_initial = Graph::new();
 
     Application::new().run(|cx| {
-        let build_canvas = |sync_seed: Graph| {
+        let build_canvas = |sync_seed: Graph, user_name: &'static str, user_color: u32| {
             move |window: &mut gpui::Window, cx: &mut gpui::App| {
                 cx.new(|ctx| {
+                    let presence = PresenceConfig::new()
+                        .with_local_name(user_name)
+                        .with_local_color(user_color)
+                        .with_show_remote_name(true);
                     FlowCanvas::builder(Graph::new(), ctx, window)
                         .plugin(SelectionPlugin::new())
                         .plugin(NodeInteractionPlugin::new())
@@ -160,7 +164,10 @@ fn main() {
                         .plugin(DeletePlugin::new())
                         .plugin(HistoryPlugin::new())
                         .node_renderer("sync", SyncBasicNodeRenderer)
-                        .sync_plugin(YrsSyncPlugin::new(sync_seed, "ws://127.0.0.1:9001"))
+                        .sync_plugin(
+                            YrsSyncPlugin::new(sync_seed, "ws://127.0.0.1:9001")
+                                .with_presence_config(presence),
+                        )
                         .build()
                 })
             }
@@ -172,7 +179,7 @@ fn main() {
                 Point::new(px(40.0), px(40.0)),
                 true,
             ),
-            build_canvas(left_initial),
+            build_canvas(left_initial, "client-a", 0xFF6B6B),
         )
         .unwrap();
 
@@ -182,7 +189,7 @@ fn main() {
                 Point::new(px(800.0), px(40.0)),
                 false,
             ),
-            build_canvas(right_initial),
+            build_canvas(right_initial, "client-b", 0x4ECDC4),
         )
         .unwrap();
     });

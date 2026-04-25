@@ -4,7 +4,9 @@ use std::{
 };
 
 use futures::channel::mpsc::UnboundedSender;
-use gpui::{Element as _, ParentElement, PathBuilder, Pixels, Point, Styled as _, div, px, rgb};
+use gpui::{
+    Element as _, ParentElement, PathBuilder, Pixels, Point, Styled as _, div, px, rgb, rgba,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
@@ -41,8 +43,15 @@ pub struct YrsSyncPlugin {
     _subscription_order: Option<yrs::Subscription>,
     _subscription_doc_update: Option<yrs::Subscription>,
     last_awareness_push: Option<Instant>,
+    presence: PresenceConfig,
     ws_url: String,
     ws_sync_config: WsSyncConfig,
+}
+
+pub struct PresenceConfig {
+    local_name: Option<String>,
+    local_color: Option<u32>,
+    show_remote_name: bool,
 }
 
 impl YrsSyncPlugin {
@@ -73,6 +82,7 @@ impl YrsSyncPlugin {
         Self {
             awareness,
             last_awareness_push: None,
+            presence: PresenceConfig::default(),
             init_graph: graph,
             undo_manager,
             undo_origin,
@@ -89,6 +99,26 @@ impl YrsSyncPlugin {
             ws_url: ws_url.to_string(),
             ws_sync_config,
         }
+    }
+
+    pub fn with_presence_config(mut self, config: PresenceConfig) -> Self {
+        self.presence = config;
+        self
+    }
+
+    pub fn with_local_user_name(mut self, name: impl Into<String>) -> Self {
+        self.presence.local_name = Some(name.into());
+        self
+    }
+
+    pub fn with_local_user_color(mut self, color: u32) -> Self {
+        self.presence.local_color = Some(color & 0x00FF_FFFF);
+        self
+    }
+
+    pub fn with_show_remote_name(mut self, show: bool) -> Self {
+        self.presence.show_remote_name = show;
+        self
     }
 
     pub fn from_graph(&self) {
@@ -212,6 +242,8 @@ impl YrsSyncPlugin {
         let state = RemoteCursorState {
             x: world.x.into(),
             y: world.y.into(),
+            name: self.presence.local_name.clone(),
+            color: self.presence.local_color,
         };
         let _ = self.awareness.set_local_state(&state);
     }
@@ -364,7 +396,13 @@ impl SyncPlugin for YrsSyncPlugin {
                 continue;
             };
             let screen = ctx.world_to_screen(Point::new(px(cursor.x), px(cursor.y)));
-            let color = color_for_client(client_id);
+            let color = cursor.color.unwrap_or_else(|| color_for_client(client_id));
+            let name = cursor
+                .name
+                .as_deref()
+                .filter(|n| !n.trim().is_empty())
+                .map(str::to_owned)
+                .unwrap_or_else(|| format!("user-{}", client_id % 10_000));
             out.push(
                 div()
                     .absolute()
@@ -417,6 +455,28 @@ impl SyncPlugin for YrsSyncPlugin {
                     )
                     .into_any(),
             );
+            if self.presence.show_remote_name {
+                out.push(
+                    div()
+                        .absolute()
+                        .left(screen.x + px(14.0))
+                        .top(screen.y + px(18.0))
+                        .flex()
+                        .items_center()
+                        .gap(px(4.0))
+                        .px_2()
+                        .py_0p5()
+                        .rounded(px(6.0))
+                        .bg(rgba(0x10131acc))
+                        .border_1()
+                        .border_color(rgb(color))
+                        .text_xs()
+                        .text_color(rgb(0xFFFFFF))
+                        .child(div().w(px(6.0)).h(px(6.0)).rounded_full().bg(rgb(color)))
+                        .child(name)
+                        .into_any(),
+                );
+            }
         }
         out
     }
@@ -459,6 +519,10 @@ fn hsl_to_rgb_u32(h: f32, s: f32, l: f32) -> u32 {
 struct RemoteCursorState {
     pub x: f32,
     pub y: f32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub color: Option<u32>,
 }
 
 fn write_port_to_map(txn: &mut TransactionMut, port_map: &MapRef, port: &Port) {
@@ -717,6 +781,37 @@ fn read_edge_from_map(txn: &yrs::TransactionMut, node_map: &MapRef, id: EdgeId) 
 
 fn read_map_f32<T: ReadTxn>(txn: &T, map: &MapRef, key: &str) -> Option<f32> {
     map.get_as::<_, f64>(txn, key).ok().map(|v| v as f32)
+}
+
+impl Default for PresenceConfig {
+    fn default() -> Self {
+        Self {
+            local_name: None,
+            local_color: None,
+            show_remote_name: true,
+        }
+    }
+}
+
+impl PresenceConfig {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn with_local_name(mut self, name: impl Into<String>) -> Self {
+        self.local_name = Some(name.into());
+        self
+    }
+
+    pub fn with_local_color(mut self, color: u32) -> Self {
+        self.local_color = Some(color & 0x00FF_FFFF);
+        self
+    }
+
+    pub fn with_show_remote_name(mut self, show: bool) -> Self {
+        self.show_remote_name = show;
+        self
+    }
 }
 
 #[cfg(test)]
