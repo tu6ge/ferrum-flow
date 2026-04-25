@@ -1,4 +1,5 @@
 use std::{
+    str::FromStr as _,
     sync::Arc,
     time::{Duration, Instant},
 };

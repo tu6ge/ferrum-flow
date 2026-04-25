@@ -425,14 +425,16 @@ impl ToString for PortPosition {
     }
 }
 
-impl PortPosition {
-    pub fn from_str(str: &str) -> Option<Self> {
-        match str {
-            "right" => Some(Self::Right),
-            "top" => Some(Self::Top),
-            "bottom" => Some(Self::Bottom),
-            "left" => Some(Self::Left),
-            _ => None,
+impl FromStr for PortPosition {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "right" => Ok(Self::Right),
+            "top" => Ok(Self::Top),
+            "bottom" => Ok(Self::Bottom),
+            "left" => Ok(Self::Left),
+            _ => Err(()),
         }
     }
 }
