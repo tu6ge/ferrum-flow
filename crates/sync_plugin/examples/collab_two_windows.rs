@@ -152,7 +152,7 @@ fn main() {
                         .plugin(ZoomControlsPlugin::new())
                         .plugin(BackgroundPlugin::new())
                         .plugin(NodePlugin::new())
-                        .plugin(MinimapPlugin::new())
+                        //.plugin(MinimapPlugin::new())
                         .plugin(ClipboardPlugin::new())
                         .plugin(ContextMenuPlugin::new())
                         .plugin(SelectAllViewportPlugin::new())
