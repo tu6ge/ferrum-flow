@@ -24,8 +24,8 @@ impl Plugin for ViewportPlugin {
         ctx: &mut crate::plugin::PluginContext,
     ) -> EventResult {
         if let FlowEvent::Input(InputEvent::MouseDown(ev)) = event
-            && ev.button == MouseButton::Left
-            && ev.modifiers.shift
+            && ((ev.button == MouseButton::Left && ev.modifiers.shift)
+                || ev.button == MouseButton::Middle)
         {
             ctx.start_interaction(Panning {
                 start_mouse: ev.position,
