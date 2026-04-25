@@ -19,6 +19,12 @@ impl Display for NodeId {
     }
 }
 
+impl Default for NodeId {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl NodeId {
     pub fn new() -> Self {
         Self(Uuid::new_v4())
@@ -406,21 +412,22 @@ impl Port {
     }
 }
 
-impl ToString for PortKind {
-    fn to_string(&self) -> String {
+impl Display for PortKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            PortKind::Input => "input".into(),
-            PortKind::Output => "output".into(),
+            PortKind::Input => write!(f, "input"),
+            PortKind::Output => write!(f, "output"),
         }
     }
 }
-impl ToString for PortPosition {
-    fn to_string(&self) -> String {
+
+impl Display for PortPosition {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            PortPosition::Left => "left".into(),
-            PortPosition::Right => "right".into(),
-            PortPosition::Top => "top".into(),
-            PortPosition::Bottom => "bottom".into(),
+            PortPosition::Left => write!(f, "left"),
+            PortPosition::Right => write!(f, "right"),
+            PortPosition::Top => write!(f, "top"),
+            PortPosition::Bottom => write!(f, "bottom"),
         }
     }
 }
