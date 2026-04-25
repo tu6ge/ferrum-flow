@@ -1,5 +1,5 @@
 use ferrum_flow::*;
-use ferrum_flow_sync_plugin::YrsSyncPlugin;
+use ferrum_flow_sync_plugin::{PresenceConfig, YrsSyncPlugin};
 use gpui::{
     AnyElement, AppContext as _, Application, Element as _, ParentElement as _, Size, Styled as _,
     WindowOptions, div, px, rgb,
@@ -106,7 +106,14 @@ fn main() {
                     .plugin(DeletePlugin::new())
                     .plugin(HistoryPlugin::new())
                     .node_renderer("sync", SyncBasicNodeRenderer)
-                    .sync_plugin(YrsSyncPlugin::new(graph, "ws://127.0.0.1:9001"))
+                    .sync_plugin(
+                        YrsSyncPlugin::new(graph, "ws://127.0.0.1:9001").with_presence_config(
+                            PresenceConfig::new()
+                                .with_local_name("basic-client")
+                                .with_local_color(0x7C83FD)
+                                .with_show_remote_name(true),
+                        ),
+                    )
                     .build()
             })
         })
