@@ -7,7 +7,6 @@ A **ferrum-flow** collaboration plugin built on [Yjs / yrs](https://github.com/y
 - **Y.Doc** stores nodes, ports, edges, and `node_order`, mapped bidirectionally with ferrum-flow’s `Graph`.
 - Uses the **y-sync** protocol (`DefaultProtocol`) to exchange updates with the server; local edits are distinguished from remote updates through `UndoManager` origins.
 - **Awareness**: cursor positions in **canvas (world) coordinates**; leaving the canvas clears local presence so peers stop drawing your cursor.
-- Bundled **`Assets`** (`rust-embed`): remote cursors use `assets/cursor.png`; examples load it with `Application::with_assets(Assets)`.
 - Optional Cargo feature **`dev-ws-relay`**: compiles the sample WebSocket relay (`run_dev_ws_relay`, `tokio/net`). Off by default so the library surface stays client-focused.
 
 ## Requirements
@@ -58,11 +57,10 @@ IS_INIT=0 cargo run -p ferrum-flow-sync-plugin --features dev-ws-relay --example
 
 ## Integrating in your app
 
-1. Call **`Application::with_assets(Assets)`** (or supply your own `AssetSource` that serves `cursor.png`).
-2. Register the plugin on `FlowCanvas::builder(...).sync_plugin(...)`:
+Register the plugin on `FlowCanvas::builder(...).sync_plugin(...)`:
 
    ```rust
-   use ferrum_flow_sync_plugin::{Assets, YrsSyncPlugin};
+   use ferrum_flow_sync_plugin::YrsSyncPlugin;
 
    // ...
    .sync_plugin(YrsSyncPlugin::new(initial_graph, "ws://127.0.0.1:9001"))
@@ -80,7 +78,6 @@ WebSocket connect uses retries with exponential backoff (defaults: 10 attempts, 
 | --- | --- |
 | `YrsSyncPlugin` | Implements `ferrum_flow::SyncPlugin` |
 | `WsSyncConfig` | Retry / backoff / reconnect delay for the sync WebSocket thread |
-| `Assets` | GPUI `AssetSource` embedding `cursor.png` |
 | `run_dev_ws_relay` | *(feature `dev-ws-relay`)* Async entry point for the **sample** y-sync WebSocket relay (`127.0.0.1:9001`); used by `examples/server` and `examples/collab_two_windows` |
 
 ## Server notes
