@@ -19,6 +19,9 @@ enum AlignKind {
     CenterV,
 }
 
+type NodePositions = Vec<(NodeId, Point<Pixels>)>;
+type AlignFromTo = (NodePositions, NodePositions);
+
 impl AlignPlugin {
     pub fn new() -> Self {
         Self
@@ -55,7 +58,7 @@ fn selected_nodes_ordered(ctx: &PluginContext) -> Vec<NodeId> {
 fn build_aligned_positions(
     ctx: &PluginContext,
     kind: AlignKind,
-) -> Option<(Vec<(NodeId, Point<Pixels>)>, Vec<(NodeId, Point<Pixels>)>)> {
+) -> Option<AlignFromTo> {
     let ids = selected_nodes_ordered(ctx);
     if ids.len() < 2 {
         return None;

@@ -32,10 +32,10 @@ const MENU_PAD: f32 = 4.0;
 ///
 /// The second argument is the **world-space** point under the initial right-click that opened this menu
 /// (same as [`PluginContext::screen_to_world`] applied to that click).
+type ContextMenuActionFn = dyn for<'a> Fn(&mut PluginContext<'a>, Point<Pixels>) + Send + Sync;
+
 #[derive(Clone)]
-pub struct ContextMenuCustomAction(
-    Arc<dyn for<'a> Fn(&mut PluginContext<'a>, Point<Pixels>) + Send + Sync>,
-);
+pub struct ContextMenuCustomAction(Arc<ContextMenuActionFn>);
 
 impl ContextMenuCustomAction {
     pub fn new(
