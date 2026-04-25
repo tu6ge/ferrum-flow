@@ -18,7 +18,7 @@ fn main() {
             }
         }
 
-        let node_ids = graph.nodes().iter().map(|(id, _)| *id).collect::<Vec<_>>();
+        let node_ids = graph.nodes().keys().map(|id| *id).collect::<Vec<_>>();
 
         generate_chain_edges(&mut graph, node_ids);
 

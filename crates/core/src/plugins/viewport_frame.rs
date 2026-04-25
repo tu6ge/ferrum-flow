@@ -71,38 +71,6 @@ impl Command for ViewportFrameCommand {
     }
 }
 
-#[cfg(test)]
-mod command_interop_tests {
-    use gpui::{Point, px};
-
-    use crate::{Graph, command_interop::assert_command_interop};
-
-    use super::ViewportFrameCommand;
-
-    #[test]
-    fn viewport_frame_command_interop() {
-        let base = Graph::new();
-        let cmd = ViewportFrameCommand {
-            from_zoom: 1.0,
-            from_offset: Point::new(px(0.0), px(0.0)),
-            to_zoom: 1.1,
-            to_offset: Point::new(px(8.0), px(9.0)),
-        };
-        assert_command_interop(
-            &base,
-            || {
-                Box::new(ViewportFrameCommand {
-                    from_zoom: cmd.from_zoom,
-                    from_offset: cmd.from_offset,
-                    to_zoom: cmd.to_zoom,
-                    to_offset: cmd.to_offset,
-                })
-            },
-            "ViewportFrameCommand",
-        );
-    }
-}
-
 /// Pan + zoom so the given world-space axis-aligned box (position + size) fits the window.
 pub(crate) fn frame_world_rect(ctx: &mut PluginContext, bx: f32, by: f32, bw: f32, bh: f32) {
     let Some(wb) = ctx.window_bounds() else {
@@ -163,4 +131,36 @@ pub(crate) fn apply_frame_world_rect_direct(
 
     ctx.set_zoom(z);
     ctx.set_offset(new_offset);
+}
+
+#[cfg(test)]
+mod command_interop_tests {
+    use gpui::{Point, px};
+
+    use crate::{Graph, command_interop::assert_command_interop};
+
+    use super::ViewportFrameCommand;
+
+    #[test]
+    fn viewport_frame_command_interop() {
+        let base = Graph::new();
+        let cmd = ViewportFrameCommand {
+            from_zoom: 1.0,
+            from_offset: Point::new(px(0.0), px(0.0)),
+            to_zoom: 1.1,
+            to_offset: Point::new(px(8.0), px(9.0)),
+        };
+        assert_command_interop(
+            &base,
+            || {
+                Box::new(ViewportFrameCommand {
+                    from_zoom: cmd.from_zoom,
+                    from_offset: cmd.from_offset,
+                    to_zoom: cmd.to_zoom,
+                    to_offset: cmd.to_offset,
+                })
+            },
+            "ViewportFrameCommand",
+        );
+    }
 }

@@ -829,13 +829,11 @@ mod tests {
     }
 
     fn json_numbers_equal(a: &Number, b: &Number) -> bool {
-        match (a.as_i64(), b.as_i64()) {
-            (Some(x), Some(y)) => return x == y,
-            _ => {}
+        if let (Some(x), Some(y)) = (a.as_i64(), b.as_i64()) {
+            return x == y;
         }
-        match (a.as_u64(), b.as_u64()) {
-            (Some(x), Some(y)) => return x == y,
-            _ => {}
+        if let (Some(x), Some(y)) = (a.as_u64(), b.as_u64()) {
+            return x == y;
         }
         match (a.as_f64(), b.as_f64()) {
             (Some(x), Some(y)) => (x - y).abs() < f64::EPSILON,

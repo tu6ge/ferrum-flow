@@ -197,34 +197,6 @@ impl Command for MinimapPanCommand {
     }
 }
 
-#[cfg(test)]
-mod command_interop_tests {
-    use gpui::{Point, px};
-
-    use crate::{Graph, command_interop::assert_command_interop};
-
-    use super::MinimapPanCommand;
-
-    #[test]
-    fn minimap_pan_command_interop() {
-        let base = Graph::new();
-        let cmd = MinimapPanCommand {
-            from: Point::new(px(1.0), px(2.0)),
-            to: Point::new(px(10.0), px(20.0)),
-        };
-        assert_command_interop(
-            &base,
-            || {
-                Box::new(MinimapPanCommand {
-                    from: cmd.from,
-                    to: cmd.to,
-                })
-            },
-            "MinimapPanCommand",
-        );
-    }
-}
-
 /// Renders a bottom-right overview map and pans the viewport when the user clicks it.
 ///
 /// Uses priority **135** so clicks hit the minimap before [`crate::plugins::SelectionPlugin`] (100)
@@ -433,4 +405,32 @@ fn rect_stroke_bounds(
     line.line_to(Point::new(px(x0), px(y0 + h)));
     line.close();
     line.build()
+}
+
+#[cfg(test)]
+mod command_interop_tests {
+    use gpui::{Point, px};
+
+    use crate::{Graph, command_interop::assert_command_interop};
+
+    use super::MinimapPanCommand;
+
+    #[test]
+    fn minimap_pan_command_interop() {
+        let base = Graph::new();
+        let cmd = MinimapPanCommand {
+            from: Point::new(px(1.0), px(2.0)),
+            to: Point::new(px(10.0), px(20.0)),
+        };
+        assert_command_interop(
+            &base,
+            || {
+                Box::new(MinimapPanCommand {
+                    from: cmd.from,
+                    to: cmd.to,
+                })
+            },
+            "MinimapPanCommand",
+        );
+    }
 }
