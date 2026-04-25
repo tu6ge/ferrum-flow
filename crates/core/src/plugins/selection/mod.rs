@@ -71,8 +71,9 @@ impl Plugin for SelectionPlugin {
                 })
             };
             return EventResult::Stop;
+        } else if let FlowEvent::Input(InputEvent::Hover(false)) = event {
+            self.selected = None;
         }
-
         EventResult::Continue
     }
     fn priority(&self) -> i32 {
