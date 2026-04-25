@@ -200,7 +200,7 @@ impl YrsSyncPlugin {
         }
     }
 
-    fn on_mouse_move(&mut self, _event: &MouseMoveEvent, world: Point<Pixels>) {
+    fn on_mouse_move(&mut self, world: Point<Pixels>) {
         const MIN_INTERVAL: Duration = Duration::from_millis(33);
         let now = Instant::now();
         if let Some(prev) = self.last_awareness_push {
@@ -338,7 +338,7 @@ impl SyncPlugin for YrsSyncPlugin {
     fn on_event(&mut self, event: &FlowEvent, ctx: &mut SyncPluginContext) {
         match event {
             FlowEvent::Input(InputEvent::MouseMove(event)) => {
-                self.on_mouse_move(&event, ctx.screen_to_world(event.position));
+                self.on_mouse_move(ctx.screen_to_world(event.position));
             }
             FlowEvent::Input(InputEvent::Hover(hovered)) => {
                 if !*hovered {
