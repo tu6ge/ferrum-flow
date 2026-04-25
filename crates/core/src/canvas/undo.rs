@@ -20,7 +20,9 @@ pub trait Command {
 
     /// used by sync plugin
     /// when open sync plugin, execute method is diasbeld, and using to_ops send graph intent
-    fn to_ops(&self, ctx: &mut CommandContext) -> Vec<GraphOp>;
+    fn to_ops(&self, _ctx: &mut CommandContext) -> Vec<GraphOp> {
+        vec![]
+    }
 }
 
 pub trait HistoryProvider {
