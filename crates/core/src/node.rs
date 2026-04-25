@@ -433,7 +433,7 @@ impl Display for PortPosition {
 }
 
 impl FromStr for PortPosition {
-    type Err = ();
+    type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
@@ -441,7 +441,7 @@ impl FromStr for PortPosition {
             "top" => Ok(Self::Top),
             "bottom" => Ok(Self::Bottom),
             "left" => Ok(Self::Left),
-            _ => Err(()),
+            _ => Err(anyhow::anyhow!("Invalid port position: {}", s)),
         }
     }
 }
