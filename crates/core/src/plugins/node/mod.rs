@@ -91,6 +91,12 @@ impl NodePlugin {
     }
 }
 
+impl Default for NodePlugin {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Plugin for NodePlugin {
     fn name(&self) -> &'static str {
         "node"

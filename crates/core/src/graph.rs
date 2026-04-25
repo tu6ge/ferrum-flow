@@ -25,6 +25,12 @@ pub struct Graph {
     selected_node: HashSet<NodeId>,
 }
 
+impl Default for Graph {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Graph {
     pub fn new() -> Self {
         Self {
@@ -132,7 +138,7 @@ impl Graph {
     }
 
     pub fn add_port(&mut self, port: Port) {
-        let ref mut map = self.ports;
+        let map = &mut self.ports;
         map.insert(port.id(), port);
     }
 
@@ -265,19 +271,19 @@ impl Graph {
     }
 
     pub fn remove_selected_node(&mut self) -> bool {
-        if self.selected_node.len() == 0 {
+        if self.selected_node.is_empty() {
             return false;
         }
 
         let mut ids = vec![];
         for id in self.selected_node.iter() {
-            ids.push(id.clone());
+            ids.push(*id);
         }
         for id in ids.iter() {
-            self.remove_node(&id);
+            self.remove_node(id);
         }
         self.selected_node.clear();
-        return true;
+        true
     }
 
     pub fn add_selected_edge(&mut self, id: EdgeId, shift: bool) {
@@ -297,19 +303,19 @@ impl Graph {
     }
 
     pub fn remove_selected_edge(&mut self) -> bool {
-        if self.selected_edge.len() == 0 {
+        if self.selected_edge.is_empty() {
             return false;
         }
 
         let mut ids = vec![];
         for id in self.selected_edge.iter() {
-            ids.push(id.clone());
+            ids.push(*id);
         }
         for id in ids.iter() {
             self.edges.remove(id);
         }
         self.selected_edge.clear();
-        return true;
+        true
     }
 
     pub fn selection_bounds(&self) -> Option<Bounds<Pixels>> {

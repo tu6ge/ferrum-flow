@@ -14,6 +14,12 @@ impl Display for EdgeId {
     }
 }
 
+impl Default for EdgeId {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl EdgeId {
     pub fn new() -> Self {
         Self(Uuid::new_v4())
@@ -39,6 +45,12 @@ pub struct Edge {
     pub target_port: PortId,
 }
 
+impl Default for Edge {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Edge {
     pub fn new() -> Self {
         Self {
@@ -61,6 +73,12 @@ pub struct EdgeBuilder<'a> {
     graph: Option<&'a mut Graph>,
     source: Option<PortId>,
     target: Option<PortId>,
+}
+
+impl<'a> Default for EdgeBuilder<'a> {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl<'a> EdgeBuilder<'a> {

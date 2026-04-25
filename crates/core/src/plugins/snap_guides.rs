@@ -38,7 +38,7 @@ fn union_drag_bounds(graph: &Graph, dragged_ids: &[NodeId]) -> Option<gpui::Boun
     let mut any = false;
 
     for id in dragged_ids {
-        let Some(n) = graph.get_node(&id) else {
+        let Some(n) = graph.get_node(id) else {
             continue;
         };
         any = true;

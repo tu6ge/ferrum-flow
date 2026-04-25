@@ -557,7 +557,7 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
                 &mut canvas.port_offset_cache,
                 &mut canvas.viewport,
                 &mut canvas.renderers,
-                &self.ctx,
+                self.ctx,
                 drawable_size,
                 &mut canvas.theme,
                 &mut canvas.shared_state,

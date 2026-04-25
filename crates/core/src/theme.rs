@@ -81,6 +81,7 @@ pub struct FlowTheme {
 }
 
 impl Default for FlowTheme {
+    #[allow(clippy::mixed_case_hex_literals)]
     fn default() -> Self {
         Self {
             node_card_background: 0x00FFFFFF,

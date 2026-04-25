@@ -54,6 +54,12 @@ impl LocalHistory {
     }
 }
 
+impl Default for LocalHistory {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl HistoryProvider for LocalHistory {
     fn push(&mut self, mut command: Box<dyn Command>, ctx: &mut CommandContext) {
         command.execute(ctx);
@@ -88,6 +94,12 @@ impl HistoryProvider for LocalHistory {
 
 pub struct CompositeCommand {
     commands: Vec<Box<dyn Command>>,
+}
+
+impl Default for CompositeCommand {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl CompositeCommand {
@@ -234,7 +246,7 @@ impl<'a> CommandContext<'a> {
     }
 
     pub fn hit_node(&self, mouse: Point<Pixels>) -> Option<NodeId> {
-        self.graph.hit_node(mouse, &self.viewport)
+        self.graph.hit_node(mouse, self.viewport)
     }
 
     pub fn bring_node_to_front(&mut self, node_id: NodeId) {

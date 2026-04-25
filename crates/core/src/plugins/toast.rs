@@ -67,6 +67,12 @@ pub struct ToastPlugin {
     queue: VecDeque<ToastItem>,
 }
 
+impl Default for ToastPlugin {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ToastPlugin {
     pub fn new() -> Self {
         Self {

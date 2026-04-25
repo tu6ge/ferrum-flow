@@ -62,6 +62,12 @@ pub struct RendererRegistry {
     undefined: Box<dyn NodeRenderer>,
 }
 
+impl Default for RendererRegistry {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl RendererRegistry {
     pub fn new() -> Self {
         Self {
@@ -99,12 +105,7 @@ struct DefaultNodeRenderer;
 impl NodeRenderer for DefaultNodeRenderer {
     fn render(&self, node: &Node, ctx: &mut RenderContext) -> AnyElement {
         let node_id = node.id();
-        let selected = ctx
-            .graph
-            .selected_node()
-            .iter()
-            .find(|id| **id == node_id)
-            .is_some();
+        let selected = ctx.graph.selected_node().iter().any(|id| *id == node_id);
 
         ctx.node_card_shell(node, selected, NodeCardVariant::Default)
             .rounded(px(6.0))

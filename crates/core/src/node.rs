@@ -249,6 +249,12 @@ impl Display for PortId {
     }
 }
 
+impl Default for PortId {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PortId {
     pub fn new() -> Self {
         Self(Uuid::new_v4())

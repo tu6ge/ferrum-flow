@@ -27,10 +27,7 @@ impl PortLayoutCache {
     /// Port ids whose offsets are cached for `node_id` (after [`Self::ensure_node_ports`]).
     ///
     /// Order follows the inner [`HashMap`] and is not guaranteed stable across runs.
-    pub fn cached_port_ids_for_node(
-        &self,
-        node_id: &NodeId,
-    ) -> impl Iterator<Item = PortId> + '_ {
+    pub fn cached_port_ids_for_node(&self, node_id: &NodeId) -> impl Iterator<Item = PortId> + '_ {
         self.map
             .get(node_id)
             .into_iter()
@@ -82,7 +79,7 @@ impl PortLayoutCache {
 
     /// Fill port layout for every node if not already cached.
     pub fn ensure_all_nodes_ports(&mut self, graph: &Graph, renderers: &RendererRegistry) {
-        let node_ids = graph.nodes().iter().map(|(id, _)| *id);
+        let node_ids = graph.nodes().keys().map(|id| *id);
 
         for node_id in node_ids {
             self.ensure_node_ports(graph, renderers, &node_id);
