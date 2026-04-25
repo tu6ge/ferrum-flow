@@ -97,7 +97,7 @@ pub trait Command {
 
 Built-in features:
 
-- Undo / Redo stacks
+- Undo / Redo stacks(using ⌘ + z / ⌘ + Shift + z or Ctrl + z / Ctrl + Shift + z)
 - Composite commands
 - Easy integration via `PluginContext`
 
