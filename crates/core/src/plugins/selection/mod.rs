@@ -32,6 +32,12 @@ impl SelectionPlugin {
     }
 }
 
+impl Default for SelectionPlugin {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Plugin for SelectionPlugin {
     fn name(&self) -> &'static str {
         "selection"
@@ -48,14 +54,12 @@ impl Plugin for SelectionPlugin {
             }
             if !ev.modifiers.shift {
                 let start = ctx.screen_to_world(ev.position);
-                if let Some(Selected { bounds, nodes }) = self.selected.take() {
-                    if bounds.contains(&start) {
-                        ctx.start_interaction(SelectionInteraction::start_move(
-                            start, bounds, nodes,
-                        ));
+                if let Some(Selected { bounds, nodes }) = self.selected.take()
+                    && bounds.contains(&start)
+                {
+                    ctx.start_interaction(SelectionInteraction::start_move(start, bounds, nodes));
 
-                        return EventResult::Stop;
-                    }
+                    return EventResult::Stop;
                 }
 
                 ctx.start_interaction(SelectionInteraction::new(start));
@@ -135,8 +139,8 @@ impl SelectionInteraction {
         Self {
             state: SelectionState::Moving {
                 start_mouse: mouse,
-                start_bounds: bounds.clone(),
-                bounds: bounds,
+                start_bounds: bounds,
+                bounds,
                 nodes,
             },
             last_drag_command_at: None,
@@ -192,7 +196,7 @@ impl Interaction for SelectionInteraction {
                             nodes.iter().map(|(id, point)| (*id, *point)).collect();
                         ctx.execute_command(super::node::DragNodesCommand::new(
                             &start_position,
-                            &ctx,
+                            ctx,
                         ));
                         self.last_drag_command_at = Some(now);
                     }
@@ -206,9 +210,7 @@ impl Interaction for SelectionInteraction {
     }
     fn on_mouse_up(&mut self, _ev: &MouseUpEvent, ctx: &mut PluginContext) -> InteractionResult {
         match &mut self.state {
-            SelectionState::Pending { .. } => {
-                return InteractionResult::End;
-            }
+            SelectionState::Pending { .. } => InteractionResult::End,
 
             SelectionState::Selecting { start, end } => {
                 let rect = normalize_rect(*start, *end);
@@ -253,7 +255,7 @@ impl Interaction for SelectionInteraction {
                 ctx.cancel_interaction();
                 ctx.emit(FlowEvent::custom(SelectedEvent { bounds, nodes }));
 
-                return InteractionResult::End;
+                InteractionResult::End
             }
 
             SelectionState::Moving { bounds, nodes, .. } => {
@@ -277,7 +279,7 @@ impl Interaction for SelectionInteraction {
                     nodes: new_nodes,
                 }));
 
-                return InteractionResult::End;
+                InteractionResult::End
             }
         }
     }

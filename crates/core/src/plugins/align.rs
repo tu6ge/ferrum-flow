@@ -25,6 +25,12 @@ impl AlignPlugin {
     }
 }
 
+impl Default for AlignPlugin {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 fn align_shortcut(ev: &gpui::KeyDownEvent) -> bool {
     primary_platform_modifier(ev) && ev.keystroke.modifiers.shift
 }

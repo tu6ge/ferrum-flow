@@ -13,7 +13,7 @@ pub(super) fn render_node_cards(
     node_ids: &[crate::NodeId],
     id: &'static str,
 ) -> gpui::AnyElement {
-    ctx.cache_port_offset_with_nodes(&node_ids);
+    ctx.cache_port_offset_with_nodes(node_ids);
     let list = node_ids.iter().filter_map(|node_id| {
         let node = ctx.graph.nodes().get(node_id)?;
         let render = ctx.renderers.get(node.renderer_key());
@@ -62,7 +62,11 @@ impl NodeStaticLayerCacheKey {
             viewport: ctx.viewport().visibility_cache_key(),
             nodes_len: ctx.graph.nodes().len(),
             node_order_len: ctx.graph.node_order().len(),
-            node_order_tail: ctx.graph.node_order().last().map(|id| id.as_uuid().as_u128()),
+            node_order_tail: ctx
+                .graph
+                .node_order()
+                .last()
+                .map(|id| id.as_uuid().as_u128()),
             drag_arc: drag.map(|d| {
                 let p = Arc::as_ptr(&d.0);
                 (p.cast::<NodeId>() as usize, d.0.len())

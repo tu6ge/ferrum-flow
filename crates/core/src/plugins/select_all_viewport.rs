@@ -11,6 +11,12 @@ impl SelectAllViewportPlugin {
     }
 }
 
+impl Default for SelectAllViewportPlugin {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 fn select_visible(ctx: &mut PluginContext) {
     let visible_nodes: HashSet<_> = ctx
         .graph
@@ -51,12 +57,13 @@ impl Plugin for SelectAllViewportPlugin {
         event: &FlowEvent,
         ctx: &mut PluginContext,
     ) -> crate::plugin::EventResult {
-        if let FlowEvent::Input(crate::plugin::InputEvent::KeyDown(ev)) = event {
-            if primary_platform_modifier(ev) && ev.keystroke.key == "a" {
-                select_visible(ctx);
-                ctx.notify();
-                return crate::plugin::EventResult::Stop;
-            }
+        if let FlowEvent::Input(crate::plugin::InputEvent::KeyDown(ev)) = event
+            && primary_platform_modifier(ev)
+            && ev.keystroke.key == "a"
+        {
+            select_visible(ctx);
+            ctx.notify();
+            return crate::plugin::EventResult::Stop;
         }
         crate::plugin::EventResult::Continue
     }

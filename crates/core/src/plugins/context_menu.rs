@@ -119,6 +119,12 @@ struct OpenMenu {
     actions: Vec<MenuItem>,
 }
 
+impl Default for ContextMenuPlugin {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ContextMenuPlugin {
     pub fn new() -> Self {
         Self {

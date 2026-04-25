@@ -20,6 +20,12 @@ impl EdgePlugin {
     }
 }
 
+impl Default for EdgePlugin {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Plugin for EdgePlugin {
     fn name(&self) -> &'static str {
         "edge"
@@ -35,14 +41,12 @@ impl Plugin for EdgePlugin {
                 return crate::plugin::EventResult::Continue;
             }
             let shift = ev.modifiers.shift;
-            if let Some(id) = hit_test_get_edge(ev.position, &ctx) {
+            if let Some(id) = hit_test_get_edge(ev.position, ctx) {
                 ctx.cache_port_offset_with_edge(&id);
-                ctx.execute_command(SelectEdgeCommand::new(id, shift, &ctx));
+                ctx.execute_command(SelectEdgeCommand::new(id, shift, ctx));
                 return crate::plugin::EventResult::Stop;
-            } else {
-                if !shift {
-                    ctx.execute_command(ClearEdgeCommand::new(&ctx));
-                }
+            } else if !shift {
+                ctx.execute_command(ClearEdgeCommand::new(ctx));
             }
         }
         crate::plugin::EventResult::Continue
@@ -77,7 +81,7 @@ impl Plugin for EdgePlugin {
                 visible_nodes.contains(&source_port.node_id())
                     || visible_nodes.contains(&target_port.node_id())
             })
-            .map(|(k, v)| (*k, edge_geometry2(v, &ctx)))
+            .map(|(k, v)| (*k, edge_geometry2(v, ctx)))
             .collect();
 
         let edge_ids = edges.iter().map(|(id, _)| *id);
@@ -101,7 +105,7 @@ impl Plugin for EdgePlugin {
                         line.move_to(*start);
                         line.cubic_bezier_to(*end, *c1, *c2);
 
-                        let selected = selected_edges.iter().find(|i| **i == *id).is_some();
+                        let selected = selected_edges.iter().any(|i| *i == *id);
 
                         if let Ok(line) = line.build() {
                             win.paint_path(line, rgb(if selected { stroke_sel } else { stroke }));
@@ -211,7 +215,7 @@ pub fn edge_bounds(geom: &EdgeGeometry) -> Bounds<Pixels> {
 }
 
 fn hit_test_edge(mouse: Point<Pixels>, geom: &EdgeGeometry) -> bool {
-    let points = sample_bezier(&geom, 20);
+    let points = sample_bezier(geom, 20);
 
     for segment in points.windows(2) {
         let d = distance_to_segment(mouse, segment[0], segment[1]);

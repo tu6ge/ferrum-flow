@@ -30,6 +30,12 @@ pub struct PortInteractionPlugin {
     validator: Arc<dyn EdgeValidator>,
 }
 
+impl Default for PortInteractionPlugin {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PortInteractionPlugin {
     pub fn new() -> Self {
         Self {
@@ -104,6 +110,7 @@ impl PortInteractionPlugin {
         ctx.execute_command(CreateEdge::new(edge));
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn paint_wire_and_dot(
         win: &mut gpui::Window,
         start: Point<Pixels>,
@@ -145,12 +152,12 @@ impl Plugin for PortInteractionPlugin {
             if ev.button != MouseButton::Left {
                 return crate::plugin::EventResult::Continue;
             }
-            if let Some(pend) = self.pending {
-                if Self::pending_dot_contains_screen(ctx, pend.end_world, ev.position) {
-                    self.pending = None;
-                    self.finish_pending_link(ctx, pend);
-                    return crate::plugin::EventResult::Stop;
-                }
+            if let Some(pend) = self.pending
+                && Self::pending_dot_contains_screen(ctx, pend.end_world, ev.position)
+            {
+                self.pending = None;
+                self.finish_pending_link(ctx, pend);
+                return crate::plugin::EventResult::Stop;
             }
 
             let visible_nodes: HashSet<_> = ctx
@@ -327,7 +334,7 @@ impl Interaction for PortConnecting {
                 PortKind::Input => (target_port, soruce_port),
             };
 
-            match self.validator.validate(&soruce_port, &target_port, ctx) {
+            match self.validator.validate(soruce_port, target_port, ctx) {
                 Ok(_) => {
                     let edge = ctx
                         .new_edge()
@@ -405,10 +412,10 @@ impl Interaction for PortConnecting {
                         lr,
                         dr,
                     );
-                    if let Some((center, radius)) = th {
-                        if let Ok(dot) = filled_disc_path(center, radius) {
-                            win.paint_path(dot, rgb(lr));
-                        }
+                    if let Some((center, radius)) = th
+                        && let Ok(dot) = filled_disc_path(center, radius)
+                    {
+                        win.paint_path(dot, rgb(lr));
                     }
                 },
             )

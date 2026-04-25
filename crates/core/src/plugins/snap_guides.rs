@@ -37,7 +37,7 @@ fn union_drag_bounds(graph: &Graph, dragged_ids: &[NodeId]) -> Option<gpui::Boun
     let mut max_y = f32::MIN;
     let mut any = false;
 
-    for id in dragged_ids.iter().copied() {
+    for id in dragged_ids {
         let Some(n) = graph.get_node(&id) else {
             continue;
         };
@@ -164,6 +164,12 @@ pub struct SnapGuidesPlugin {
 impl SnapGuidesPlugin {
     pub fn new() -> Self {
         Self { guides: None }
+    }
+}
+
+impl Default for SnapGuidesPlugin {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

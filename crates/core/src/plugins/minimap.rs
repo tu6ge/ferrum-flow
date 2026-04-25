@@ -239,6 +239,12 @@ impl MinimapPlugin {
     }
 }
 
+impl Default for MinimapPlugin {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Plugin for MinimapPlugin {
     fn name(&self) -> &'static str {
         "minimap"
@@ -247,19 +253,17 @@ impl Plugin for MinimapPlugin {
     fn setup(&mut self, _ctx: &mut crate::plugin::InitPluginContext) {}
 
     fn on_event(&mut self, event: &FlowEvent, ctx: &mut PluginContext) -> EventResult {
-        if let FlowEvent::Input(InputEvent::MouseDown(ev)) = event {
-            if let Some(ref layout) = self.last_layout {
-                if layout.contains_chrome(ev.position) {
-                    if ev.button == MouseButton::Right {
-                        return EventResult::Stop;
-                    }
-                    if ev.button == MouseButton::Left {
-                        let world = layout.screen_to_world(ev.position);
-                        center_viewport_on_world(ctx, world);
-                        ctx.notify();
-                        return EventResult::Stop;
-                    }
-                }
+        if let FlowEvent::Input(InputEvent::MouseDown(ev)) = event
+            && let Some(ref layout) = self.last_layout
+            && layout.contains_chrome(ev.position)
+        {
+            if ev.button == MouseButton::Right {
+                return EventResult::Stop;
+            } else if ev.button == MouseButton::Left {
+                let world = layout.screen_to_world(ev.position);
+                center_viewport_on_world(ctx, world);
+                ctx.notify();
+                return EventResult::Stop;
             }
         }
         EventResult::Continue

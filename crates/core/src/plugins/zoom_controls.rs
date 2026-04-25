@@ -205,6 +205,12 @@ pub struct ZoomControlsPlugin {
     last_layout: Option<ZoomControlsLayout>,
 }
 
+impl Default for ZoomControlsPlugin {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ZoomControlsPlugin {
     pub fn new() -> Self {
         Self { last_layout: None }
@@ -219,21 +225,19 @@ impl Plugin for ZoomControlsPlugin {
     fn setup(&mut self, _ctx: &mut crate::plugin::InitPluginContext) {}
 
     fn on_event(&mut self, event: &FlowEvent, ctx: &mut PluginContext) -> EventResult {
-        if let FlowEvent::Input(InputEvent::MouseDown(ev)) = event {
-            if ev.button == MouseButton::Left {
-                if let Some(ref layout) = self.last_layout {
-                    if let Some(hit) = layout.hit(ev.position) {
-                        match hit {
-                            Hit::ZoomIn => zoom_by_factor(ctx, ZOOM_STEP),
-                            Hit::ZoomOut => zoom_by_factor(ctx, 1.0 / ZOOM_STEP),
-                            Hit::ResetZoom => reset_zoom(ctx),
-                            Hit::FitEntireGraph => fit_entire_graph(ctx),
-                        }
-                        ctx.notify();
-                        return EventResult::Stop;
-                    }
-                }
+        if let FlowEvent::Input(InputEvent::MouseDown(ev)) = event
+            && ev.button == MouseButton::Left
+            && let Some(ref layout) = self.last_layout
+            && let Some(hit) = layout.hit(ev.position)
+        {
+            match hit {
+                Hit::ZoomIn => zoom_by_factor(ctx, ZOOM_STEP),
+                Hit::ZoomOut => zoom_by_factor(ctx, 1.0 / ZOOM_STEP),
+                Hit::ResetZoom => reset_zoom(ctx),
+                Hit::FitEntireGraph => fit_entire_graph(ctx),
             }
+            ctx.notify();
+            return EventResult::Stop;
         }
         EventResult::Continue
     }

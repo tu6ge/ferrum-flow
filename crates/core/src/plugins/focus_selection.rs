@@ -12,6 +12,12 @@ impl FocusSelectionPlugin {
     }
 }
 
+impl Default for FocusSelectionPlugin {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 fn focus_shortcut(ev: &gpui::KeyDownEvent) -> bool {
     primary_platform_modifier(ev) && ev.keystroke.modifiers.shift
 }
@@ -47,11 +53,12 @@ impl Plugin for FocusSelectionPlugin {
         event: &FlowEvent,
         ctx: &mut PluginContext,
     ) -> crate::plugin::EventResult {
-        if let FlowEvent::Input(crate::plugin::InputEvent::KeyDown(ev)) = event {
-            if focus_shortcut(ev) && ev.keystroke.key == "f" {
-                focus_selected(ctx);
-                return crate::plugin::EventResult::Stop;
-            }
+        if let FlowEvent::Input(crate::plugin::InputEvent::KeyDown(ev)) = event
+            && focus_shortcut(ev)
+            && ev.keystroke.key == "f"
+        {
+            focus_selected(ctx);
+            return crate::plugin::EventResult::Stop;
         }
         crate::plugin::EventResult::Continue
     }

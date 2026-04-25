@@ -13,6 +13,12 @@ impl ViewportPlugin {
     }
 }
 
+impl Default for ViewportPlugin {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Plugin for ViewportPlugin {
     fn name(&self) -> &'static str {
         "viewport"

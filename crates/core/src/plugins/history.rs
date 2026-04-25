@@ -8,6 +8,12 @@ impl HistoryPlugin {
     }
 }
 
+impl Default for HistoryPlugin {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Plugin for HistoryPlugin {
     fn name(&self) -> &'static str {
         "history"

@@ -135,16 +135,14 @@ impl Interaction for NodeDragInteraction {
                 if delta.x.abs() > DRAG_THRESHOLD || delta.y.abs() > DRAG_THRESHOLD {
                     let mut nodes = vec![];
 
-                    if ctx.graph.selected_node().contains(&node_id) {
+                    if ctx.graph.selected_node().contains(node_id) {
                         for id in ctx.graph.selected_node() {
-                            if let Some(node) = ctx.nodes().get(&id) {
-                                nodes.push((id.clone(), node.point()));
+                            if let Some(node) = ctx.nodes().get(id) {
+                                nodes.push((*id, node.point()));
                             }
                         }
-                    } else {
-                        if let Some(node) = ctx.nodes().get(&node_id) {
-                            nodes.push((node_id.clone(), node.point()));
-                        }
+                    } else if let Some(node) = ctx.nodes().get(node_id) {
+                        nodes.push((*node_id, node.point()));
                     }
                     let dragged_ids: Arc<[NodeId]> =
                         nodes.iter().map(|(id, _)| *id).collect::<Vec<_>>().into();
@@ -179,7 +177,7 @@ impl Interaction for NodeDragInteraction {
                         .map(|t| now.duration_since(t) >= DRAG_COMMAND_INTERVAL)
                         .unwrap_or(true);
                     if should_command {
-                        ctx.execute_command(DragNodesCommand::new(start_positions, &ctx));
+                        ctx.execute_command(DragNodesCommand::new(start_positions, ctx));
                         self.last_drag_command_at = Some(now);
                     }
                 }
@@ -216,7 +214,7 @@ impl Interaction for NodeDragInteraction {
                 start_positions, ..
             } => {
                 ctx.emit(FlowEvent::custom(NodeDragEvent::End));
-                ctx.execute_command(DragNodesCommand::new(start_positions, &ctx));
+                ctx.execute_command(DragNodesCommand::new(start_positions, ctx));
                 InteractionResult::End
             }
         }

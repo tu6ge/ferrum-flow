@@ -89,6 +89,12 @@ pub struct BackgroundPlugin {
     bitmap: Option<Arc<RenderImage>>,
 }
 
+impl Default for BackgroundPlugin {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl BackgroundPlugin {
     pub fn new() -> Self {
         Self {

@@ -79,6 +79,7 @@ pub struct InitPluginContext<'a, 'b> {
 }
 
 impl<'a, 'b> InitPluginContext<'a, 'b> {
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn new(
         graph: &'a mut Graph,
         port_offset_cache: &'a mut PortLayoutCache,
@@ -186,7 +187,7 @@ impl<'a, 'b> InitPluginContext<'a, 'b> {
     }
 
     pub fn hit_node(&self, mouse: Point<Pixels>) -> Option<NodeId> {
-        self.graph.hit_node(mouse, &self.viewport)
+        self.graph.hit_node(mouse, self.viewport)
     }
 
     pub fn bring_node_to_front(&mut self, node_id: NodeId) {
@@ -306,7 +307,7 @@ impl<'a, 'b> InitPluginContext<'a, 'b> {
 
     pub fn cache_port_offset_with_node(&mut self, node_ids: &Vec<NodeId>) {
         for node_id in node_ids {
-            self.cache_node_port_offset(&node_id);
+            self.cache_node_port_offset(node_id);
         }
     }
 
@@ -351,6 +352,7 @@ pub enum EventResult {
 }
 
 impl<'a> PluginContext<'a> {
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn new(
         graph: &'a mut Graph,
         port_offset_cache: &'a mut PortLayoutCache,
@@ -416,8 +418,8 @@ impl<'a> PluginContext<'a> {
         let mut ctx = CommandContext::new(
             self.graph,
             self.port_offset_cache,
-            &mut self.viewport,
-            &mut self.renderers,
+            self.viewport,
+            self.renderers,
             self.shared_state,
             self.notify,
         );
@@ -439,8 +441,8 @@ impl<'a> PluginContext<'a> {
             let mut ctx = CommandContext::new(
                 self.graph,
                 self.port_offset_cache,
-                &mut self.viewport,
-                &mut self.renderers,
+                self.viewport,
+                self.renderers,
                 self.shared_state,
                 self.notify,
             );
@@ -458,8 +460,8 @@ impl<'a> PluginContext<'a> {
             let mut ctx = CommandContext::new(
                 self.graph,
                 self.port_offset_cache,
-                &mut self.viewport,
-                &mut self.renderers,
+                self.viewport,
+                self.renderers,
                 self.shared_state,
                 self.notify,
             );
@@ -567,7 +569,7 @@ impl<'a> PluginContext<'a> {
     }
 
     pub fn hit_node(&self, mouse: Point<Pixels>) -> Option<NodeId> {
-        self.graph.hit_node(mouse, &self.viewport)
+        self.graph.hit_node(mouse, self.viewport)
     }
 
     pub fn bring_node_to_front(&mut self, node_id: NodeId) {
@@ -696,7 +698,7 @@ impl<'a> PluginContext<'a> {
 
     pub fn cache_port_offset_with_node(&mut self, node_ids: &Vec<NodeId>) {
         for node_id in node_ids {
-            self.cache_node_port_offset(&node_id);
+            self.cache_node_port_offset(node_id);
         }
     }
 
@@ -827,13 +829,13 @@ impl<'a> RenderContext<'a> {
     }
 
     pub fn hit_node(&self, mouse: Point<Pixels>) -> Option<NodeId> {
-        self.graph.hit_node(mouse, &self.viewport)
+        self.graph.hit_node(mouse, self.viewport)
     }
 
     // ---- Viewport shortcuts ----
 
     pub fn viewport(&self) -> &Viewport {
-        &self.viewport
+        self.viewport
     }
 
     pub fn zoom(&self) -> f32 {

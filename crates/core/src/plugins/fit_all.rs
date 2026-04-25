@@ -18,6 +18,12 @@ impl FitAllGraphPlugin {
     }
 }
 
+impl Default for FitAllGraphPlugin {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 fn graph_world_bounds_graph<'a>(
     nodes: impl Iterator<Item = &'a Node> + 'a,
 ) -> Option<(f32, f32, f32, f32)> {
@@ -95,14 +101,13 @@ impl Plugin for FitAllGraphPlugin {
         event: &FlowEvent,
         ctx: &mut PluginContext,
     ) -> crate::plugin::EventResult {
-        if let FlowEvent::Input(crate::plugin::InputEvent::KeyDown(ev)) = event {
-            if primary_platform_modifier(ev)
-                && !ev.keystroke.modifiers.shift
-                && ev.keystroke.key == "0"
-            {
-                fit_all(ctx);
-                return crate::plugin::EventResult::Stop;
-            }
+        if let FlowEvent::Input(crate::plugin::InputEvent::KeyDown(ev)) = event
+            && primary_platform_modifier(ev)
+            && !ev.keystroke.modifiers.shift
+            && ev.keystroke.key == "0"
+        {
+            fit_all(ctx);
+            return crate::plugin::EventResult::Stop;
         }
         crate::plugin::EventResult::Continue
     }

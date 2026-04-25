@@ -13,6 +13,12 @@ impl ClipboardPlugin {
     }
 }
 
+impl Default for ClipboardPlugin {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Plugin for ClipboardPlugin {
     fn name(&self) -> &'static str {
         "clipboard"

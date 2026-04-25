@@ -13,6 +13,12 @@ impl DeletePlugin {
     }
 }
 
+impl Default for DeletePlugin {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 pub(crate) fn delete_selection(ctx: &mut crate::plugin::PluginContext) {
     ctx.execute_command(DeleteCommand::new(ctx));
 }
@@ -27,11 +33,11 @@ impl Plugin for DeletePlugin {
         event: &FlowEvent,
         ctx: &mut crate::plugin::PluginContext,
     ) -> crate::plugin::EventResult {
-        if let FlowEvent::Input(crate::plugin::InputEvent::KeyDown(ev)) = event {
-            if ev.keystroke.key == "delete" || ev.keystroke.key == "backspace" {
-                ctx.execute_command(DeleteCommand::new(&ctx));
-                return crate::plugin::EventResult::Stop;
-            }
+        if let FlowEvent::Input(crate::plugin::InputEvent::KeyDown(ev)) = event
+            && (ev.keystroke.key == "delete" || ev.keystroke.key == "backspace")
+        {
+            ctx.execute_command(DeleteCommand::new(ctx));
+            return crate::plugin::EventResult::Stop;
         }
         crate::plugin::EventResult::Continue
     }
