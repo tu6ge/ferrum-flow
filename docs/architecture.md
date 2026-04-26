@@ -52,6 +52,9 @@ A plugin can:
 - Render UI layers
 - Modify graph state
 
+Starter example for custom plugin development:  
+[`crates/core/examples/plugin.rs`](https://github.com/tu6ge/ferrum-flow/blob/master/crates/core/examples/plugin.rs)
+
 ## Interaction System
 
 Interactions represent ongoing user actions, such as:
