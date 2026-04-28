@@ -231,8 +231,7 @@ impl Graph {
             self.ports.remove(&port_id);
         }
         for edge_id in edge_ids_to_remove {
-            self.edges.remove(&edge_id);
-            self.selected_edge.remove(&edge_id);
+            self.remove_edge(&edge_id);
         }
 
         self.nodes.remove(id);
@@ -358,7 +357,9 @@ impl Graph {
     }
 
     pub fn bring_node_to_front(&mut self, node_id: NodeId) {
-        self.node_order_mut().retain(|id| *id != node_id);
+        if let Some(index) = self.node_order_mut().iter().position(|id| *id == node_id) {
+            self.node_order_mut().remove(index);
+        }
 
         self.node_order_mut().push(node_id);
     }
