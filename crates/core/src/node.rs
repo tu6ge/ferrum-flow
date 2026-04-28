@@ -105,12 +105,6 @@ impl Node {
     }
 
     #[allow(deprecated)]
-    pub fn node_type(mut self, ty: impl Into<String>) -> Self {
-        self.node_type = ty.into();
-        self
-    }
-
-    #[allow(deprecated)]
     pub fn id(&self) -> NodeId {
         self.id
     }
