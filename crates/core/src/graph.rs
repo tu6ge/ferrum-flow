@@ -221,36 +221,27 @@ impl Graph {
         let Some(node) = &self.nodes.get(id) else {
             return;
         };
-        let mut port_ids = node.inputs().to_vec();
-        port_ids.extend(node.outputs().iter().copied());
+
+        let mut edge_ids_to_remove = HashSet::new();
+        for port_id in node.inputs().iter().chain(node.outputs().iter()).copied() {
+            edge_ids_to_remove.extend(
+                self.edges
+                    .iter()
+                    .filter(|(_, edge)| edge.source_port == port_id || edge.target_port == port_id)
+                    .map(|(id, _)| *id),
+            );
+            self.ports.remove(&port_id);
+        }
+        for edge_id in edge_ids_to_remove {
+            self.edges.remove(&edge_id);
+            self.selected_edge.remove(&edge_id);
+        }
 
         self.nodes.remove(id);
         self.selected_node.remove(id);
         let index = self.node_order.iter().position(|v| *v == *id);
         if let Some(index) = index {
             self.node_order.remove(index);
-        }
-
-        for port_id in port_ids.iter() {
-            let edge1 = self
-                .edges
-                .iter()
-                .find(|(_, edge)| edge.source_port == *port_id);
-            if let Some((&edge_id, _)) = edge1 {
-                self.edges.remove(&edge_id);
-                self.selected_edge.remove(&edge_id);
-            }
-
-            let edge2 = self
-                .edges
-                .iter()
-                .find(|(_, edge)| edge.target_port == *port_id);
-            if let Some((&edge_id, _)) = edge2 {
-                self.edges.remove(&edge_id);
-                self.selected_edge.remove(&edge_id);
-            }
-
-            self.ports.remove(port_id);
         }
     }
 
