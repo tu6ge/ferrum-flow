@@ -336,7 +336,7 @@ impl Render for FlowCanvas {
 
         let graph = &mut self.graph;
         let viewport = &self.viewport;
-        let renderder = &self.renderers;
+        let renderers = &self.renderers;
         let port_offset_cache = &mut self.port_offset_cache;
         let theme = &self.theme;
         let shared_state = &self.shared_state;
@@ -349,7 +349,7 @@ impl Render for FlowCanvas {
                 graph,
                 port_offset_cache,
                 viewport,
-                renderder,
+                renderers,
                 window,
                 theme,
                 shared_state,
@@ -365,7 +365,7 @@ impl Render for FlowCanvas {
                 graph,
                 port_offset_cache,
                 viewport,
-                renderder,
+                renderers,
                 window,
                 theme,
                 shared_state,
@@ -381,7 +381,7 @@ impl Render for FlowCanvas {
                 graph,
                 port_offset_cache,
                 viewport,
-                renderder,
+                renderers,
                 window,
                 theme,
                 shared_state,
