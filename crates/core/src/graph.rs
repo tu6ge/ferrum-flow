@@ -56,8 +56,6 @@ impl Graph {
             && self.ports.is_empty()
             && self.edges.is_empty()
             && self.node_order.is_empty()
-            && self.selected_edge.is_empty()
-            && self.selected_node.is_empty()
     }
 
     pub fn apply(&mut self, op: GraphChangeKind) {
