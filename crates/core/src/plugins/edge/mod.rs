@@ -30,7 +30,6 @@ impl Plugin for EdgePlugin {
     fn name(&self) -> &'static str {
         "edge"
     }
-    fn setup(&mut self, _ctx: &mut crate::plugin::InitPluginContext) {}
     fn on_event(
         &mut self,
         event: &FlowEvent,
