@@ -87,7 +87,6 @@ pub(crate) fn paste_subgraph(ctx: &mut PluginContext, sub: &CopiedSubgraph) {
         node.set_data(old.data_ref().clone());
         node.set_id(new_id);
 
-        // TODO review
         for pid in old.inputs() {
             node.push_input(port_map[pid]);
         }
@@ -100,11 +99,9 @@ pub(crate) fn paste_subgraph(ctx: &mut PluginContext, sub: &CopiedSubgraph) {
 
     for old in &sub.ports {
         let port = Port::new(
-            // TODO review
             port_map[&old.id()],
             old.kind(),
             old.index(),
-            // TODO review
             node_map[&old.node_id()],
             old.position(),
             *old.size_ref(),
