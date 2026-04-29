@@ -24,8 +24,6 @@ impl Plugin for ClipboardPlugin {
         "clipboard"
     }
 
-    fn setup(&mut self, _ctx: &mut crate::plugin::InitPluginContext) {}
-
     fn priority(&self) -> i32 {
         95
     }
