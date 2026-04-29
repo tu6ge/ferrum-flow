@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use gpui::px;
 
-use crate::{CompositeCommand, Edge, Graph, Node, NodeId, Port, plugin::PluginContext};
+use crate::{CompositeCommand, Edge, Graph, Node, Port, plugin::PluginContext};
 
 use super::copied_subgraph::CopiedSubgraph;
 use crate::plugins::{CreateEdge, CreateNode, CreatePort};
@@ -28,43 +28,30 @@ pub(crate) fn extract_subgraph(graph: &Graph) -> Option<CopiedSubgraph> {
     if graph.selected_node_is_empty() {
         return None;
     }
-    let selected = graph.selected_node();
-    let node_ids: Vec<NodeId> = graph
-        .node_order()
-        .iter()
-        .filter(|id| selected.contains(id))
-        .copied()
-        .collect();
+    let node_ids = graph.selected_node();
     if node_ids.is_empty() {
         return None;
     }
 
     let mut port_ids = HashSet::new();
-    let mut nodes = Vec::new();
-    for nid in &node_ids {
-        let n = graph.get_node(nid)?.clone();
-        for pid in n.inputs().iter().chain(n.outputs().iter()) {
-            port_ids.insert(*pid);
-        }
-        nodes.push(n);
-    }
-
+    let mut nodes = Vec::with_capacity(node_ids.len());
     let mut ports = Vec::new();
-    for nid in &node_ids {
+    for nid in node_ids {
         let n = graph.get_node(nid)?;
         for pid in n.inputs().iter().chain(n.outputs().iter()) {
+            port_ids.insert(*pid);
             if let Some(p) = graph.get_port(pid) {
                 ports.push(p.clone());
             }
         }
+        nodes.push(n.clone());
     }
 
-    let mut edges = Vec::new();
-    for e in graph.edges_values() {
-        if port_ids.contains(&e.source_port) && port_ids.contains(&e.target_port) {
-            edges.push(e.clone());
-        }
-    }
+    let edges = graph
+        .edges_values()
+        .filter(|e| port_ids.contains(&e.source_port) && port_ids.contains(&e.target_port))
+        .cloned()
+        .collect();
 
     Some(CopiedSubgraph {
         nodes,
