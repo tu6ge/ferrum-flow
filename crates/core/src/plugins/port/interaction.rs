@@ -134,7 +134,7 @@ impl Plugin for PortInteractionPlugin {
     fn name(&self) -> &'static str {
         "port_interaction"
     }
-    fn setup(&mut self, _ctx: &mut crate::plugin::InitPluginContext) {}
+
     fn on_event(
         &mut self,
         event: &FlowEvent,
@@ -213,9 +213,11 @@ impl Plugin for PortInteractionPlugin {
 
         crate::plugin::EventResult::Continue
     }
+
     fn priority(&self) -> i32 {
         125
     }
+
     fn render(&mut self, ctx: &mut RenderContext) -> Option<gpui::AnyElement> {
         let p = self.pending.as_ref()?;
         let start = ctx.port_screen_center_by_port_id(p.source_port)?;
@@ -237,6 +239,7 @@ impl Plugin for PortInteractionPlugin {
             .into_any(),
         )
     }
+
     fn render_layer(&self) -> crate::plugin::RenderLayer {
         crate::plugin::RenderLayer::Interaction
     }
@@ -310,6 +313,7 @@ impl Interaction for PortConnecting {
         ctx.notify();
         crate::canvas::InteractionResult::Continue
     }
+
     fn on_mouse_up(
         &mut self,
         ev: &gpui::MouseUpEvent,
@@ -358,6 +362,7 @@ impl Interaction for PortConnecting {
         }));
         crate::canvas::InteractionResult::End
     }
+
     fn render(&self, ctx: &mut RenderContext) -> Option<gpui::AnyElement> {
         let mouse = self.mouse?;
         let start = ctx.port_screen_center_by_port_id(self.port_id)?;
