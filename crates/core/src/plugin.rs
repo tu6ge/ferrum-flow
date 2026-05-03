@@ -514,6 +514,22 @@ impl<'a> PluginContext<'a> {
         Some(self.renderers.get(node.renderer_key()))
     }
 
+    /// World-space offset from the node's top-left ([`Node::point`]) to the port anchor used for
+    /// edge wiring (same as [`NodeRenderer::port_offset`]).
+    ///
+    /// `graph` must contain `node` and that node's ports (a scratch graph is fine) so multi-port
+    /// spacing matches runtime layout.
+    pub(crate) fn port_world_offset_relative(
+        &self,
+        graph: &Graph,
+        node: &Node,
+        port: &Port,
+    ) -> Point<Pixels> {
+        self.renderers
+            .get(node.renderer_key())
+            .port_offset(node, port, graph)
+    }
+
     pub fn get_node_mut(&mut self, id: &NodeId) -> Option<&mut Node> {
         self.graph.get_node_mut(id)
     }

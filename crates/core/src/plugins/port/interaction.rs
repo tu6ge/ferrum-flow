@@ -3,7 +3,7 @@ use std::{collections::HashSet, sync::Arc};
 use gpui::{Bounds, Element, MouseButton, Pixels, Point, canvas, px, rgb};
 
 use crate::{
-    DefaultEdgeValidator, EdgeValidator, PortId, PortKind, PortPosition, ToastMessage,
+    DefaultEdgeValidator, EdgeValidator, Graph, PortId, PortKind, PortPosition, ToastMessage,
     canvas::Interaction,
     plugin::{FlowEvent, InputEvent, Plugin, RenderContext},
     plugins::port::{edge_bezier, filled_disc_path, port_screen_big_bounds, port_screen_bounds},
@@ -75,17 +75,31 @@ impl PortInteractionPlugin {
             return;
         };
 
-        let x: f32 = p.end_world.x.into();
-        let y: f32 = p.end_world.y.into();
-
         let mut builder = ctx.create_node("");
-        builder = builder.position(x, y);
         builder = match source.kind() {
             PortKind::Output => builder.input(),
             PortKind::Input => builder.output(),
         };
 
-        let (new_node, new_ports, _) = builder.build_raw();
+        let (mut new_node, new_ports, _) = builder.build_raw();
+
+        let Some(connect_port) = (match source.kind() {
+            PortKind::Output => new_ports.iter().find(|p| p.kind() == PortKind::Input),
+            PortKind::Input => new_ports.iter().find(|p| p.kind() == PortKind::Output),
+        }) else {
+            return;
+        };
+
+        let mut scratch = Graph::new();
+        scratch.add_node(new_node.clone());
+        for port in &new_ports {
+            scratch.add_port(port.clone());
+        }
+        let offset = ctx.port_world_offset_relative(&scratch, &new_node, connect_port);
+        new_node.set_position_with_point(Point::new(
+            p.end_world.x - offset.x,
+            p.end_world.y - offset.y,
+        ));
 
         let edge = match source.kind() {
             PortKind::Output => {
