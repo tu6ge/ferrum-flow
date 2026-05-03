@@ -386,12 +386,12 @@ impl Interaction for PortConnecting {
         let viewport = ctx.viewport().clone();
         let has_validation_error = self.validation_error.is_some();
         let line_rgb = if has_validation_error {
-            0x00FF1744
+            ctx.theme.error
         } else {
             ctx.theme.port_preview_line
         };
         let dot_rgb = if has_validation_error {
-            0x00FF1744
+            ctx.theme.error
         } else {
             ctx.theme.port_preview_dot
         };

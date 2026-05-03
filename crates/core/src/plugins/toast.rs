@@ -5,7 +5,10 @@ use std::{
 
 use gpui::{Element as _, ParentElement as _, Styled as _, div, px, rgb};
 
-use crate::plugin::{FlowEvent, Plugin, PluginContext, RenderContext};
+use crate::{
+    FlowTheme,
+    plugin::{FlowEvent, Plugin, PluginContext, RenderContext},
+};
 
 const DEFAULT_TOAST_DURATION: Duration = Duration::from_millis(3000);
 const MAX_TOASTS: usize = 4;
@@ -97,12 +100,12 @@ impl ToastPlugin {
         }
     }
 
-    fn bg_color(level: ToastLevel) -> u32 {
+    fn bg_color(level: ToastLevel, theme: &FlowTheme) -> u32 {
         match level {
-            ToastLevel::Info => 0x001F2937,
-            ToastLevel::Success => 0x001E8E3E,
-            ToastLevel::Warning => 0x00B35A00,
-            ToastLevel::Error => 0x00D32F2F,
+            ToastLevel::Info => theme.info,
+            ToastLevel::Success => theme.success,
+            ToastLevel::Warning => theme.warning,
+            ToastLevel::Error => theme.error,
         }
     }
 }
@@ -135,7 +138,7 @@ impl Plugin for ToastPlugin {
         crate::plugin::RenderLayer::Overlay
     }
 
-    fn render(&mut self, _ctx: &mut RenderContext) -> Option<gpui::AnyElement> {
+    fn render(&mut self, ctx: &mut RenderContext) -> Option<gpui::AnyElement> {
         self.gc_expired();
         if self.queue.is_empty() {
             return None;
@@ -146,7 +149,7 @@ impl Plugin for ToastPlugin {
                 .mb_2()
                 .max_w(px(360.0))
                 .rounded(px(8.0))
-                .bg(rgb(Self::bg_color(item.level)))
+                .bg(rgb(Self::bg_color(item.level, ctx.theme)))
                 .px_3()
                 .py_2()
                 .child(

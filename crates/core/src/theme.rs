@@ -78,6 +78,15 @@ pub struct FlowTheme {
     pub context_menu_shortcut_text: u32,
     /// Context menu separator rule between rows.
     pub context_menu_separator: u32,
+
+    /// common error color.
+    pub error: u32,
+    /// common info color.
+    pub info: u32,
+    /// common success color.
+    pub success: u32,
+    /// common warning color.
+    pub warning: u32,
 }
 
 impl Default for FlowTheme {
@@ -114,6 +123,10 @@ impl Default for FlowTheme {
             context_menu_text: 0x001a192b,
             context_menu_shortcut_text: 0x007a7a88,
             context_menu_separator: 0x00e0e0e8,
+            error: 0x00FF1744,
+            info: 0x001F2937,
+            success: 0x001E8E3E,
+            warning: 0x00B35A00,
         }
     }
 }

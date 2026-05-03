@@ -33,5 +33,6 @@ pub fn shader_studio_theme() -> FlowTheme {
         context_menu_text: 0x00e8eaed,
         context_menu_shortcut_text: 0x009098a8,
         context_menu_separator: 0x00384048,
+        ..Default::default()
     }
 }
