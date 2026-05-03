@@ -42,7 +42,7 @@ impl Plugin for SelectionPlugin {
     fn name(&self) -> &'static str {
         "selection"
     }
-    fn setup(&mut self, _ctx: &mut crate::plugin::InitPluginContext) {}
+
     fn on_event(
         &mut self,
         event: &FlowEvent,
@@ -80,12 +80,15 @@ impl Plugin for SelectionPlugin {
         }
         EventResult::Continue
     }
+
     fn priority(&self) -> i32 {
         100
     }
+
     fn render_layer(&self) -> RenderLayer {
         RenderLayer::Selection
     }
+
     fn render(&mut self, ctx: &mut RenderContext) -> Option<AnyElement> {
         self.selected.as_ref().map(|Selected { bounds, .. }| {
             let top_left = ctx.world_to_screen(bounds.origin);
