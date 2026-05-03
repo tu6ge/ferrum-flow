@@ -311,10 +311,11 @@ impl Interaction for PortConnecting {
                     return crate::canvas::InteractionResult::Continue;
                 };
 
-                let (source_port, target_port) = match source_port.kind() {
-                    PortKind::Output => (source_port, target_port),
-                    PortKind::Input => (target_port, source_port),
+                let (source_port, target_port) = match (source_port.kind(), target_port.kind()) {
+                    (PortKind::Input, PortKind::Output) => (target_port, source_port),
+                    _ => (source_port, target_port),
                 };
+
                 if self
                     .validator
                     .validate(source_port, target_port, ctx)
@@ -343,20 +344,20 @@ impl Interaction for PortConnecting {
             let Some(target_port) = ctx.graph.get_port(&port_id) else {
                 return crate::canvas::InteractionResult::End;
             };
-            let Some(soruce_port) = ctx.graph.get_port(&self.port_id) else {
+            let Some(source_port) = ctx.graph.get_port(&self.port_id) else {
                 return crate::canvas::InteractionResult::End;
             };
 
-            let (soruce_port, target_port) = match soruce_port.kind() {
-                PortKind::Output => (soruce_port, target_port),
-                PortKind::Input => (target_port, soruce_port),
+            let (source_port, target_port) = match (source_port.kind(), target_port.kind()) {
+                (PortKind::Input, PortKind::Output) => (target_port, source_port),
+                _ => (source_port, target_port),
             };
 
-            match self.validator.validate(soruce_port, target_port, ctx) {
+            match self.validator.validate(source_port, target_port, ctx) {
                 Ok(_) => {
                     let edge = ctx
                         .new_edge()
-                        .source(soruce_port.id())
+                        .source(source_port.id())
                         .target(target_port.id());
                     ctx.execute_command(CreateEdge::new(edge));
                 }
