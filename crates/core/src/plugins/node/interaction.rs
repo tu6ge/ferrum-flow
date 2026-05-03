@@ -6,7 +6,7 @@ use gpui::{MouseButton, Pixels, Point, px};
 use crate::{
     NodeId,
     canvas::{Interaction, InteractionResult},
-    plugin::{EventResult, FlowEvent, InitPluginContext, InputEvent, Plugin, PluginContext},
+    plugin::{EventResult, FlowEvent, InputEvent, Plugin, PluginContext},
     plugins::node::{
         ActiveNodeDrag, NODE_DRAG_TICK_INTERVAL, NodeDragEvent,
         command::{DragNodesCommand, SelecteNodeCommand},
@@ -46,8 +46,6 @@ impl Plugin for NodeInteractionPlugin {
     fn name(&self) -> &'static str {
         "node_interaction"
     }
-
-    fn setup(&mut self, _ctx: &mut InitPluginContext) {}
 
     fn on_event(&mut self, event: &FlowEvent, ctx: &mut PluginContext) -> EventResult {
         if let FlowEvent::Input(InputEvent::MouseDown(ev)) = event {
