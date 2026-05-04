@@ -190,8 +190,6 @@ impl Plugin for ZoomControlsPlugin {
         "zoom_controls"
     }
 
-    fn setup(&mut self, _ctx: &mut crate::plugin::InitPluginContext) {}
-
     fn on_event(&mut self, event: &FlowEvent, ctx: &mut PluginContext) -> EventResult {
         if let FlowEvent::Input(InputEvent::MouseDown(ev)) = event
             && ev.button == MouseButton::Left
