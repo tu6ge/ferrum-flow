@@ -14,7 +14,7 @@ use crate::{
 
 use super::{
     clipboard::{
-        extract_subgraph, get_clipboard_subgraph, has_clipboard_subgraph, paste_subgraph,
+        extract_subgraph, get_clipboard_subgraph, has_clipboard_subgraph, paste_subgraph_at_world,
         set_clipboard_subgraph,
     },
     delete::delete_selection,
@@ -260,7 +260,7 @@ impl ContextMenuPlugin {
                 MenuBuiltin::FitAllGraph => fit_entire_graph(ctx),
                 MenuBuiltin::Paste => {
                     if let Some(sub) = get_clipboard_subgraph(ctx) {
-                        paste_subgraph(ctx, &sub);
+                        paste_subgraph_at_world(ctx, &sub, menu_world);
                     }
                 }
                 MenuBuiltin::SelectAllViewport => select_all_in_viewport(ctx),

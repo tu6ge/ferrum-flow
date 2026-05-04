@@ -5,6 +5,6 @@ mod plugin;
 pub use plugin::ClipboardPlugin;
 
 pub(crate) use clipboard_ops::{
-    extract_subgraph, get_clipboard_subgraph, has_clipboard_subgraph, paste_subgraph,
+    extract_subgraph, get_clipboard_subgraph, has_clipboard_subgraph, paste_subgraph_at_world,
     set_clipboard_subgraph,
 };

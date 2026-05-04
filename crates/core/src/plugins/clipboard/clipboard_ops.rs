@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use gpui::px;
+use gpui::{Pixels, Point, px};
 
 use crate::{CompositeCommand, Edge, Graph, Node, Port, plugin::PluginContext};
 
@@ -60,9 +60,48 @@ pub(crate) fn extract_subgraph(graph: &Graph) -> Option<CopiedSubgraph> {
     })
 }
 
+/// Top-left of the axis-aligned bounding box of copied node positions (world space).
+fn subgraph_bounds_top_left(sub: &CopiedSubgraph) -> Point<Pixels> {
+    let (mut min_x, mut min_y) = (f32::INFINITY, f32::INFINITY);
+    for n in &sub.nodes {
+        let (x, y) = n.position();
+        min_x = min_x.min(x.into());
+        min_y = min_y.min(y.into());
+    }
+    Point::new(px(min_x), px(min_y))
+}
+
+/// Paste with the subgraph's bounding-box top-left placed at `anchor_world`.
+pub(crate) fn paste_subgraph_at_world(
+    ctx: &mut PluginContext,
+    sub: &CopiedSubgraph,
+    anchor_world: Point<Pixels>,
+) {
+    paste_subgraph_with_anchor(ctx, sub, anchor_world);
+}
+
+/// Paste offset from the copied layout (keyboard paste): bbox top-left moves by (40, 40) in world space.
 pub(crate) fn paste_subgraph(ctx: &mut PluginContext, sub: &CopiedSubgraph) {
-    const OFFSET: f32 = 40.0;
-    let offset = px(OFFSET);
+    const NUDGE: f32 = 40.0;
+    let origin = subgraph_bounds_top_left(sub);
+    let anchor = Point::new(origin.x + px(NUDGE), origin.y + px(NUDGE));
+    paste_subgraph_with_anchor(ctx, sub, anchor);
+}
+
+fn paste_subgraph_with_anchor(
+    ctx: &mut PluginContext,
+    sub: &CopiedSubgraph,
+    anchor_world: Point<Pixels>,
+) {
+    if sub.nodes.is_empty() {
+        return;
+    }
+
+    let origin = subgraph_bounds_top_left(sub);
+    let ox: f32 = origin.x.into();
+    let oy: f32 = origin.y.into();
+    let ax: f32 = anchor_world.x.into();
+    let ay: f32 = anchor_world.y.into();
 
     let mut node_map = HashMap::new();
     for n in &sub.nodes {
@@ -80,7 +119,9 @@ pub(crate) fn paste_subgraph(ctx: &mut PluginContext, sub: &CopiedSubgraph) {
     for old in &sub.nodes {
         let new_id = node_map[&old.id()];
         let (x, y) = old.position();
-        let mut node = Node::new((x + offset).into(), (y + offset).into());
+        let nx = ax + f32::from(x) - ox;
+        let ny = ay + f32::from(y) - oy;
+        let mut node = Node::new(nx, ny);
         node.set_renderer_key(old.renderer_key());
         node.set_execute_type(old.execute_type_ref());
         node.set_size_mut(*old.size_ref());
