@@ -1058,7 +1058,7 @@ pub struct PluginRegistry {
 }
 
 impl PluginRegistry {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self { plugins: vec![] }
     }
 
