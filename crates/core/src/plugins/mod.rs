@@ -38,7 +38,7 @@ pub use port::{
 };
 pub use select_all_viewport::SelectAllViewportPlugin;
 pub use selection::SelectionPlugin;
-pub use snap_guides::{AlignmentGuides, SetAlignmentGuides, SnapGuidesPlugin};
+pub use snap_guides::SnapGuidesPlugin;
 pub use toast::{ToastLevel, ToastMessage, ToastPlugin};
 pub use viewport::ViewportPlugin;
 pub use zoom_controls::ZoomControlsPlugin;

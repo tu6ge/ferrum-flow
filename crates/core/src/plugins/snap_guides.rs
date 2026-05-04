@@ -2,7 +2,7 @@
 //!
 //! Subscribes to [`NodeDragEvent`](crate::plugins::node::NodeDragEvent) from
 //! [`crate::plugins::NodeInteractionPlugin`] and runs
-//! [`compute_alignment_guides`] only here. [`SetAlignmentGuides`] remains for manual overrides.
+//! [`compute_alignment_guides`] only here.
 //! This keeps [`crate::canvas::InteractionState`] free of overlay-specific fields.
 
 use std::collections::HashSet;
@@ -21,14 +21,10 @@ const SNAP_SCREEN_PX: f32 = 4.0;
 
 /// World-space lines to draw as alignment guides (full width / height of the canvas view).
 #[derive(Debug, Clone, Default)]
-pub struct AlignmentGuides {
+struct AlignmentGuides {
     pub vertical_x: Vec<Pixels>,
     pub horizontal_y: Vec<Pixels>,
 }
-
-/// Payload for [`FlowEvent::custom`]. Any code may emit `None` to clear guides.
-#[derive(Debug, Clone)]
-pub struct SetAlignmentGuides(pub Option<AlignmentGuides>);
 
 fn union_drag_bounds(graph: &Graph, dragged_ids: &[NodeId]) -> Option<gpui::Bounds<Pixels>> {
     let mut min_x = f32::MAX;
@@ -75,7 +71,7 @@ fn dedup_sorted_coords(mut v: Vec<Pixels>) -> Vec<Pixels> {
 
 /// Computes alignment guides for the current drag. Skips nodes that are not on-screen and uses an
 /// AABB broadphase so distant nodes are not considered.
-pub(crate) fn compute_alignment_guides(
+fn compute_alignment_guides(
     ctx: &PluginContext,
     dragged_ids: &[NodeId],
 ) -> Option<AlignmentGuides> {
@@ -179,9 +175,6 @@ impl Plugin for SnapGuidesPlugin {
     }
 
     fn on_event(&mut self, event: &FlowEvent, ctx: &mut PluginContext) -> EventResult {
-        if let Some(sg) = event.as_custom::<SetAlignmentGuides>() {
-            self.guides = sg.0.clone();
-        }
         if let Some(evt) = event.as_custom::<NodeDragEvent>() {
             match evt {
                 NodeDragEvent::Tick(ids) => {
