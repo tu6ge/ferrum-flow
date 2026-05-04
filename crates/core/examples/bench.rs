@@ -42,6 +42,8 @@ fn main() {
                     .plugin(FocusSelectionPlugin::new())
                     .plugin(ZoomControlsPlugin::new())
                     .plugin(SnapGuidesPlugin::new())
+                    .plugin(ToastPlugin::new())
+                    //.plugin(FitAllGraphPlugin::new())
                     .build()
             })
         })
