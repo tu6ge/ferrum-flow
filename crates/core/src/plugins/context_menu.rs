@@ -322,8 +322,7 @@ impl Plugin for ContextMenuPlugin {
                 .flex()
                 .items_center()
                 .px_2()
-                .child(div().w_full().h(px(1.0)).bg(rgb(separator)))
-                .into_any_element(),
+                .child(div().w_full().h(px(1.0)).bg(rgb(separator))),
             MenuItem::Builtin(b) => {
                 let label = div()
                     .flex_1()
@@ -350,7 +349,6 @@ impl Plugin for ContextMenuPlugin {
                     .text_color(rgb(row_text))
                     .child(label)
                     .children(shortcut)
-                    .into_any_element()
             }
             MenuItem::Custom {
                 label, shortcut, ..
@@ -380,7 +378,6 @@ impl Plugin for ContextMenuPlugin {
                     .text_color(rgb(row_text))
                     .child(label_el)
                     .children(shortcut_el)
-                    .into_any_element()
             }
         });
 
