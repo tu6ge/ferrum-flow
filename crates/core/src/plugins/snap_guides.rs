@@ -7,7 +7,7 @@
 
 use std::collections::HashSet;
 
-use gpui::{AnyElement, Element, ParentElement, Pixels, Point, Styled, div, px, rgb};
+use gpui::{AnyElement, Div, Element, ParentElement, Pixels, Point, Styled, div, px, rgb};
 
 use crate::{
     Graph, NodeId,
@@ -221,7 +221,7 @@ impl Plugin for SnapGuidesPlugin {
     }
 }
 
-fn vline(wx: Pixels, win_h: Pixels, ctx: &RenderContext<'_>, theme: &FlowTheme) -> AnyElement {
+fn vline(wx: Pixels, win_h: Pixels, ctx: &RenderContext<'_>, theme: &FlowTheme) -> Div {
     let sx = ctx.world_to_screen(Point::new(wx, px(0.0))).x;
     div()
         .absolute()
@@ -230,10 +230,9 @@ fn vline(wx: Pixels, win_h: Pixels, ctx: &RenderContext<'_>, theme: &FlowTheme) 
         .w(px(1.0))
         .h(win_h)
         .bg(rgb(theme.selection_rect_border))
-        .into_any()
 }
 
-fn hline(wy: Pixels, win_w: Pixels, ctx: &RenderContext<'_>, theme: &FlowTheme) -> AnyElement {
+fn hline(wy: Pixels, win_w: Pixels, ctx: &RenderContext<'_>, theme: &FlowTheme) -> Div {
     let sy = ctx.world_to_screen(Point::new(px(0.0), wy)).y;
     div()
         .absolute()
@@ -242,5 +241,4 @@ fn hline(wy: Pixels, win_w: Pixels, ctx: &RenderContext<'_>, theme: &FlowTheme) 
         .w(win_w)
         .h(px(1.0))
         .bg(rgb(theme.selection_rect_border))
-        .into_any()
 }
