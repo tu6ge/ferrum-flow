@@ -23,9 +23,9 @@ pub enum ToastLevel {
 
 #[derive(Debug, Clone)]
 pub struct ToastMessage {
-    pub text: String,
-    pub level: ToastLevel,
-    pub duration: Duration,
+    text: String,
+    level: ToastLevel,
+    duration: Duration,
 }
 
 impl ToastMessage {
