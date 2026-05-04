@@ -23,7 +23,7 @@ impl Plugin for ViewportPlugin {
     fn name(&self) -> &'static str {
         "viewport"
     }
-    fn setup(&mut self, _ctx: &mut crate::plugin::InitPluginContext) {}
+
     fn on_event(
         &mut self,
         event: &crate::plugin::FlowEvent,
@@ -59,11 +59,9 @@ impl Plugin for ViewportPlugin {
         }
         EventResult::Continue
     }
+
     fn priority(&self) -> i32 {
         10
-    }
-    fn render(&mut self, _context: &mut crate::plugin::RenderContext) -> Option<gpui::AnyElement> {
-        None
     }
 }
 
@@ -89,6 +87,7 @@ impl Interaction for Panning {
 
         InteractionResult::Continue
     }
+
     fn on_mouse_up(
         &mut self,
         _event: &gpui::MouseUpEvent,
@@ -100,9 +99,6 @@ impl Interaction for Panning {
         });
         ctx.cancel_interaction();
         InteractionResult::End
-    }
-    fn render(&self, _ctx: &mut crate::plugin::RenderContext) -> Option<gpui::AnyElement> {
-        None
     }
 }
 
