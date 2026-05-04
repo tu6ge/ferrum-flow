@@ -779,7 +779,7 @@ pub struct RenderContext<'a> {
 
 impl<'a> RenderContext<'a> {
     pub(crate) fn new(
-        graph: &'a mut Graph,
+        graph: &'a Graph,
         port_offset_cache: &'a mut PortLayoutCache,
         viewport: &'a Viewport,
         renderers: &'a RendererRegistry,
