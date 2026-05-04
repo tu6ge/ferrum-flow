@@ -48,17 +48,11 @@ pub struct LocalHistory {
 }
 
 impl LocalHistory {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             undo_stack: vec![],
             redo_stack: vec![],
         }
-    }
-}
-
-impl Default for LocalHistory {
-    fn default() -> Self {
-        Self::new()
     }
 }
 
