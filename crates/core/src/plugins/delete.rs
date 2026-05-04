@@ -27,7 +27,7 @@ impl Plugin for DeletePlugin {
     fn name(&self) -> &'static str {
         "delete"
     }
-    fn setup(&mut self, _ctx: &mut crate::plugin::InitPluginContext) {}
+
     fn on_event(
         &mut self,
         event: &FlowEvent,
@@ -97,15 +97,12 @@ impl DeleteCommand {
         Self {
             selected_edge,
             originally_selected_edge_ids,
-            selected_node,
-            selected_port: ctx
-                .graph
-                .selected_node()
+            selected_port: selected_node
                 .iter()
-                .filter_map(|node_id| ctx.get_node(node_id))
                 .flat_map(|node| node.inputs().iter().chain(node.outputs().iter()))
                 .filter_map(|port_id| ctx.graph.get_port(port_id).cloned())
                 .collect(),
+            selected_node,
         }
     }
 }
