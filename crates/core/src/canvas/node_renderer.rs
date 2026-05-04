@@ -62,14 +62,8 @@ pub struct RendererRegistry {
     undefined: Box<dyn NodeRenderer>,
 }
 
-impl Default for RendererRegistry {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl RendererRegistry {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             map: HashMap::new(),
             default: Box::new(DefaultNodeRenderer {}),
