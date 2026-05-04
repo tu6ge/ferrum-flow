@@ -46,8 +46,6 @@ impl Plugin for SelectAllViewportPlugin {
         "select_all_viewport"
     }
 
-    fn setup(&mut self, _ctx: &mut crate::plugin::InitPluginContext) {}
-
     fn priority(&self) -> i32 {
         93
     }
