@@ -138,17 +138,15 @@ impl Command for DeleteCommand {
         let mut removed_edges = HashSet::new();
         for node in &self.selected_node {
             list.push(GraphOp::RemoveNode { id: node.id() });
-            let mut port_ids = node.inputs().to_vec();
-            port_ids.extend(node.outputs().iter().copied());
 
             let index = ctx.graph.node_order().iter().position(|v| *v == node.id());
             if let Some(index) = index {
                 list.push(GraphOp::NodeOrderRemove { index })
             }
+        }
 
-            for port_id in port_ids.iter() {
-                list.push(GraphOp::RemovePort(*port_id));
-            }
+        for port in &self.selected_port {
+            list.push(GraphOp::RemovePort(port.id()));
         }
 
         for edge in &self.selected_edge {
