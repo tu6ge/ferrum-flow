@@ -8,7 +8,6 @@ use std::collections::HashMap;
 use std::fmt;
 
 /// Keyed by [`TypeId`]; values must be `'static` and [`Send`].
-#[derive(Default)]
 pub struct SharedState {
     inner: HashMap<TypeId, Box<dyn Any + Send>>,
 }
@@ -22,8 +21,10 @@ impl fmt::Debug for SharedState {
 }
 
 impl SharedState {
-    pub fn new() -> Self {
-        Self::default()
+    pub(crate) fn new() -> Self {
+        Self {
+            inner: HashMap::new(),
+        }
     }
 
     /// Inserts a value, returning the previous one of the same type if any.
