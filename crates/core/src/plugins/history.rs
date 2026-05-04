@@ -18,7 +18,7 @@ impl Plugin for HistoryPlugin {
     fn name(&self) -> &'static str {
         "history"
     }
-    fn setup(&mut self, _ctx: &mut crate::plugin::InitPluginContext) {}
+
     fn on_event(
         &mut self,
         event: &FlowEvent,
