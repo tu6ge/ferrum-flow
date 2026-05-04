@@ -222,8 +222,6 @@ impl Plugin for MinimapPlugin {
         "minimap"
     }
 
-    fn setup(&mut self, _ctx: &mut crate::plugin::InitPluginContext) {}
-
     fn on_event(&mut self, event: &FlowEvent, ctx: &mut PluginContext) -> EventResult {
         if let FlowEvent::Input(InputEvent::MouseDown(ev)) = event
             && let Some(ref layout) = self.last_layout
