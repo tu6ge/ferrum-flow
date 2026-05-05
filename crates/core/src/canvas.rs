@@ -197,7 +197,7 @@ impl FlowCanvas {
         }
     }
 
-    pub fn handle_event(&mut self, event: FlowEvent, cx: &mut Context<Self>) {
+    fn handle_event(&mut self, event: FlowEvent, cx: &mut Context<Self>) {
         if let Some(sync_plugin) = &mut self.sync_plugin {
             let mut ctx = SyncPluginContext::new(&self.viewport);
             sync_plugin.on_event(&event, &mut ctx);
@@ -242,6 +242,74 @@ impl FlowCanvas {
                 EventResult::Stop => break,
             }
         }
+    }
+
+    /// Same [`PluginContext`] wiring as input dispatch, for **inbound** control from other GPUI
+    /// entities (toolbar, palette, automation) without touching `graph` directly.
+    ///
+    /// Use from `Entity::update`:
+    ///
+    /// ```ignore
+    /// canvas_entity.update(cx, |canvas, cx| {
+    ///     canvas.dispatch_command(CreateNode::new(node), cx);
+    /// });
+    /// ```
+    fn with_plugin_context_for_dispatch(
+        &mut self,
+        cx: &mut Context<Self>,
+        f: impl FnOnce(&mut PluginContext<'_>),
+    ) {
+        let event_queue = &mut self.event_queue;
+        let mut emit = |e| event_queue.push(e);
+        let mut notify = || cx.notify();
+        let delayed_notify_tx = self.delayed_notify_tx.clone();
+        let mut schedule_after = move |delay: Duration| {
+            let tx = delayed_notify_tx.clone();
+            std::thread::spawn(move || {
+                std::thread::sleep(delay);
+                let _ = tx.unbounded_send(());
+            });
+        };
+
+        let mut ctx = PluginContext::new(
+            &mut self.graph,
+            &mut self.port_offset_cache,
+            &mut self.viewport,
+            &mut self.interaction,
+            &mut self.renderers,
+            &mut self.sync_plugin,
+            self.history.as_mut(),
+            &mut self.theme,
+            &mut self.shared_state,
+            &mut emit,
+            &mut notify,
+            &mut schedule_after,
+        );
+        f(&mut ctx);
+    }
+
+    /// Run a [`Command`] through the same path as plugins: local [`HistoryProvider`] or
+    /// [`SyncPlugin::process_intent`], then redraw.
+    ///
+    /// Prefer this over mutating [`Self::graph`] from outside so undo/redo and sync stay consistent.
+    pub fn dispatch_command(&mut self, command: impl Command + 'static, cx: &mut Context<Self>) {
+        self.with_plugin_context_for_dispatch(cx, |ctx| {
+            ctx.execute_command(command);
+        });
+    }
+
+    /// Undo the last command (same as plugin [`PluginContext::undo`]).
+    pub fn dispatch_undo(&mut self, cx: &mut Context<Self>) {
+        self.with_plugin_context_for_dispatch(cx, |ctx| {
+            ctx.undo();
+        });
+    }
+
+    /// Redo (same as plugin [`PluginContext::redo`]).
+    pub fn dispatch_redo(&mut self, cx: &mut Context<Self>) {
+        self.with_plugin_context_for_dispatch(cx, |ctx| {
+            ctx.redo();
+        });
     }
 
     fn process_event_queue(&mut self, cx: &mut Context<Self>) {
