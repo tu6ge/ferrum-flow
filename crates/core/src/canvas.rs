@@ -33,6 +33,41 @@ pub use node_renderer::{NodeRenderer, RendererRegistry, default_node_caption};
 /// Host-side callback for **outbound** [`FlowEvent`]s: invoked synchronously whenever a plugin calls
 /// [`PluginContext::emit`](crate::plugin::PluginContext::emit) with the same event that is then
 /// enqueued for the internal plugin pipeline ([`FlowCanvas::event_queue`]).
+///
+/// # Parent / shell integration
+///
+/// This is **not** a GPUI `subscribe` / `observe` stream: you install **one** `FnMut` on the canvas
+/// ([`FlowCanvasBuilder::outbound`] or [`FlowCanvas::set_outbound`]). The closure runs on the **UI
+/// thread**, **before** the event is pushed onto [`FlowCanvas::event_queue`], and receives a
+/// **read-only** reference for inspection ([`FlowEvent::as_custom`]).
+///
+/// **Typical patterns**
+///
+/// - **Shared counters or queues** — [`std::sync::Arc`] + [`std::sync::atomic::AtomicUsize`] /
+///   [`std::sync::Mutex`] / `mpsc` sender; the host view reads them in [`gpui::Render`] (see the
+///   `outbound_host` example in this crate).
+/// - **Refresh a parent `Entity`** — capture `gpui::Entity<YourShell>` (or a weak handle) in the
+///   closure and call [`gpui::Entity::update`] + [`gpui::Context::notify`] after filtering with
+///   `as_custom::<T>()`.
+/// - **Graph edits without `emit`** — outbound does **not** run for plain [`FlowCanvas::dispatch_command`]
+///   unless a plugin later `emit`s; also use [`gpui::Context::observe`] on `Entity<FlowCanvas>` for
+///   those cases.
+///
+/// ```ignore
+/// use ferrum_flow::{FlowCanvas, FlowEvent};
+/// use gpui::{Context, Entity};
+///
+/// fn wire(canvas: &Entity<FlowCanvas>, shell: &Entity<MyShell>, cx: &mut Context<MyShell>) {
+///     let shell = shell.clone();
+///     canvas.update(cx, |canvas, cx| {
+///         canvas.set_outbound(Some(Box::new(move |ev: &FlowEvent| {
+///             if ev.as_custom::<MyPayload>().is_some() {
+///                 let _ = shell.update(cx, |_, cx| cx.notify());
+///             }
+///         })));
+///     });
+/// }
+/// ```
 pub type FlowCanvasOutbound = Box<dyn FnMut(&FlowEvent) + Send + 'static>;
 
 fn enqueue_plugin_emit(
@@ -339,14 +374,15 @@ impl FlowCanvas {
         });
     }
 
-    /// Replace or clear the outbound hook ([`FlowCanvasOutbound`]). Call from `Entity::update` on
-    /// the canvas after [`FlowCanvas::builder`] if you did not set [`.outbound`](FlowCanvasBuilder::outbound).
+    /// Replace or clear the outbound hook ([`FlowCanvasOutbound`]). Prefer calling from
+    /// `Entity<FlowCanvas>::update` once the canvas exists; see [`FlowCanvasOutbound`] for parent
+    /// wiring and the `outbound_host` example in this crate.
     ///
     /// The hook runs on the same thread as input dispatch, **before** the event is pushed onto
-    /// [`Self::event_queue`]. Inspect custom payloads with [`FlowEvent::as_custom`]. Graph changes
-    /// that do not go through [`PluginContext::emit`](crate::plugin::PluginContext::emit) (for
-    /// example plain [`Self::dispatch_command`] with no follow-up emit) are **not** reported here;
-    /// use [`gpui::Context::observe`] on the canvas entity if you need those as well.
+    /// [`Self::event_queue`]. Graph changes that do not go through
+    /// [`PluginContext::emit`](crate::plugin::PluginContext::emit) (for example plain
+    /// [`Self::dispatch_command`] with no follow-up emit) are **not** reported here; use
+    /// [`gpui::Context::observe`] on the canvas entity if you need those as well.
     pub fn set_outbound(&mut self, hook: Option<FlowCanvasOutbound>) {
         self.outbound = hook;
     }
@@ -627,7 +663,9 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
     }
 
     /// Register an outbound hook: invoked for every [`PluginContext::emit`](crate::plugin::PluginContext::emit)
-    /// on this canvas (same as [`FlowCanvas::set_outbound`]).
+    /// on this canvas (same as [`FlowCanvas::set_outbound`]). See [`FlowCanvasOutbound`] and the
+    /// `outbound_host` example for how a parent view can react (e.g. `Arc<AtomicUsize>` or
+    /// `Entity::update` on a shell).
     pub fn outbound(mut self, hook: impl FnMut(&FlowEvent) + Send + 'static) -> Self {
         self.outbound = Some(Box::new(hook));
         self
