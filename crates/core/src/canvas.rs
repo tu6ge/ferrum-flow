@@ -47,7 +47,7 @@ fn enqueue_plugin_emit(
 }
 
 pub struct FlowCanvas {
-    pub graph: Graph,
+    graph: Graph,
 
     pub(crate) viewport: Viewport,
 
@@ -318,7 +318,7 @@ impl FlowCanvas {
     /// Run a [`Command`] through the same path as plugins: local [`HistoryProvider`] or
     /// [`SyncPlugin::process_intent`], then redraw.
     ///
-    /// Prefer this over mutating [`Self::graph`] from outside so undo/redo and sync stay consistent.
+    /// Prefer this for graph edits so undo/redo and sync stay consistent.
     pub fn dispatch_command(&mut self, command: impl Command + 'static, cx: &mut Context<Self>) {
         self.with_plugin_context_for_dispatch(cx, |ctx| {
             ctx.execute_command(command);
@@ -349,6 +349,16 @@ impl FlowCanvas {
     /// use [`gpui::Context::observe`] on the canvas entity if you need those as well.
     pub fn set_outbound(&mut self, hook: Option<FlowCanvasOutbound>) {
         self.outbound = hook;
+    }
+
+    /// Read-only view of the document graph (nodes, edges, selection).
+    pub fn graph(&self) -> &Graph {
+        &self.graph
+    }
+
+    /// Clone the graph for use outside the current `update` closure (e.g. async snapshots).
+    pub fn graph_snapshot(&self) -> Graph {
+        self.graph.clone()
     }
 
     fn process_event_queue(&mut self, cx: &mut Context<Self>) {

@@ -4,7 +4,7 @@
 use ferrum_flow::*;
 use ferrum_flow_executor::{
     ExecuteGraphEvent, ExecutionHighlightPlugin, ExecutorContext, GraphExecutor, NodeOutput,
-    NodeProcessor, NodeRegistry, PortValues,
+    NodeProcessor, NodeRegistry, PortValues, UpdateNodeDataCommand,
 };
 use gpui::{
     AnyElement, AppContext as _, Application, Element as _, ParentElement as _, Styled,
@@ -221,14 +221,15 @@ fn main() {
 
         let exec_plugin = ExecutionHighlightPlugin::new(executor)
             .with_step_delay(std::time::Duration::from_millis(400))
-            .with_on_run_complete(move |g, exec_ctx| {
+            .with_on_run_complete(move |exec_ctx, canvas, cx| {
                 let text = exec_ctx
                     .get_input(&sink_in)
                     .map(format_result_value)
                     .unwrap_or_default();
-                if let Some(n) = g.get_node_mut(&sink_id) {
-                    n.set_data(json!({ "text": text }));
-                }
+                canvas.dispatch_command(
+                    UpdateNodeDataCommand::new(sink_id, json!({ "text": text })),
+                    cx,
+                );
             });
 
         cx.open_window(WindowOptions::default(), |window, cx| {

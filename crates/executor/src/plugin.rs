@@ -2,11 +2,11 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use ferrum_flow::{
-    EventResult, FlowEvent, Graph, InitPluginContext, NodeId, Plugin, PluginContext, RenderContext,
-    RenderLayer,
+    EventResult, FlowCanvas, FlowEvent, InitPluginContext, NodeId, Plugin, PluginContext,
+    RenderContext, RenderLayer,
 };
 use futures::{StreamExt, channel::mpsc};
-use gpui::{AnyElement, Element, Size, Styled, div, px, rgb};
+use gpui::{AnyElement, Context, Element, Size, Styled, div, px, rgb};
 
 use crate::{ExecutorContext, GraphExecutor};
 
@@ -21,7 +21,13 @@ pub struct ExecutionHighlightPlugin {
     trigger_tx: mpsc::UnboundedSender<()>,
     trigger_rx: Option<mpsc::UnboundedReceiver<()>>,
     step_delay: Duration,
-    on_run_complete: Arc<Mutex<Option<Box<dyn FnMut(&mut Graph, &ExecutorContext) + Send>>>>,
+    on_run_complete: Arc<
+        Mutex<
+            Option<
+                Box<dyn FnMut(&ExecutorContext, &mut FlowCanvas, &mut Context<FlowCanvas>) + Send>,
+            >,
+        >,
+    >,
 }
 
 /// Emit with [`PluginContext::emit`] to start the same run as the trigger channel.
@@ -46,11 +52,12 @@ impl ExecutionHighlightPlugin {
         self
     }
 
-    /// Called on the main thread after a **successful** full run (all nodes executed), so you can
-    /// write execution results back into the live [`Graph`] (e.g. update [`Node::data`]).
+    /// Called on the main thread after a **successful** full run (all nodes executed). Use
+    /// [`FlowCanvas::dispatch_command`](ferrum_flow::FlowCanvas::dispatch_command) (e.g.
+    /// [`UpdateNodeDataCommand`](crate::UpdateNodeDataCommand)) so edits use undo/sync.
     pub fn with_on_run_complete<F>(self, f: F) -> Self
     where
-        F: FnMut(&mut Graph, &ExecutorContext) + Send + 'static,
+        F: FnMut(&ExecutorContext, &mut FlowCanvas, &mut Context<FlowCanvas>) + Send + 'static,
     {
         *self.on_run_complete.lock().expect("on_run_complete lock") = Some(Box::new(f));
         self
@@ -80,7 +87,7 @@ impl Plugin for ExecutionHighlightPlugin {
         init.gpui_ctx
             .spawn(async move |this, cx| {
                 while let Some(()) = rx.next().await {
-                    let graph = match this.update(cx, |canvas, _| canvas.graph.clone()) {
+                    let graph = match this.update(cx, |canvas, _| canvas.graph_snapshot()) {
                         Ok(g) => g,
                         Err(_) => continue,
                     };
@@ -116,7 +123,7 @@ impl Plugin for ExecutionHighlightPlugin {
                         if run_ok {
                             if let Ok(mut lock) = on_run_complete.lock() {
                                 if let Some(f) = lock.as_mut() {
-                                    f(&mut canvas.graph, &exec_ctx);
+                                    f(&exec_ctx, canvas, c);
                                 }
                             }
                         }
