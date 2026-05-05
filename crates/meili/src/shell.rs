@@ -18,8 +18,8 @@ use gpui_component::select::{SearchableVec, Select, SelectEvent, SelectItem, Sel
 use gpui_component::{Root, Sizable as _, h_flex, v_flex};
 
 use crate::add_node_dialog;
-use crate::pick_state;
 use crate::commit_commands::{AddNodeConfirmCommand, NodeTypeSelectConfirmCommand};
+use crate::pick_state;
 
 #[derive(Clone)]
 struct NodePickItem {

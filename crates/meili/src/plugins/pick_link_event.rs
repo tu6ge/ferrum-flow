@@ -13,4 +13,3 @@ pub struct PickNodeTypeForPendingLink {
     pub source_port: PortId,
     pub end_world: Point<Pixels>,
 }
-
