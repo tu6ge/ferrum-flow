@@ -30,6 +30,22 @@ pub use types::{Interaction, InteractionResult, InteractionState};
 pub use node_renderer::port_screen_position;
 pub use node_renderer::{NodeRenderer, RendererRegistry, default_node_caption};
 
+/// Host-side callback for **outbound** [`FlowEvent`]s: invoked synchronously whenever a plugin calls
+/// [`PluginContext::emit`](crate::plugin::PluginContext::emit) with the same event that is then
+/// enqueued for the internal plugin pipeline ([`FlowCanvas::event_queue`]).
+pub type FlowCanvasOutbound = Box<dyn FnMut(&FlowEvent) + Send + 'static>;
+
+fn enqueue_plugin_emit(
+    outbound: &mut Option<FlowCanvasOutbound>,
+    queue: &mut Vec<FlowEvent>,
+    e: FlowEvent,
+) {
+    if let Some(h) = outbound.as_mut() {
+        h(&e);
+    }
+    queue.push(e);
+}
+
 pub struct FlowCanvas {
     pub graph: Graph,
 
@@ -56,6 +72,9 @@ pub struct FlowCanvas {
     /// Type-erased map for cross-plugin data on this canvas instance.
     pub shared_state: SharedState,
     delayed_notify_tx: mpsc::UnboundedSender<()>,
+
+    /// Optional host hook for every plugin [`PluginContext::emit`](crate::plugin::PluginContext::emit).
+    outbound: Option<FlowCanvasOutbound>,
 }
 
 // // TODO
@@ -104,6 +123,7 @@ impl FlowCanvas {
             theme: FlowTheme::default(),
             shared_state: SharedState::new(),
             delayed_notify_tx,
+            outbound: None,
         };
         canvas.init_delayed_notify_channel(cx);
         canvas
@@ -122,6 +142,7 @@ impl FlowCanvas {
             sync_plugin: None,
             renderers: RendererRegistry::new(),
             theme: FlowTheme::default(),
+            outbound: None,
         }
     }
 
@@ -129,8 +150,6 @@ impl FlowCanvas {
     /// `true` so the plugin chain is skipped for this dispatch (avoids duplicate handling and keeps
     /// drag ownership consistent, including for [`Self::process_event_queue`]).
     fn dispatch_interaction_pointer(&mut self, event: &FlowEvent, cx: &mut Context<Self>) -> bool {
-        let event_queue = &mut self.event_queue;
-        let mut emit = |e| event_queue.push(e);
         let mut notify = || cx.notify();
         let delayed_notify_tx = self.delayed_notify_tx.clone();
         let mut schedule_after = move |delay: Duration| {
@@ -145,6 +164,9 @@ impl FlowCanvas {
                 let Some(mut handler) = self.interaction.handler.take() else {
                     return false;
                 };
+                let outbound = &mut self.outbound;
+                let event_queue = &mut self.event_queue;
+                let mut emit = |e| enqueue_plugin_emit(outbound, event_queue, e);
                 let mut ctx = PluginContext::new(
                     &mut self.graph,
                     &mut self.port_offset_cache,
@@ -171,6 +193,9 @@ impl FlowCanvas {
                 let Some(mut handler) = self.interaction.handler.take() else {
                     return false;
                 };
+                let outbound = &mut self.outbound;
+                let event_queue = &mut self.event_queue;
+                let mut emit = |e| enqueue_plugin_emit(outbound, event_queue, e);
                 let mut ctx = PluginContext::new(
                     &mut self.graph,
                     &mut self.port_offset_cache,
@@ -208,8 +233,9 @@ impl FlowCanvas {
             return;
         }
 
+        let outbound = &mut self.outbound;
         let event_queue = &mut self.event_queue;
-        let mut emit = |e| event_queue.push(e);
+        let mut emit = |e| enqueue_plugin_emit(outbound, event_queue, e);
         let mut notify = || cx.notify();
         let delayed_notify_tx = self.delayed_notify_tx.clone();
         let mut schedule_after = move |delay: Duration| {
@@ -259,8 +285,9 @@ impl FlowCanvas {
         cx: &mut Context<Self>,
         f: impl FnOnce(&mut PluginContext<'_>),
     ) {
+        let outbound = &mut self.outbound;
         let event_queue = &mut self.event_queue;
-        let mut emit = |e| event_queue.push(e);
+        let mut emit = |e| enqueue_plugin_emit(outbound, event_queue, e);
         let mut notify = || cx.notify();
         let delayed_notify_tx = self.delayed_notify_tx.clone();
         let mut schedule_after = move |delay: Duration| {
@@ -312,6 +339,18 @@ impl FlowCanvas {
         });
     }
 
+    /// Replace or clear the outbound hook ([`FlowCanvasOutbound`]). Call from `Entity::update` on
+    /// the canvas after [`FlowCanvas::builder`] if you did not set [`.outbound`](FlowCanvasBuilder::outbound).
+    ///
+    /// The hook runs on the same thread as input dispatch, **before** the event is pushed onto
+    /// [`Self::event_queue`]. Inspect custom payloads with [`FlowEvent::as_custom`]. Graph changes
+    /// that do not go through [`PluginContext::emit`](crate::plugin::PluginContext::emit) (for
+    /// example plain [`Self::dispatch_command`] with no follow-up emit) are **not** reported here;
+    /// use [`gpui::Context::observe`] on the canvas entity if you need those as well.
+    pub fn set_outbound(&mut self, hook: Option<FlowCanvasOutbound>) {
+        self.outbound = hook;
+    }
+
     fn process_event_queue(&mut self, cx: &mut Context<Self>) {
         while let Some(event) = self.event_queue.pop() {
             if let Some(sync_plugin) = &mut self.sync_plugin {
@@ -323,8 +362,9 @@ impl FlowCanvas {
                 continue;
             }
 
+            let outbound = &mut self.outbound;
             let event_queue = &mut self.event_queue;
-            let mut emit = |e| event_queue.push(e);
+            let mut emit = |e| enqueue_plugin_emit(outbound, event_queue, e);
             let mut notify = || cx.notify();
             let delayed_notify_tx = self.delayed_notify_tx.clone();
             let mut schedule_after = |delay: Duration| {
@@ -500,6 +540,7 @@ pub struct FlowCanvasBuilder<'a, 'b> {
     renderers: RendererRegistry,
     sync_plugin: Option<Box<dyn SyncPlugin + 'static>>,
     theme: FlowTheme,
+    outbound: Option<FlowCanvasOutbound>,
 }
 
 impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
@@ -575,6 +616,13 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
         self
     }
 
+    /// Register an outbound hook: invoked for every [`PluginContext::emit`](crate::plugin::PluginContext::emit)
+    /// on this canvas (same as [`FlowCanvas::set_outbound`]).
+    pub fn outbound(mut self, hook: impl FnMut(&FlowEvent) + Send + 'static) -> Self {
+        self.outbound = Some(Box::new(hook));
+        self
+    }
+
     pub fn build(self) -> FlowCanvas {
         let mut duplicate_plugins: BTreeMap<&'static str, usize> = BTreeMap::new();
         for plugin in self.plugins.iter() {
@@ -607,6 +655,7 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
             theme: self.theme,
             shared_state: SharedState::new(),
             delayed_notify_tx,
+            outbound: self.outbound,
         };
         canvas.init_delayed_notify_channel(self.ctx);
 
