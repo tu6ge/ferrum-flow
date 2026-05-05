@@ -405,6 +405,10 @@ impl<'a> PluginContext<'a> {
         (self.schedule_after)(delay);
     }
 
+    /// Enqueue a follow-up event for plugins and notify the canvas. If the host registered
+    /// [`FlowCanvas::set_outbound`](crate::canvas::FlowCanvas::set_outbound) or
+    /// [`FlowCanvasBuilder::outbound`](crate::canvas::FlowCanvasBuilder::outbound), the same
+    /// `event` is passed there first (synchronous, read-only).
     pub fn emit(&mut self, event: FlowEvent) {
         (self.emit)(event);
         self.notify();

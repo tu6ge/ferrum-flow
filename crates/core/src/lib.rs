@@ -17,8 +17,8 @@ mod viewport;
 #[allow(deprecated)]
 pub use canvas::port_screen_position;
 pub use canvas::{
-    Command, CommandContext, CompositeCommand, FlowCanvas, HistoryProvider, Interaction,
-    InteractionResult, InteractionState, LocalHistory, NodeRenderer, RendererRegistry,
+    Command, CommandContext, CompositeCommand, FlowCanvas, FlowCanvasOutbound, HistoryProvider,
+    Interaction, InteractionResult, InteractionState, LocalHistory, NodeRenderer, RendererRegistry,
     default_node_caption,
 };
 pub use edge::*;
