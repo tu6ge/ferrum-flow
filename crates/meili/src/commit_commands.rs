@@ -103,10 +103,7 @@ pub struct NodeTypeSelectConfirmCommand {
 
 impl NodeTypeSelectConfirmCommand {
     pub fn new(digit: u8) -> Self {
-        Self {
-            digit,
-            inner: None,
-        }
+        Self { digit, inner: None }
     }
 }
 
