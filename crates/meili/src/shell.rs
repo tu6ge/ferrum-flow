@@ -4,7 +4,7 @@
 //! - [`gpui_component::input::Input`] plus **Select** for “Add node” from the context menu: pick type and title
 //!   (see [`crate::add_node_dialog`] and [`crate::plugins::MeiliAddNodePlugin`]).
 //!
-//! User actions forward custom events through [`ferrum_flow::FlowCanvas::handle_event`]; plugins update the graph.
+//! User actions call [`ferrum_flow::FlowCanvas::dispatch_command`] with Meili shell commands so history and sync stay consistent.
 
 use ferrum_flow::FlowCanvas;
 use gpui::prelude::FluentBuilder as _;
@@ -19,7 +19,7 @@ use gpui_component::{Root, Sizable as _, h_flex, v_flex};
 
 use crate::add_node_dialog;
 use crate::pick_state;
-use crate::plugins::pick_link_event::{AddNodeConfirm, NodeTypeSelectConfirm};
+use crate::commit_commands::{AddNodeConfirmCommand, NodeTypeSelectConfirmCommand};
 
 #[derive(Clone)]
 struct NodePickItem {
@@ -103,13 +103,8 @@ fn dispatch_add_node_confirmed<C: gpui::AppContext>(
     let label_confirmed: SharedString = t.to_string().into();
     let (world_x, world_y) = crate::add_node_dialog::take_pending_world().unwrap_or((240.0, 200.0));
     canvas.update(cx, |flow, cx| {
-        flow.handle_event(
-            ferrum_flow::FlowEvent::custom(AddNodeConfirm {
-                label: label_confirmed,
-                world_x,
-                world_y,
-                kind_digit,
-            }),
+        flow.dispatch_command(
+            AddNodeConfirmCommand::new(label_confirmed, world_x, world_y, kind_digit),
             cx,
         );
     });
@@ -178,10 +173,7 @@ impl MeiliShell {
             move |_shell, _, event: &SelectEvent<SearchableVec<NodePickItem>>, cx| {
                 if let SelectEvent::Confirm(Some(digit)) = event {
                     canvas_for_confirm.update(cx, |flow, cx| {
-                        flow.handle_event(
-                            ferrum_flow::FlowEvent::custom(NodeTypeSelectConfirm { digit: *digit }),
-                            cx,
-                        );
+                        flow.dispatch_command(NodeTypeSelectConfirmCommand::new(*digit), cx);
                     });
                 }
             },

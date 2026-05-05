@@ -7,8 +7,8 @@
 //!    emits [`PickNodeTypeForPendingLink`](super::pick_link_event::PickNodeTypeForPendingLink); this plugin stores it
 //!    in [`crate::pick_state`] and notifies the canvas.
 //! 3. [`crate::shell::MeiliShell`] sees `pick_state` and renders the **gpui-component**
-//!    [`Select`](gpui_component::select::Select); after the user picks, the Shell calls [`ferrum_flow::FlowCanvas::handle_event`]
-//!    with [`NodeTypeSelectConfirm`](super::pick_link_event::NodeTypeSelectConfirm), and this plugin runs `commit_choice`.
+//!    [`Select`](gpui_component::select::Select); after the user picks, the Shell calls [`ferrum_flow::FlowCanvas::dispatch_command`]
+//!    with [`NodeTypeSelectConfirmCommand`](crate::commit_commands::NodeTypeSelectConfirmCommand).
 //!
 //! ## Why `Select` is not in the plugin
 //!
@@ -21,12 +21,10 @@
 //! - **Esc** still cancels (handled on canvas focus by this plugin).
 
 use crate::pick_state;
-use crate::plugins::node_kind_preset::{NodeKindPreset, preset_for_digit};
-use crate::plugins::pick_link_event::{NodeTypeSelectConfirm, PickNodeTypeForPendingLink};
+use crate::plugins::pick_link_event::PickNodeTypeForPendingLink;
 use ferrum_flow::{
-    CreateEdge, CreateNode, CreatePort, EventResult, FlowEvent, InputEvent, NodeBuilder, Plugin,
-    PluginContext, PortKind, PortPosition, RenderContext, RenderLayer, edge_bezier,
-    filled_disc_path,
+    EventResult, FlowEvent, InputEvent, Plugin, PluginContext, PortPosition, RenderContext,
+    RenderLayer, edge_bezier, filled_disc_path,
 };
 use gpui::{Element as _, ParentElement as _, Styled, canvas, div, px, rgb};
 
@@ -45,65 +43,6 @@ impl NodeTypePickerPlugin {
             PortPosition::Bottom => PortPosition::Top,
         }
     }
-
-    fn with_opposite_port(kind: PortKind, preset: NodeKindPreset, b: NodeBuilder) -> NodeBuilder {
-        match kind {
-            PortKind::Output => match preset {
-                NodeKindPreset::Tool => b.input_at(PortPosition::Top),
-                _ => b.input(),
-            },
-            PortKind::Input => match preset {
-                NodeKindPreset::Tool => b.output_at(PortPosition::Bottom),
-                _ => b.output(),
-            },
-        }
-    }
-
-    fn commit_choice(ctx: &mut PluginContext, choice: NodeKindPreset) {
-        let Some(p) = pick_state::pending_take() else {
-            return;
-        };
-        let Some(source) = ctx.graph.get_port(&p.source_port).cloned() else {
-            return;
-        };
-
-        let x: f32 = p.end_world.x.into();
-        let y: f32 = p.end_world.y.into();
-
-        let (node_type, w, h, data) = choice.describe();
-
-        let mut builder = ctx.create_node(node_type);
-        builder = builder
-            .position(x, y)
-            .size(w, h)
-            .data(data)
-            .execute_type(node_type);
-        builder = Self::with_opposite_port(source.kind(), choice, builder);
-
-        let (new_node, new_ports, _) = builder.build_raw();
-
-        let edge = match source.kind() {
-            PortKind::Output => {
-                let Some(in_port) = new_node.inputs().first().copied() else {
-                    return;
-                };
-                ctx.new_edge().source(p.source_port).target(in_port)
-            }
-            PortKind::Input => {
-                let Some(out_port) = new_node.outputs().first().copied() else {
-                    return;
-                };
-                ctx.new_edge().source(out_port).target(p.source_port)
-            }
-        };
-
-        ctx.execute_command(CreateNode::new(new_node));
-        for port in new_ports {
-            ctx.execute_command(CreatePort::new(port));
-        }
-        ctx.execute_command(CreateEdge::new(edge));
-        ctx.notify();
-    }
 }
 
 impl Plugin for NodeTypePickerPlugin {
@@ -117,13 +56,6 @@ impl Plugin for NodeTypePickerPlugin {
         if let Some(p) = event.as_custom::<PickNodeTypeForPendingLink>() {
             pick_state::pending_set(Some(*p));
             ctx.notify();
-            return EventResult::Stop;
-        }
-
-        if let Some(c) = event.as_custom::<NodeTypeSelectConfirm>() {
-            if let Some(preset) = preset_for_digit(c.digit) {
-                Self::commit_choice(ctx, preset);
-            }
             return EventResult::Stop;
         }
 

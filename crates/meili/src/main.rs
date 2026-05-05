@@ -6,6 +6,7 @@
 //! Core `PortInteractionPlugin` is not registered so this works without changing `ferrum-flow`.
 
 mod add_node_dialog;
+mod commit_commands;
 mod demo_graph;
 mod pick_state;
 mod plugins;
