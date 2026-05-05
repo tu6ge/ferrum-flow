@@ -63,14 +63,14 @@ pub struct FlowCanvas {
 
     pub history: Box<dyn HistoryProvider>,
 
-    pub event_queue: Vec<FlowEvent>,
-    pub port_offset_cache: PortLayoutCache,
+    event_queue: Vec<FlowEvent>,
+    port_offset_cache: PortLayoutCache,
 
     /// Visual tokens for canvas chrome; plugins adjust via [`InitPluginContext::theme`](crate::plugin::InitPluginContext::theme).
-    pub theme: FlowTheme,
+    theme: FlowTheme,
 
     /// Type-erased map for cross-plugin data on this canvas instance.
-    pub shared_state: SharedState,
+    shared_state: SharedState,
     delayed_notify_tx: mpsc::UnboundedSender<()>,
 
     /// Optional host hook for every plugin [`PluginContext::emit`](crate::plugin::PluginContext::emit).
