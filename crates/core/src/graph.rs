@@ -306,6 +306,40 @@ impl Graph {
         true
     }
 
+    /// World-space axis-aligned bounds of **all** nodes: `(min_x, min_y, width, height)`, or `None` if there are no nodes.
+    pub fn nodes_world_aabb(&self) -> Option<(f32, f32, f32, f32)> {
+        let mut min_x = f32::MAX;
+        let mut min_y = f32::MAX;
+        let mut max_x = f32::MIN;
+        let mut max_y = f32::MIN;
+        let mut any = false;
+
+        for n in self.nodes.values() {
+            let (nx, ny) = n.position();
+            let size = *n.size_ref();
+            let x: f32 = nx.into();
+            let y: f32 = ny.into();
+            let w: f32 = size.width.into();
+            let h: f32 = size.height.into();
+            min_x = min_x.min(x);
+            min_y = min_y.min(y);
+            max_x = max_x.max(x + w);
+            max_y = max_y.max(y + h);
+            any = true;
+        }
+
+        if !any {
+            return None;
+        }
+
+        Some((
+            min_x,
+            min_y,
+            (max_x - min_x).max(1.0),
+            (max_y - min_y).max(1.0),
+        ))
+    }
+
     pub fn selection_bounds(&self) -> Option<Bounds<Pixels>> {
         let mut min_x = f32::MAX;
         let mut min_y = f32::MAX;

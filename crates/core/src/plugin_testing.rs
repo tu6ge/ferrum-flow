@@ -60,7 +60,6 @@ impl PluginTestHarness {
         &mut self,
         plugin: &mut dyn Plugin,
         gpui_ctx: &'a Context<'b, FlowCanvas>,
-        drawable_size: Size<Pixels>,
     ) {
         let mut ctx = InitPluginContext::new(
             &mut self.graph,
@@ -68,7 +67,6 @@ impl PluginTestHarness {
             &mut self.viewport,
             &mut self.renderers,
             gpui_ctx,
-            drawable_size,
             &mut self.theme,
             &mut self.shared_state,
         );
