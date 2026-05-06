@@ -1,7 +1,6 @@
 use crate::plugin::Plugin;
 use gpui::{
-    Bounds, Corners, Element as _, InteractiveElement as _, ParentElement, RenderImage, Size,
-    Styled, canvas, div, px,
+    Corners, Element as _, InteractiveElement as _, ParentElement, RenderImage, Styled, canvas, div,
 };
 use image::{Frame, RgbaImage};
 use smallvec::smallvec;
@@ -109,9 +108,13 @@ impl BackgroundPlugin {
         let offset = ctx.offset();
         let offset_x = f32::from(offset.x);
         let offset_y = f32::from(offset.y);
-        let bounds = ctx.window.bounds();
-        let width = f32::from(bounds.size.width) as u32;
-        let height = f32::from(bounds.size.height) as u32;
+        let Some(drawable) = ctx.window_bounds() else {
+            self.bitmap_key = None;
+            self.bitmap = None;
+            return;
+        };
+        let width = f32::from(drawable.size.width) as u32;
+        let height = f32::from(drawable.size.height) as u32;
 
         if grid <= 0.0 || width == 0 || height == 0 {
             return;
@@ -172,23 +175,11 @@ impl Plugin for BackgroundPlugin {
             );
         };
 
-        let bounds = ctx.window.bounds();
-        let width = f32::from(bounds.size.width);
-        let height = f32::from(bounds.size.height);
-
         let el = canvas(
             move |_, _, _| bitmap,
             move |bounds, bitmap, window, _cx| {
-                let _ = window.paint_image(
-                    Bounds {
-                        origin: bounds.origin,
-                        size: Size::new(px(width), px(height)),
-                    },
-                    Corners::default(),
-                    Arc::clone(&bitmap),
-                    0,
-                    false,
-                );
+                let _ =
+                    window.paint_image(bounds, Corners::default(), Arc::clone(&bitmap), 0, false);
             },
         )
         .absolute()
