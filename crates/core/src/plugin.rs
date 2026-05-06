@@ -2,7 +2,7 @@ use std::{any::Any, collections::HashMap, time::Duration};
 
 use gpui::{
     AnyElement, Bounds, Context, Div, ElementId, InteractiveElement as _, KeyDownEvent, KeyUpEvent,
-    MouseDownEvent, MouseMoveEvent, MouseUpEvent, Pixels, Point, ScrollWheelEvent, Size, Stateful,
+    MouseDownEvent, MouseMoveEvent, MouseUpEvent, Pixels, Point, ScrollWheelEvent, Stateful,
     Styled, Window, div, rgb,
 };
 
@@ -69,8 +69,6 @@ pub struct InitPluginContext<'a, 'b> {
     viewport: &'a mut Viewport,
     renderers: &'a mut RendererRegistry,
     pub gpui_ctx: &'a Context<'b, FlowCanvas>,
-    /// Drawable size from the `window` passed to [`FlowCanvas::builder`] (`Window::viewport_size` when `build()` runs).
-    pub drawable_size: Size<Pixels>,
     /// Canvas colors and strokes; mutate in [`Plugin::setup`](Plugin::setup) to customize chrome.
     pub theme: &'a mut FlowTheme,
     /// Plugin-local shared state on the [`FlowCanvas`](FlowCanvas).
@@ -86,7 +84,6 @@ impl<'a, 'b> InitPluginContext<'a, 'b> {
         viewport: &'a mut Viewport,
         renderers: &'a mut RendererRegistry,
         gpui_ctx: &'a Context<'b, FlowCanvas>,
-        drawable_size: Size<Pixels>,
         theme: &'a mut FlowTheme,
         shared_state: &'a mut SharedState,
     ) -> Self {
@@ -96,7 +93,6 @@ impl<'a, 'b> InitPluginContext<'a, 'b> {
             viewport,
             renderers,
             gpui_ctx,
-            drawable_size,
             theme,
             shared_state,
         }
@@ -698,6 +694,10 @@ impl<'a> PluginContext<'a> {
         self.port_offset_cache.get_offset(node_id, port_id)
     }
 
+    pub(crate) fn viewport_mut(&mut self) -> &mut Viewport {
+        self.viewport
+    }
+
     pub fn port_offset_cache_clear_all(&mut self) {
         self.port_offset_cache.clear_all();
     }
@@ -758,6 +758,10 @@ impl<'a> PluginContext<'a> {
 
 pub enum FlowEvent {
     Input(InputEvent),
+    /// GPUI layout has reported drawable bounds; [`FlowCanvas`](crate::FlowCanvas) has updated
+    /// [`crate::Viewport::window_bounds`]. Handle this for layout-dependent setup (e.g. initial fit-all).
+    /// Do not emit this from plugins; it is reserved for the canvas host after `on_children_prepainted`.
+    DrawableBoundsReady,
     Custom(Box<dyn std::any::Any + Send>),
 }
 

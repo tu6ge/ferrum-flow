@@ -167,12 +167,11 @@ impl FlowCanvas {
     pub fn builder<'a, 'b>(
         graph: Graph,
         ctx: &'a mut Context<'b, Self>,
-        window: &'a Window,
+        _: &'a Window,
     ) -> FlowCanvasBuilder<'a, 'b> {
         FlowCanvasBuilder {
             graph,
             ctx,
-            window,
             plugins: PluginRegistry::new(),
             sync_plugin: None,
             renderers: RendererRegistry::new(),
@@ -548,8 +547,10 @@ impl Render for FlowCanvas {
             let entity = entity.clone();
             move |children_bounds: Vec<Bounds<Pixels>>, _window: &mut Window, cx: &mut App| {
                 if let Some(b) = children_bounds.first().copied() {
-                    let _ = entity.update(cx, |canvas, _cx| {
+                    entity.update(cx, |canvas, cx| {
                         canvas.viewport.set_window_bounds(Some(b));
+                        canvas.handle_event(FlowEvent::DrawableBoundsReady, cx);
+                        canvas.process_event_queue(cx);
                     });
                 }
             }
@@ -598,7 +599,6 @@ impl Render for FlowCanvas {
 pub struct FlowCanvasBuilder<'a, 'b> {
     graph: Graph,
     ctx: &'a mut Context<'b, FlowCanvas>,
-    window: &'a Window,
 
     plugins: PluginRegistry,
     renderers: RendererRegistry,
@@ -704,7 +704,6 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
         }
 
         let focus_handle = self.ctx.focus_handle();
-        let drawable_size = self.window.viewport_size();
         let (delayed_notify_tx, _rx) = mpsc::unbounded::<()>();
 
         let mut canvas = FlowCanvas {
@@ -755,7 +754,6 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
                 &mut canvas.viewport,
                 &mut canvas.renderers,
                 self.ctx,
-                drawable_size,
                 &mut canvas.theme,
                 &mut canvas.shared_state,
             );
