@@ -484,8 +484,6 @@ impl FlowCanvas {
 
 impl Render for FlowCanvas {
     fn render(&mut self, window: &mut Window, this_cx: &mut Context<Self>) -> impl IntoElement {
-        self.viewport.sync_drawable_bounds(window);
-
         let entity = this_cx.entity();
 
         let graph = &mut self.graph;
@@ -546,6 +544,30 @@ impl Render for FlowCanvas {
             }
         }
 
+        let sync_canvas_bounds = {
+            let entity = entity.clone();
+            move |children_bounds: Vec<Bounds<Pixels>>, _window: &mut Window, cx: &mut App| {
+                if let Some(b) = children_bounds.first().copied() {
+                    let _ = entity.update(cx, |canvas, _cx| {
+                        canvas.viewport.set_window_bounds(Some(b));
+                    });
+                }
+            }
+        };
+
+        let layers_root = div().size_full().children(RenderLayer::ALL.iter().map(|layer| {
+            div()
+                .id(ElementId::Integer(layer.index() as u64))
+                .absolute()
+                .size_full()
+                .children(layers[layer.index()].drain(..))
+        }));
+
+        let measured_stack = div()
+            .size_full()
+            .on_children_prepainted(sync_canvas_bounds)
+            .child(layers_root);
+
         div()
             .id("ferrum_flow_canvas")
             .size_full()
@@ -567,13 +589,7 @@ impl Render for FlowCanvas {
                 window.listener_for(&entity, Self::on_mouse_up),
             )
             .on_scroll_wheel(window.listener_for(&entity, Self::on_scroll_wheel))
-            .children(RenderLayer::ALL.iter().map(|layer| {
-                div()
-                    .id(ElementId::Integer(layer.index() as u64))
-                    .absolute()
-                    .size_full()
-                    .children(layers[layer.index()].drain(..))
-            }))
+            .child(measured_stack)
     }
 }
 

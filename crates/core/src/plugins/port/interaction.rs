@@ -63,6 +63,7 @@ impl PortInteractionPlugin {
         end_world: Point<Pixels>,
         screen: Point<Pixels>,
     ) -> bool {
+        let screen = ctx.window_pointer_to_canvas_local(screen);
         let c = ctx.world_to_screen(end_world);
         let dx: f32 = (screen.x - c.x).into();
         let dy: f32 = (screen.y - c.y).into();

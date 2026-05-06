@@ -163,6 +163,7 @@ fn edge_geometry2(edge: &Edge, ctx: &RenderContext) -> Option<EdgeGeometry> {
 }
 
 fn hit_test_get_edge(mouse: Point<Pixels>, ctx: &PluginContext) -> Option<EdgeId> {
+    let mouse = ctx.window_pointer_to_canvas_local(mouse);
     let visible_nodes: HashSet<_> = ctx
         .graph
         .nodes()

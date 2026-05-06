@@ -251,8 +251,17 @@ impl<'a, 'b> InitPluginContext<'a, 'b> {
         self.viewport.world_to_screen(p)
     }
 
+    /// [`Viewport::screen_to_world`]: `p` is GPUI **window** space.
     pub fn screen_to_world(&self, p: Point<Pixels>) -> Point<Pixels> {
         self.viewport.screen_to_world(p)
+    }
+
+    pub fn window_pointer_to_canvas_local(&self, p: Point<Pixels>) -> Point<Pixels> {
+        self.viewport.window_to_canvas_local(p)
+    }
+
+    pub fn canvas_local_to_world(&self, p: Point<Pixels>) -> Point<Pixels> {
+        self.viewport.canvas_local_to_world(p)
     }
 
     pub fn edge_control_point(
@@ -653,8 +662,17 @@ impl<'a> PluginContext<'a> {
         self.viewport.world_to_screen(p)
     }
 
+    /// [`Viewport::screen_to_world`]: `p` is GPUI **window** space.
     pub fn screen_to_world(&self, p: Point<Pixels>) -> Point<Pixels> {
         self.viewport.screen_to_world(p)
+    }
+
+    pub fn window_pointer_to_canvas_local(&self, p: Point<Pixels>) -> Point<Pixels> {
+        self.viewport.window_to_canvas_local(p)
+    }
+
+    pub fn canvas_local_to_world(&self, p: Point<Pixels>) -> Point<Pixels> {
+        self.viewport.canvas_local_to_world(p)
     }
 
     pub fn edge_control_point(
@@ -929,8 +947,17 @@ impl<'a> RenderContext<'a> {
         }
     }
 
+    /// [`Viewport::screen_to_world`]: `p` is GPUI **window** space.
     pub fn screen_to_world(&self, p: Point<Pixels>) -> Point<Pixels> {
         self.viewport.screen_to_world(p)
+    }
+
+    pub fn window_pointer_to_canvas_local(&self, p: Point<Pixels>) -> Point<Pixels> {
+        self.viewport.window_to_canvas_local(p)
+    }
+
+    pub fn canvas_local_to_world(&self, p: Point<Pixels>) -> Point<Pixels> {
+        self.viewport.canvas_local_to_world(p)
     }
 
     pub fn edge_control_point(

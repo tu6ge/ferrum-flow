@@ -82,6 +82,14 @@ impl<'a> SyncPluginContext<'a> {
         self.viewport.screen_to_world(screen)
     }
 
+    pub fn window_pointer_to_canvas_local(&self, p: Point<Pixels>) -> Point<Pixels> {
+        self.viewport.window_to_canvas_local(p)
+    }
+
+    pub fn canvas_local_to_world(&self, p: Point<Pixels>) -> Point<Pixels> {
+        self.viewport.canvas_local_to_world(p)
+    }
+
     pub fn world_to_screen(&self, world: Point<Pixels>) -> Point<Pixels> {
         self.viewport.world_to_screen(world)
     }
