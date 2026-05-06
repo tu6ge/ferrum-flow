@@ -16,7 +16,7 @@ use crate::{
 };
 
 mod sync;
-mod utils;
+pub(crate) mod utils;
 
 pub use sync::{SyncPlugin, SyncPluginContext};
 

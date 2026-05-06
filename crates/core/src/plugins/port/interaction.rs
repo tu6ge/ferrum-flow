@@ -5,7 +5,7 @@ use gpui::{Bounds, Element, MouseButton, Pixels, Point, canvas, px, rgb};
 use crate::{
     DefaultEdgeValidator, EdgeValidator, Graph, PortId, PortKind, PortPosition, ToastMessage,
     canvas::Interaction,
-    plugin::{FlowEvent, InputEvent, Plugin, RenderContext},
+    plugin::{FlowEvent, InputEvent, Plugin, RenderContext, utils::canvas_paint_point},
     plugins::port::{edge_bezier, filled_disc_path, port_screen_big_bounds, port_screen_bounds},
 };
 
@@ -128,6 +128,7 @@ impl PortInteractionPlugin {
     #[allow(clippy::too_many_arguments)]
     fn paint_wire_and_dot(
         win: &mut gpui::Window,
+        canvas_bounds: Bounds<Pixels>,
         start: Point<Pixels>,
         end: Point<Pixels>,
         start_position: PortPosition,
@@ -136,6 +137,8 @@ impl PortInteractionPlugin {
         line_rgb: u32,
         dot_rgb: u32,
     ) {
+        let start = canvas_paint_point(canvas_bounds, start);
+        let end = canvas_paint_point(canvas_bounds, end);
         if let Ok(path) = edge_bezier(start, start_position, target_position, end, viewport) {
             win.paint_path(path, rgb(line_rgb));
         }
@@ -247,8 +250,8 @@ impl Plugin for PortInteractionPlugin {
         Some(
             canvas(
                 move |_, _, _| (start_position, target_position, viewport, line_rgb, dot_rgb),
-                move |_, (sp, tp, vp, lr, dr), win, _| {
-                    Self::paint_wire_and_dot(win, start, end, sp, tp, &vp, lr, dr);
+                move |bounds, (sp, tp, vp, lr, dr), win, _| {
+                    Self::paint_wire_and_dot(win, bounds, start, end, sp, tp, &vp, lr, dr);
                 },
             )
             .into_any(),
@@ -380,7 +383,9 @@ impl Interaction for PortConnecting {
     }
 
     fn render(&self, ctx: &mut RenderContext) -> Option<gpui::AnyElement> {
-        let mouse = self.mouse?;
+        let mouse = self
+            .mouse
+            .map(|p| ctx.viewport().window_to_canvas_local(p))?;
         let start = ctx.port_screen_center_by_port_id(self.port_id)?;
         let position = self.position;
         let target_position = self.target_position;
@@ -422,9 +427,10 @@ impl Interaction for PortConnecting {
                         target_highlight,
                     )
                 },
-                move |_, (position, target_position, viewport, lr, dr, th), win, _| {
+                move |bounds, (position, target_position, viewport, lr, dr, th), win, _| {
                     PortInteractionPlugin::paint_wire_and_dot(
                         win,
+                        bounds,
                         start,
                         mouse,
                         position,
@@ -433,10 +439,11 @@ impl Interaction for PortConnecting {
                         lr,
                         dr,
                     );
-                    if let Some((center, radius)) = th
-                        && let Ok(dot) = filled_disc_path(center, radius)
-                    {
-                        win.paint_path(dot, rgb(lr));
+                    if let Some((center, radius)) = th {
+                        let center = canvas_paint_point(bounds, center);
+                        if let Ok(dot) = filled_disc_path(center, radius) {
+                            win.paint_path(dot, rgb(lr));
+                        }
                     }
                 },
             )

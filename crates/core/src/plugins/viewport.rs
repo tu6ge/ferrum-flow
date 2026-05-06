@@ -55,10 +55,7 @@ impl Plugin for ViewportPlugin {
 
             let after = ctx.world_to_screen(before);
 
-            ctx.translate_offset(
-                cursor_local.x - after.x,
-                cursor_local.y - after.y,
-            );
+            ctx.translate_offset(cursor_local.x - after.x, cursor_local.y - after.y);
             ctx.notify();
         }
         EventResult::Continue
