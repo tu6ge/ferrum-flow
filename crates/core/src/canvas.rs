@@ -574,6 +574,7 @@ impl Render for FlowCanvas {
         div()
             .id("ferrum_flow_canvas")
             .size_full()
+            .overflow_hidden()
             .track_focus(&self.focus_handle)
             .on_key_down(window.listener_for(&entity, Self::on_key_down))
             .on_key_up(window.listener_for(&entity, Self::on_key_up))
