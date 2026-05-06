@@ -555,13 +555,15 @@ impl Render for FlowCanvas {
             }
         };
 
-        let layers_root = div().size_full().children(RenderLayer::ALL.iter().map(|layer| {
-            div()
-                .id(ElementId::Integer(layer.index() as u64))
-                .absolute()
-                .size_full()
-                .children(layers[layer.index()].drain(..))
-        }));
+        let layers_root = div()
+            .size_full()
+            .children(RenderLayer::ALL.iter().map(|layer| {
+                div()
+                    .id(ElementId::Integer(layer.index() as u64))
+                    .absolute()
+                    .size_full()
+                    .children(layers[layer.index()].drain(..))
+            }));
 
         let measured_stack = div()
             .size_full()

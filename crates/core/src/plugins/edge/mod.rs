@@ -4,7 +4,7 @@ use gpui::{Bounds, Element, MouseButton, PathBuilder, Pixels, Point, canvas, px,
 
 use crate::{
     Edge, EdgeId, RenderContext,
-    plugin::{FlowEvent, Plugin, PluginContext},
+    plugin::{FlowEvent, Plugin, PluginContext, utils::canvas_paint_point},
     plugins::edge::command::ClearEdgeCommand,
 };
 
@@ -95,14 +95,18 @@ impl Plugin for EdgePlugin {
         Some(
             canvas(
                 move |_, _, _| (edges, selected_edges, stroke, stroke_sel),
-                move |_, (edges, selected_edges, stroke, stroke_sel), win, _| {
+                move |bounds, (edges, selected_edges, stroke, stroke_sel), win, _| {
                     for (id, geometry) in edges.iter() {
-                        let Some(EdgeGeometry { start, c1, c2, end }) = geometry else {
-                            return;
+                        let Some(EdgeGeometry { start, c1, c2, end }) = geometry.as_ref() else {
+                            continue;
                         };
+                        let start = canvas_paint_point(bounds, *start);
+                        let c1 = canvas_paint_point(bounds, *c1);
+                        let c2 = canvas_paint_point(bounds, *c2);
+                        let end = canvas_paint_point(bounds, *end);
                         let mut line = PathBuilder::stroke(px(1.0));
-                        line.move_to(*start);
-                        line.cubic_bezier_to(*end, *c1, *c2);
+                        line.move_to(start);
+                        line.cubic_bezier_to(end, c1, c2);
 
                         let selected = selected_edges.iter().any(|i| *i == *id);
 

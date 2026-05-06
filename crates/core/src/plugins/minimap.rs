@@ -9,6 +9,7 @@ use crate::{
     canvas::{Command, CommandContext},
     plugin::{
         EventResult, FlowEvent, InputEvent, Plugin, PluginContext, RenderContext, RenderLayer,
+        utils::canvas_paint_point,
     },
 };
 
@@ -230,8 +231,7 @@ impl Plugin for MinimapPlugin {
             if ev.button == MouseButton::Right {
                 return EventResult::Stop;
             } else if ev.button == MouseButton::Left {
-                let world = layout
-                    .screen_to_world(ctx.window_pointer_to_canvas_local(ev.position));
+                let world = layout.screen_to_world(ctx.window_pointer_to_canvas_local(ev.position));
                 center_viewport_on_world(ctx, world);
                 ctx.notify();
                 return EventResult::Stop;
@@ -304,7 +304,10 @@ impl Plugin for MinimapPlugin {
         Some(
             canvas(
                 move |_, _, _| (),
-                move |_, _, win, _| {
+                move |bounds, _, win, _| {
+                    let to_win = |p: Point<Pixels>| canvas_paint_point(bounds, p);
+                    let inner = Bounds::new(to_win(inner.origin), inner.size);
+
                     // Inner background
                     if let Ok(p) = rect_fill_path(inner) {
                         win.paint_path(p, rgb(minimap_background));
@@ -315,8 +318,8 @@ impl Plugin for MinimapPlugin {
 
                     // Edges (straight segments between node centers)
                     for (sx, sy, tx, ty) in edges {
-                        let a = world_to_inner_pt(sx, sy, &layout);
-                        let b = world_to_inner_pt(tx, ty, &layout);
+                        let a = to_win(world_to_inner_pt(sx, sy, &layout));
+                        let b = to_win(world_to_inner_pt(tx, ty, &layout));
                         let mut line = PathBuilder::stroke(px(1.0));
                         line.move_to(a);
                         line.line_to(b);
@@ -326,8 +329,8 @@ impl Plugin for MinimapPlugin {
                     }
 
                     for (x, y, nw, nh) in nodes {
-                        let p0 = world_to_inner_pt(x, y, &layout);
-                        let p1 = world_to_inner_pt(x + nw, y + nh, &layout);
+                        let p0 = to_win(world_to_inner_pt(x, y, &layout));
+                        let p1 = to_win(world_to_inner_pt(x + nw, y + nh, &layout));
                         let min_x = f32::min(f32::from(p0.x), f32::from(p1.x));
                         let max_x = f32::max(f32::from(p0.x), f32::from(p1.x));
                         let min_y = f32::min(f32::from(p0.y), f32::from(p1.y));
@@ -349,7 +352,7 @@ impl Plugin for MinimapPlugin {
                     let max_x = f32::max(f32::from(v_tl.x), f32::from(v_br.x));
                     let min_y = f32::min(f32::from(v_tl.y), f32::from(v_br.y));
                     let max_y = f32::max(f32::from(v_tl.y), f32::from(v_br.y));
-                    let vo = Point::new(px(min_x), px(min_y));
+                    let vo = to_win(Point::new(px(min_x), px(min_y)));
                     let vs = Size::new(px((max_x - min_x).max(2.0)), px((max_y - min_y).max(2.0)));
                     if let Ok(p) = rect_stroke_bounds(vo, vs, px(1.5)) {
                         win.paint_path(p, rgb(minimap_viewport_stroke));
