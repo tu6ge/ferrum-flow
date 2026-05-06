@@ -408,8 +408,9 @@ impl Plugin for ContextMenuPlugin {
                 if let Some(open) = self.open.take() {
                     let menu_world = open.anchor_world;
                     let b = Self::menu_bounds(open.anchor, &open.actions);
-                    if b.contains(&ev.position) {
-                        let dy: f32 = (ev.position.y - open.anchor.y).into();
+                    let local = ctx.window_pointer_to_canvas_local(ev.position);
+                    if b.contains(&local) {
+                        let dy: f32 = (local.y - open.anchor.y).into();
                         let inner_y = dy - MENU_PAD;
                         if let Some(row) = Self::row_at_dy(&open.actions, inner_y) {
                             let a = &open.actions[row];
@@ -442,7 +443,7 @@ impl Plugin for ContextMenuPlugin {
                     self.canvas_actions(ctx)
                 };
                 self.open = Some(OpenMenu {
-                    anchor: ev.position,
+                    anchor: ctx.window_pointer_to_canvas_local(ev.position),
                     anchor_world: world,
                     actions,
                 });

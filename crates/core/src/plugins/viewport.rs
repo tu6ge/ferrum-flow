@@ -40,6 +40,7 @@ impl Plugin for ViewportPlugin {
             return EventResult::Stop;
         } else if let FlowEvent::Input(InputEvent::Wheel(ev)) = event {
             let cursor = ev.position;
+            let cursor_local = ctx.window_pointer_to_canvas_local(cursor);
 
             let before = ctx.screen_to_world(cursor);
 
@@ -54,7 +55,10 @@ impl Plugin for ViewportPlugin {
 
             let after = ctx.world_to_screen(before);
 
-            ctx.translate_offset(cursor.x - after.x, cursor.y - after.y);
+            ctx.translate_offset(
+                cursor_local.x - after.x,
+                cursor_local.y - after.y,
+            );
             ctx.notify();
         }
         EventResult::Continue

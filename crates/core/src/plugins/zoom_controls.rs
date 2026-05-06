@@ -133,7 +133,7 @@ fn apply_zoom(ctx: &mut PluginContext, anchor_screen: Point<Pixels>, to_zoom: f3
     if (from_zoom - to_zoom).abs() < 1e-5 {
         return;
     }
-    let anchor_world = ctx.screen_to_world(anchor_screen);
+    let anchor_world = ctx.canvas_local_to_world(anchor_screen);
     let wx: f32 = anchor_world.x.into();
     let wy: f32 = anchor_world.y.into();
     let ax: f32 = anchor_screen.x.into();
@@ -194,7 +194,7 @@ impl Plugin for ZoomControlsPlugin {
         if let FlowEvent::Input(InputEvent::MouseDown(ev)) = event
             && ev.button == MouseButton::Left
             && let Some(ref layout) = self.last_layout
-            && let Some(hit) = layout.hit(ev.position)
+            && let Some(hit) = layout.hit(ctx.window_pointer_to_canvas_local(ev.position))
         {
             match hit {
                 Hit::ZoomIn => zoom_by_factor(ctx, ZOOM_STEP),

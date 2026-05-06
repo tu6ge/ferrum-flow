@@ -89,10 +89,10 @@ fn visible_world_aabb(viewport: &Viewport, win: &Bounds<Pixels>) -> (f32, f32, f
     let w: f32 = win.size.width.into();
     let h: f32 = win.size.height.into();
     let corners = [
-        viewport.screen_to_world(Point::new(px(0.0), px(0.0))),
-        viewport.screen_to_world(Point::new(px(w), px(0.0))),
-        viewport.screen_to_world(Point::new(px(w), px(h))),
-        viewport.screen_to_world(Point::new(px(0.0), px(h))),
+        viewport.canvas_local_to_world(Point::new(px(0.0), px(0.0))),
+        viewport.canvas_local_to_world(Point::new(px(w), px(0.0))),
+        viewport.canvas_local_to_world(Point::new(px(w), px(h))),
+        viewport.canvas_local_to_world(Point::new(px(0.0), px(h))),
     ];
     let mut min_x = f32::MAX;
     let mut min_y = f32::MAX;
@@ -225,12 +225,13 @@ impl Plugin for MinimapPlugin {
     fn on_event(&mut self, event: &FlowEvent, ctx: &mut PluginContext) -> EventResult {
         if let FlowEvent::Input(InputEvent::MouseDown(ev)) = event
             && let Some(ref layout) = self.last_layout
-            && layout.contains_chrome(ev.position)
+            && layout.contains_chrome(ctx.window_pointer_to_canvas_local(ev.position))
         {
             if ev.button == MouseButton::Right {
                 return EventResult::Stop;
             } else if ev.button == MouseButton::Left {
-                let world = layout.screen_to_world(ev.position);
+                let world = layout
+                    .screen_to_world(ctx.window_pointer_to_canvas_local(ev.position));
                 center_viewport_on_world(ctx, world);
                 ctx.notify();
                 return EventResult::Stop;

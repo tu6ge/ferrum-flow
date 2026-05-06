@@ -1,4 +1,4 @@
-use gpui::{Bounds, Pixels, Point, Size, Window, px};
+use gpui::{Bounds, Pixels, Point, px};
 
 use crate::{Node, PortPosition};
 
@@ -10,6 +10,8 @@ pub(crate) struct ViewportVisibilityCacheKey {
     pub offset_x: f32,
     pub offset_y: f32,
     pub has_window: bool,
+    pub window_ox: f32,
+    pub window_oy: f32,
     pub window_w: f32,
     pub window_h: f32,
 }
@@ -30,24 +32,11 @@ impl Viewport {
         }
     }
 
-    /// Sets [`Self::window_bounds`] to the window’s drawable area (`Window::viewport_size`),
-    /// origin `(0, 0)`. Skips assignment when width/height are unchanged.
+    /// Full bounds of the flow canvas element in **window** coordinates: [`Bounds::origin`] is the
+    /// top-left of the drawable area, [`Bounds::size`] is its width and height.
     ///
-    /// Prefer this over `Window::bounds()` for hit-testing and overlay layout: the latter is in
-    /// global space and can be larger than the content viewport.
-    pub fn sync_drawable_bounds(&mut self, window: &Window) {
-        let vs = window.viewport_size();
-        let unchanged = self
-            .window_bounds
-            .is_some_and(|b| b.size.width == vs.width && b.size.height == vs.height);
-        if !unchanged {
-            self.window_bounds = Some(Bounds::new(
-                Point::new(px(0.0), px(0.0)),
-                Size::new(vs.width, vs.height),
-            ));
-        }
-    }
-
+    /// [`FlowCanvas`](crate::canvas::FlowCanvas) updates this each frame from layout. When unset,
+    /// [`Self::window_to_canvas_local`] leaves coordinates unchanged (legacy behaviour for tests).
     pub fn zoom(&self) -> f32 {
         self.zoom
     }
@@ -86,6 +75,23 @@ impl Viewport {
         self.window_bounds = bounds;
     }
 
+    /// Map a point from GPUI **window** space to **canvas-local** space (origin at the top-left of
+    /// the flow canvas element).
+    pub fn window_to_canvas_local(&self, p: Point<Pixels>) -> Point<Pixels> {
+        let Some(b) = self.window_bounds else {
+            return p;
+        };
+        Point::new(p.x - b.origin.x, p.y - b.origin.y)
+    }
+
+    /// Map a **canvas-local** screen point (same space as [`Self::world_to_screen`]) to world space.
+    pub fn canvas_local_to_world(&self, p: Point<Pixels>) -> Point<Pixels> {
+        Point::new(
+            self.screen_length_to_world(p.x - self.offset.x),
+            self.screen_length_to_world(p.y - self.offset.y),
+        )
+    }
+
     /// Convert a world-space scalar length to screen-space scalar length.
     pub fn world_scalar_to_screen(&self, value: f32) -> f32 {
         value * self.zoom
@@ -113,11 +119,9 @@ impl Viewport {
         )
     }
 
+    /// Convert a **window-space** pointer position (e.g. [`gpui::MouseDownEvent::position`]) to world space.
     pub fn screen_to_world(&self, p: Point<Pixels>) -> Point<Pixels> {
-        Point::new(
-            self.screen_length_to_world(p.x - self.offset.x),
-            self.screen_length_to_world(p.y - self.offset.y),
-        )
+        self.canvas_local_to_world(self.window_to_canvas_local(p))
     }
 
     /// Bezier control point for an edge tangent at a port direction.
@@ -163,6 +167,8 @@ impl Viewport {
                 offset_x: self.offset.x.into(),
                 offset_y: self.offset.y.into(),
                 has_window: true,
+                window_ox: b.origin.x.into(),
+                window_oy: b.origin.y.into(),
                 window_w: b.size.width.into(),
                 window_h: b.size.height.into(),
             },
@@ -171,6 +177,8 @@ impl Viewport {
                 offset_x: self.offset.x.into(),
                 offset_y: self.offset.y.into(),
                 has_window: false,
+                window_ox: 0.0,
+                window_oy: 0.0,
                 window_w: 0.0,
                 window_h: 0.0,
             },
