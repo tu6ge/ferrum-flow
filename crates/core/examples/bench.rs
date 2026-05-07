@@ -1,6 +1,5 @@
 //! open HUD display
 //!
-//!
 //! ```bash
 //! MTL_HUD_ENABLED=1 cargo run --example bench
 //! ```
