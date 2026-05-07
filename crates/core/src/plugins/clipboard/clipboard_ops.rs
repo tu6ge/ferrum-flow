@@ -170,3 +170,180 @@ fn paste_subgraph_with_anchor(
     }
     ctx.cache_port_offset_with_node(&new_node_ids);
 }
+
+#[cfg(test)]
+mod tests {
+    use gpui::{Point, px};
+    use serde_json::{Value, json};
+
+    use crate::plugin_testing::PluginTestHarness;
+
+    use super::{extract_subgraph, paste_subgraph_at_world};
+
+    fn node_for_compare(mut value: Value) -> Value {
+        let obj = value
+            .as_object_mut()
+            .expect("serialized node should be JSON object");
+        obj.remove("id");
+        obj.remove("inputs");
+        obj.remove("outputs");
+        value
+    }
+
+    fn port_for_compare(mut value: Value) -> Value {
+        let obj = value
+            .as_object_mut()
+            .expect("serialized port should be JSON object");
+        obj.remove("id");
+        obj.remove("node_id");
+        value
+    }
+
+    #[test]
+    fn paste_keeps_node_fields_except_ids_and_port_refs() {
+        let mut harness = PluginTestHarness::default();
+
+        let n1 = harness
+            .graph
+            .create_node("default")
+            .execute_type("exec-a")
+            .position(120.0, 80.0)
+            .size(210.0, 90.0)
+            .input()
+            .output()
+            .data(json!({"label":"A","tag":"node-a","nested":{"k":1}}))
+            .build()
+            .expect("node-a should be created");
+        let n2 = harness
+            .graph
+            .create_node("default")
+            .execute_type("exec-b")
+            .position(360.0, 220.0)
+            .size(260.0, 110.0)
+            .input()
+            .output()
+            .data(json!({"label":"B","tag":"node-b","nested":{"k":2}}))
+            .build()
+            .expect("node-b should be created");
+
+        harness.graph.add_selected_node(n1, false);
+        harness.graph.add_selected_node(n2, true);
+
+        let copied = extract_subgraph(&harness.graph).expect("copy should extract selected nodes");
+        let old_a = harness.graph.get_node(&n1).expect("original node-a exists");
+        let old_b = harness.graph.get_node(&n2).expect("original node-b exists");
+        let (x1, y1) = old_a.position();
+        let (x2, y2) = old_b.position();
+        let min_x = f32::from(x1).min(f32::from(x2));
+        let min_y = f32::from(y1).min(f32::from(y2));
+        let anchor = Point::new(px(min_x), px(min_y));
+
+        harness.with_plugin_context(|ctx| {
+            paste_subgraph_at_world(ctx, &copied, anchor);
+        });
+
+        let pasted_ids: Vec<_> = harness.graph.selected_node().iter().copied().collect();
+        assert_eq!(pasted_ids.len(), 2, "paste should select exactly two new nodes");
+
+        let mut pasted_a = None;
+        let mut pasted_b = None;
+        for id in pasted_ids {
+            let node = harness.graph.get_node(&id).expect("pasted node should exist");
+            match node.data_ref().get("tag").and_then(Value::as_str) {
+                Some("node-a") => pasted_a = Some(node.clone()),
+                Some("node-b") => pasted_b = Some(node.clone()),
+                _ => {}
+            }
+        }
+
+        let pasted_a = pasted_a.expect("pasted node-a should exist");
+        let pasted_b = pasted_b.expect("pasted node-b should exist");
+        let old_a = harness.graph.get_node(&n1).expect("original node-a exists");
+        let old_b = harness.graph.get_node(&n2).expect("original node-b exists");
+
+        assert_eq!(old_a.inputs().len(), pasted_a.inputs().len());
+        assert_eq!(old_a.outputs().len(), pasted_a.outputs().len());
+        assert_eq!(old_b.inputs().len(), pasted_b.inputs().len());
+        assert_eq!(old_b.outputs().len(), pasted_b.outputs().len());
+
+        for (old_pid, pasted_pid) in old_a.inputs().iter().zip(pasted_a.inputs().iter()) {
+            let old_port = harness
+                .graph
+                .get_port(old_pid)
+                .expect("old node-a input port should exist");
+            let pasted_port = harness
+                .graph
+                .get_port(pasted_pid)
+                .expect("pasted node-a input port should exist");
+            assert_eq!(
+                port_for_compare(serde_json::to_value(old_port).expect("serialize old node-a input")),
+                port_for_compare(
+                    serde_json::to_value(pasted_port).expect("serialize pasted node-a input")
+                ),
+                "node-a input port fields should remain consistent after copy/paste"
+            );
+        }
+        for (old_pid, pasted_pid) in old_a.outputs().iter().zip(pasted_a.outputs().iter()) {
+            let old_port = harness
+                .graph
+                .get_port(old_pid)
+                .expect("old node-a output port should exist");
+            let pasted_port = harness
+                .graph
+                .get_port(pasted_pid)
+                .expect("pasted node-a output port should exist");
+            assert_eq!(
+                port_for_compare(serde_json::to_value(old_port).expect("serialize old node-a output")),
+                port_for_compare(
+                    serde_json::to_value(pasted_port).expect("serialize pasted node-a output")
+                ),
+                "node-a output port fields should remain consistent after copy/paste"
+            );
+        }
+        for (old_pid, pasted_pid) in old_b.inputs().iter().zip(pasted_b.inputs().iter()) {
+            let old_port = harness
+                .graph
+                .get_port(old_pid)
+                .expect("old node-b input port should exist");
+            let pasted_port = harness
+                .graph
+                .get_port(pasted_pid)
+                .expect("pasted node-b input port should exist");
+            assert_eq!(
+                port_for_compare(serde_json::to_value(old_port).expect("serialize old node-b input")),
+                port_for_compare(
+                    serde_json::to_value(pasted_port).expect("serialize pasted node-b input")
+                ),
+                "node-b input port fields should remain consistent after copy/paste"
+            );
+        }
+        for (old_pid, pasted_pid) in old_b.outputs().iter().zip(pasted_b.outputs().iter()) {
+            let old_port = harness
+                .graph
+                .get_port(old_pid)
+                .expect("old node-b output port should exist");
+            let pasted_port = harness
+                .graph
+                .get_port(pasted_pid)
+                .expect("pasted node-b output port should exist");
+            assert_eq!(
+                port_for_compare(serde_json::to_value(old_port).expect("serialize old node-b output")),
+                port_for_compare(
+                    serde_json::to_value(pasted_port).expect("serialize pasted node-b output")
+                ),
+                "node-b output port fields should remain consistent after copy/paste"
+            );
+        }
+
+        assert_eq!(
+            node_for_compare(serde_json::to_value(old_a).expect("serialize old node-a")),
+            node_for_compare(serde_json::to_value(&pasted_a).expect("serialize pasted node-a")),
+            "node-a fields should remain consistent after copy/paste"
+        );
+        assert_eq!(
+            node_for_compare(serde_json::to_value(old_b).expect("serialize old node-b")),
+            node_for_compare(serde_json::to_value(&pasted_b).expect("serialize pasted node-b")),
+            "node-b fields should remain consistent after copy/paste"
+        );
+    }
+}

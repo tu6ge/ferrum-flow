@@ -101,6 +101,35 @@ impl PluginTestHarness {
         plugin.on_event(&event, &mut ctx)
     }
 
+    /// Runs custom logic with a fully-wired [`PluginContext`] (same wiring as `run_event`).
+    pub fn with_plugin_context(&mut self, f: impl FnOnce(&mut PluginContext<'_>)) {
+        let mut sync_plugin = None;
+        let emitted_events = &mut self.emitted_events;
+        let notify_count = &mut self.notify_count;
+        let mut emit = |e: FlowEvent| {
+            emitted_events.push(e);
+        };
+        let mut notify = || {
+            *notify_count += 1;
+        };
+        let mut schedule_after = |_delay: Duration| {};
+        let mut ctx = PluginContext::new(
+            &mut self.graph,
+            &mut self.port_offset_cache,
+            &mut self.viewport,
+            &mut self.interaction,
+            &mut self.renderers,
+            &mut sync_plugin,
+            &mut self.history,
+            &mut self.theme,
+            &mut self.shared_state,
+            &mut emit,
+            &mut notify,
+            &mut schedule_after,
+        );
+        f(&mut ctx);
+    }
+
     /// Runs `Plugin::render` once.
     ///
     /// Call this only in tests that already have a GPUI window.
