@@ -897,19 +897,13 @@ mod tests {
         let restored = read_node_from_map(&txn, &node_map, original.id());
 
         assert_eq!(restored.id(), original.id());
-        assert_eq!(restored.renderer_key(), original.renderer_key());
-        assert_eq!(restored.execute_type_ref(), original.execute_type_ref());
-        assert_eq!(restored.position().0, original.position().0);
-        assert_eq!(restored.position().1, original.position().1);
-        assert_eq!(restored.size_ref().width, original.size_ref().width);
-        assert_eq!(restored.size_ref().height, original.size_ref().height);
-        assert_eq!(restored.inputs(), original.inputs());
-        assert_eq!(restored.outputs(), original.outputs());
-        let restored_data = canonicalize_json(restored.data_ref());
-        let original_data = canonicalize_json(original.data_ref());
+        let restored_json =
+            canonicalize_json(&serde_json::to_value(&restored).expect("serialize restored node"));
+        let original_json =
+            canonicalize_json(&serde_json::to_value(&original).expect("serialize original node"));
         assert!(
-            json_semantically_equal(&restored_data, &original_data),
-            "semantic json mismatch:\nleft: {restored_data:?}\nright: {original_data:?}"
+            json_semantically_equal(&restored_json, &original_json),
+            "semantic json mismatch:\nleft: {restored_json:?}\nright: {original_json:?}"
         );
     }
 
@@ -940,13 +934,13 @@ mod tests {
 
         let restored = read_port_from_map(&txn, &port_map, original.id());
 
-        assert_eq!(restored.id(), original.id());
-        assert_eq!(restored.kind(), original.kind());
-        assert_eq!(restored.node_id(), original.node_id());
-        assert_eq!(restored.index(), original.index());
-        assert_eq!(restored.position(), original.position());
-        assert_eq!(restored.size_ref().width, original.size_ref().width);
-        assert_eq!(restored.size_ref().height, original.size_ref().height);
-        assert_eq!(restored.port_type_ref(), original.port_type_ref());
+        let restored_json =
+            canonicalize_json(&serde_json::to_value(&restored).expect("serialize restored port"));
+        let original_json =
+            canonicalize_json(&serde_json::to_value(&original).expect("serialize original port"));
+        assert!(
+            json_semantically_equal(&restored_json, &original_json),
+            "semantic json mismatch:\nleft: {restored_json:?}\nright: {original_json:?}"
+        );
     }
 }
