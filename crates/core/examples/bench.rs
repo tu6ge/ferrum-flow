@@ -1,3 +1,9 @@
+//! open HUD display
+//!
+//! ```bash
+//! MTL_HUD_ENABLED=1 cargo run --example bench
+//! ```
+
 use ferrum_flow::*;
 use gpui::{AppContext as _, Application, WindowOptions};
 use serde_json::json;
