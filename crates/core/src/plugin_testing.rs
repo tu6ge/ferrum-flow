@@ -10,7 +10,7 @@
 //! [`InitPluginContext`], [`PluginContext`] and [`RenderContext`] constructors are intentionally
 //! not public.
 
-use gpui::{AnyElement, Context, Pixels, Size, Window, px};
+use gpui::{AnyElement, Context, Window, px};
 use std::time::Duration;
 
 use crate::{
