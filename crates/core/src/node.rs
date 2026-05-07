@@ -212,6 +212,12 @@ impl Node {
     }
 
     #[allow(deprecated)]
+    pub fn clear_port_refs(&mut self) {
+        self.inputs.clear();
+        self.outputs.clear();
+    }
+
+    #[allow(deprecated)]
     pub fn point(&self) -> Point<Pixels> {
         Point::new(self.x, self.y)
     }
@@ -403,6 +409,16 @@ impl Port {
     #[allow(deprecated)]
     pub fn set_position(&mut self, position: PortPosition) {
         self.position = position;
+    }
+
+    #[allow(deprecated)]
+    pub fn set_id(&mut self, id: PortId) {
+        self.id = id;
+    }
+
+    #[allow(deprecated)]
+    pub fn set_node_id(&mut self, node_id: NodeId) {
+        self.node_id = node_id;
     }
 }
 

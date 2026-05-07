@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use gpui::{Pixels, Point, px};
 
-use crate::{CompositeCommand, Edge, Graph, Node, Port, plugin::PluginContext};
+use crate::{CompositeCommand, Edge, Graph, plugin::PluginContext};
 
 use super::copied_subgraph::CopiedSubgraph;
 use crate::plugins::{CreateEdge, CreateNode, CreatePort};
@@ -121,12 +121,11 @@ fn paste_subgraph_with_anchor(
         let (x, y) = old.position();
         let nx = ax + f32::from(x) - ox;
         let ny = ay + f32::from(y) - oy;
-        let mut node = Node::new(nx, ny);
-        node.set_renderer_key(old.renderer_key());
-        node.set_execute_type(old.execute_type_ref());
-        node.set_size_mut(*old.size_ref());
-        node.set_data(old.data_ref().clone());
+        // Clone-then-patch avoids missing newly added fields on Node.
+        let mut node = old.clone();
         node.set_id(new_id);
+        node.set_position(nx.into(), ny.into());
+        node.clear_port_refs();
 
         for pid in old.inputs() {
             node.push_input(port_map[pid]);
@@ -139,15 +138,10 @@ fn paste_subgraph_with_anchor(
     }
 
     for old in &sub.ports {
-        let port = Port::new(
-            port_map[&old.id()],
-            old.kind(),
-            old.index(),
-            node_map[&old.node_id()],
-            old.position(),
-            *old.size_ref(),
-            old.port_type_ref().clone(),
-        );
+        // Clone-then-patch avoids missing newly added fields on Port.
+        let mut port = old.clone();
+        port.set_id(port_map[&old.id()]);
+        port.set_node_id(node_map[&old.node_id()]);
         composite.push(CreatePort::new(port));
     }
 
@@ -243,12 +237,19 @@ mod tests {
         });
 
         let pasted_ids: Vec<_> = harness.graph.selected_node().iter().copied().collect();
-        assert_eq!(pasted_ids.len(), 2, "paste should select exactly two new nodes");
+        assert_eq!(
+            pasted_ids.len(),
+            2,
+            "paste should select exactly two new nodes"
+        );
 
         let mut pasted_a = None;
         let mut pasted_b = None;
         for id in pasted_ids {
-            let node = harness.graph.get_node(&id).expect("pasted node should exist");
+            let node = harness
+                .graph
+                .get_node(&id)
+                .expect("pasted node should exist");
             match node.data_ref().get("tag").and_then(Value::as_str) {
                 Some("node-a") => pasted_a = Some(node.clone()),
                 Some("node-b") => pasted_b = Some(node.clone()),
@@ -276,7 +277,9 @@ mod tests {
                 .get_port(pasted_pid)
                 .expect("pasted node-a input port should exist");
             assert_eq!(
-                port_for_compare(serde_json::to_value(old_port).expect("serialize old node-a input")),
+                port_for_compare(
+                    serde_json::to_value(old_port).expect("serialize old node-a input")
+                ),
                 port_for_compare(
                     serde_json::to_value(pasted_port).expect("serialize pasted node-a input")
                 ),
@@ -293,7 +296,9 @@ mod tests {
                 .get_port(pasted_pid)
                 .expect("pasted node-a output port should exist");
             assert_eq!(
-                port_for_compare(serde_json::to_value(old_port).expect("serialize old node-a output")),
+                port_for_compare(
+                    serde_json::to_value(old_port).expect("serialize old node-a output")
+                ),
                 port_for_compare(
                     serde_json::to_value(pasted_port).expect("serialize pasted node-a output")
                 ),
@@ -310,7 +315,9 @@ mod tests {
                 .get_port(pasted_pid)
                 .expect("pasted node-b input port should exist");
             assert_eq!(
-                port_for_compare(serde_json::to_value(old_port).expect("serialize old node-b input")),
+                port_for_compare(
+                    serde_json::to_value(old_port).expect("serialize old node-b input")
+                ),
                 port_for_compare(
                     serde_json::to_value(pasted_port).expect("serialize pasted node-b input")
                 ),
@@ -327,7 +334,9 @@ mod tests {
                 .get_port(pasted_pid)
                 .expect("pasted node-b output port should exist");
             assert_eq!(
-                port_for_compare(serde_json::to_value(old_port).expect("serialize old node-b output")),
+                port_for_compare(
+                    serde_json::to_value(old_port).expect("serialize old node-b output")
+                ),
                 port_for_compare(
                     serde_json::to_value(pasted_port).expect("serialize pasted node-b output")
                 ),
