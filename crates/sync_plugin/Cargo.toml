@@ -17,7 +17,7 @@ ferrum-flow = { workspace = true }
 tokio = { version = "1.50.0", features = [
   "rt-multi-thread",
 ], default-features = false }
-yrs = { version = "0.25.0", features = ["sync"] }
+yrs = { version = "0.26.0", features = ["sync"] }
 
 tokio-tungstenite = "0.21"
 futures = { workspace = true }

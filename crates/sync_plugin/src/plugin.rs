@@ -397,13 +397,15 @@ impl SyncPlugin for YrsSyncPlugin {
                 continue;
             };
             let screen = ctx.world_to_screen(Point::new(px(cursor.x), px(cursor.y)));
-            let color = cursor.color.unwrap_or_else(|| color_for_client(client_id));
+            let color = cursor
+                .color
+                .unwrap_or_else(|| color_for_client(client_id.get()));
             let name = cursor
                 .name
                 .as_deref()
                 .filter(|n| !n.trim().is_empty())
                 .map(str::to_owned)
-                .unwrap_or_else(|| format!("user-{}", client_id % 10_000));
+                .unwrap_or_else(|| format!("user-{}", client_id.get() % 10_000));
             out.push(
                 div()
                     .absolute()
