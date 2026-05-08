@@ -47,7 +47,7 @@ pub struct FlowTheme {
 
     /// Marquee / move-preview rectangle outline ([`gpui::rgb`]).
     pub selection_rect_border: u32,
-    /// Marquee / move-preview fill ([`gpui::rgba`], e.g. `0x78A0FF4c`).
+    /// Marquee / move-preview fill ([`gpui::rgba`], e.g. `0x78A0FF4C`).
     pub selection_rect_fill_rgba: u32,
 
     /// Alignment snap guide lines ([`crate::plugins::SnapGuidesPlugin`]).
@@ -103,7 +103,6 @@ pub struct FlowTheme {
 }
 
 impl Default for FlowTheme {
-    #[allow(clippy::mixed_case_hex_literals)]
     fn default() -> Self {
         Self {
             node_card_background: 0x00FFFFFF,
@@ -114,29 +113,29 @@ impl Default for FlowTheme {
             node_caption_text: 0x001A192B,
             undefined_node_caption_text: 0x005F6368,
             default_port_fill: 0x001A192B,
-            background: 0x00f8f9fb,
+            background: 0x00F8F9FB,
             background_grid_dot: 0x009F9FA7,
-            edge_stroke: 0x00b1b1b8,
+            edge_stroke: 0x00B1B1B8,
             edge_stroke_selected: 0x00FF7800,
             selection_rect_border: 0x0078A0FF,
-            selection_rect_fill_rgba: 0x78A0FF4c,
+            selection_rect_fill_rgba: 0x78A0FF4C,
             snap_guide_stroke: 0x0078A0FF,
-            port_preview_line: 0x00b1b1b8,
-            port_preview_dot: 0x007189a3,
-            minimap_background: 0x00f8f9fb,
-            minimap_border: 0x00b1b1b8,
-            minimap_edge: 0x00b1b1b8,
+            port_preview_line: 0x00B1B1B8,
+            port_preview_dot: 0x007189A3,
+            minimap_background: 0x00F8F9FB,
+            minimap_border: 0x00B1B1B8,
+            minimap_edge: 0x00B1B1B8,
             minimap_node_fill: 0x00FFFFFF,
-            minimap_node_stroke: 0x001a192b,
-            minimap_viewport_stroke: 0x0078a0ff,
-            zoom_controls_background: 0x00fcfcfc,
-            zoom_controls_border: 0x00c8c8d0,
-            zoom_controls_text: 0x001a192b,
-            context_menu_background: 0x00fcfcfc,
-            context_menu_border: 0x00c8c8d0,
-            context_menu_text: 0x001a192b,
-            context_menu_shortcut_text: 0x007a7a88,
-            context_menu_separator: 0x00e0e0e8,
+            minimap_node_stroke: 0x001A192B,
+            minimap_viewport_stroke: 0x0078A0FF,
+            zoom_controls_background: 0x00FCFCFC,
+            zoom_controls_border: 0x00C8C8D0,
+            zoom_controls_text: 0x001A192B,
+            context_menu_background: 0x00FCFCFC,
+            context_menu_border: 0x00C8C8D0,
+            context_menu_text: 0x001A192B,
+            context_menu_shortcut_text: 0x007A7A88,
+            context_menu_separator: 0x00E0E0E8,
             error: 0x00FF1744,
             info: 0x001F2937,
             success: 0x001E8E3E,
