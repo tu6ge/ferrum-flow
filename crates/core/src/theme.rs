@@ -3,10 +3,15 @@
 //!
 //! Colors are `u32` in **GPUI `rgb` / `rgba` layout**: `0x00RRGGBB` for opaque colors
 //! (first byte unused by [`gpui::rgb`]), and `0xRRGGBBAA` for [`gpui::rgba`] fills.
+//!
+//! [`FlowTheme`] is **non-exhaustive**: downstream crates cannot use struct literals
+//! (`FlowTheme { … }`, including with `..`). Prefer `FlowTheme::default()` and assign fields,
+//! or mutate `ctx.theme` in [`crate::plugin::Plugin::setup`](crate::plugin::Plugin::setup).
 
 use serde::{Deserialize, Serialize};
 
 /// Default canvas chrome: node cards, grid, edges, selection marquee, snap guides.
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct FlowTheme {
     /// Default node card background ([`gpui::rgb`]).
