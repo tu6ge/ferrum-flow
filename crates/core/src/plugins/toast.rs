@@ -155,7 +155,7 @@ impl Plugin for ToastPlugin {
                 .child(
                     div()
                         .text_sm()
-                        .text_color(rgb(0x00FFFFFF))
+                        .text_color(rgb(ctx.theme.toast_text))
                         .child(item.text.clone()),
                 )
         });

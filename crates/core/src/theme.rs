@@ -92,6 +92,9 @@ pub struct FlowTheme {
     pub success: u32,
     /// common warning color.
     pub warning: u32,
+
+    /// Label color on [`crate::ToastPlugin`] banners.
+    pub toast_text: u32,
 }
 
 impl Default for FlowTheme {
@@ -133,6 +136,7 @@ impl Default for FlowTheme {
             info: 0x001F2937,
             success: 0x001E8E3E,
             warning: 0x00B35A00,
+            toast_text: 0x00FFFFFF,
         }
     }
 }

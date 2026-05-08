@@ -42,6 +42,7 @@ impl Plugin for DarkGridThemePlugin {
         ctx.theme.context_menu_text = 0x00e8eaef;
         ctx.theme.context_menu_shortcut_text = 0x009098a8;
         ctx.theme.context_menu_separator = 0x003d4559;
+        ctx.theme.toast_text = 0x00FFFFFF;
     }
 }
 
