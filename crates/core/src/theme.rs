@@ -4,8 +4,10 @@
 //! Colors are `u32` in **GPUI `rgb` / `rgba` layout**: `0x00RRGGBB` for opaque colors
 //! (first byte unused by [`gpui::rgb`]), and `0xRRGGBBAA` for [`gpui::rgba`] fills.
 
+use serde::{Deserialize, Serialize};
+
 /// Default canvas chrome: node cards, grid, edges, selection marquee.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct FlowTheme {
     /// Default node card background ([`gpui::rgb`]).
     pub node_card_background: u32,
