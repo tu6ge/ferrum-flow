@@ -141,6 +141,14 @@ No active schedule; keep these in mind when designing APIs above.
 - **WASM target** — When the stack allows, support **Web** deployment paths.
 - **Predictive rendering for collaboration** — Reduce **felt latency** in multi-user editing (optimistic / speculative UI reconciled with synced state, e.g. CRDT-backed updates).
 
+## Use Case
+
+<p align="center">
+  <a href="https://github.com/feigeCode/onetcli" title="OnetCli">
+    <img src="https://github.com/feigeCode/onetcli/raw/dev/logo.svg" alt="OnetCli" width="120" />
+  </a>
+</p>
+
 ## Contributing
 
 Contributions are welcome!
