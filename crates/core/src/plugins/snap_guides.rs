@@ -229,7 +229,7 @@ fn vline(wx: Pixels, win_h: Pixels, ctx: &RenderContext<'_>, theme: &FlowTheme) 
         .top(px(0.0))
         .w(px(1.0))
         .h(win_h)
-        .bg(rgb(theme.selection_rect_border))
+        .bg(rgb(theme.snap_guide_stroke))
 }
 
 fn hline(wy: Pixels, win_w: Pixels, ctx: &RenderContext<'_>, theme: &FlowTheme) -> Div {
@@ -240,5 +240,5 @@ fn hline(wy: Pixels, win_w: Pixels, ctx: &RenderContext<'_>, theme: &FlowTheme) 
         .top(sy)
         .w(win_w)
         .h(px(1.0))
-        .bg(rgb(theme.selection_rect_border))
+        .bg(rgb(theme.snap_guide_stroke))
 }

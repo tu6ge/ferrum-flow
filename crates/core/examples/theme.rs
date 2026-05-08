@@ -25,6 +25,7 @@ impl Plugin for DarkGridThemePlugin {
         ctx.theme.edge_stroke_selected = 0x00f5a524;
         ctx.theme.selection_rect_border = 0x006b8cff;
         ctx.theme.selection_rect_fill_rgba = 0x6b8cff33;
+        ctx.theme.snap_guide_stroke = 0x006b8cff;
         ctx.theme.port_preview_line = 0x0050586b;
         ctx.theme.port_preview_dot = 0x0060809e;
         ctx.theme.minimap_background = 0x0018202e;

@@ -6,7 +6,7 @@
 
 use serde::{Deserialize, Serialize};
 
-/// Default canvas chrome: node cards, grid, edges, selection marquee.
+/// Default canvas chrome: node cards, grid, edges, selection marquee, snap guides.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct FlowTheme {
     /// Default node card background ([`gpui::rgb`]).
@@ -44,6 +44,9 @@ pub struct FlowTheme {
     pub selection_rect_border: u32,
     /// Marquee / move-preview fill ([`gpui::rgba`], e.g. `0x78A0FF4c`).
     pub selection_rect_fill_rgba: u32,
+
+    /// Alignment snap guide lines ([`crate::plugins::SnapGuidesPlugin`]).
+    pub snap_guide_stroke: u32,
 
     /// Temporary line while dragging a link from a port.
     pub port_preview_line: u32,
@@ -109,6 +112,7 @@ impl Default for FlowTheme {
             edge_stroke_selected: 0x00FF7800,
             selection_rect_border: 0x0078A0FF,
             selection_rect_fill_rgba: 0x78A0FF4c,
+            snap_guide_stroke: 0x0078A0FF,
             port_preview_line: 0x00b1b1b8,
             port_preview_dot: 0x007189a3,
             minimap_background: 0x00f8f9fb,

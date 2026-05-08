@@ -60,6 +60,7 @@ pub fn apply_flow_chrome(t: &mut FlowTheme) {
     t.edge_stroke_selected = SELECTION_BORDER;
     t.selection_rect_border = SELECTION_BORDER;
     t.selection_rect_fill_rgba = 0xc4b5fd33;
+    t.snap_guide_stroke = SELECTION_BORDER;
 
     t.port_preview_line = 0x004a5568;
     // Softer than `accent_llm()` so the pending-link endpoint is visible but not neon on dark bg.
