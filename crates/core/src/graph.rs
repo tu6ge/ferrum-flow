@@ -43,6 +43,14 @@ impl Graph {
         }
     }
 
+    /// Runs `f` on a fresh graph and returns it. Useful with [`crate::NodeBuilderInGraph::build_with_ports`]
+    /// so node/edge setup stays inside one closure.
+    pub fn build(f: impl FnOnce(&mut Self)) -> Self {
+        let mut g = Self::new();
+        f(&mut g);
+        g
+    }
+
     pub fn from_json(json: &str) -> serde_json::Result<Self> {
         serde_json::from_str(json)
     }

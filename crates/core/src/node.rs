@@ -792,4 +792,18 @@ impl<'a> NodeBuilderInGraph<'a> {
         }
         id
     }
+
+    /// Like [`Self::build`], but returns input and output [`PortId`] slices (in port-spec order)
+    /// so callers can wire [`crate::Graph::create_edge`] without [`crate::Graph::get_node`].
+    pub fn build_with_ports(self) -> (NodeId, Vec<PortId>, Vec<PortId>) {
+        let (node, ports, graph) = self.build_raw();
+        let id = node.id();
+        let inputs = node.inputs().to_vec();
+        let outputs = node.outputs().to_vec();
+        graph.0.add_node(node);
+        for port in ports {
+            graph.0.add_port(port);
+        }
+        (id, inputs, outputs)
+    }
 }

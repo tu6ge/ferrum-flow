@@ -4,37 +4,34 @@ use serde_json::json;
 
 fn main() {
     Application::new().run(|cx| {
-        let mut graph = Graph::new();
+        let graph = Graph::build(|g| {
+            g.create_node("")
+                .position(100.0, 100.0)
+                .output()
+                .output()
+                .output_with(PortPosition::Bottom, Size::new(px(20.0), px(20.0)))
+                .output_at(PortPosition::Bottom)
+                .data(json!({ "label": "Node 1" }))
+                .build();
 
-        graph
-            .create_node("")
-            .position(100.0, 100.0)
-            .output()
-            .output()
-            .output_with(PortPosition::Bottom, Size::new(px(20.0), px(20.0)))
-            .output_at(PortPosition::Bottom)
-            .data(json!({ "label": "Node 1" }))
-            .build();
+            g.create_node("")
+                .position(300.0, 400.0)
+                .input()
+                .input_at(PortPosition::Top)
+                .input_at(PortPosition::Top)
+                .output()
+                .output_at(PortPosition::Bottom)
+                .output_at(PortPosition::Bottom)
+                .data(json!({ "label": "Node 2" }))
+                .build();
 
-        graph
-            .create_node("")
-            .position(300.0, 400.0)
-            .input()
-            .input_at(PortPosition::Top)
-            .input_at(PortPosition::Top)
-            .output()
-            .output_at(PortPosition::Bottom)
-            .output_at(PortPosition::Bottom)
-            .data(json!({ "label": "Node 2" }))
-            .build();
-
-        graph
-            .create_node("")
-            .position(500.0, 500.0)
-            .input()
-            .output()
-            .data(json!({ "label": "Node 3" }))
-            .build();
+            g.create_node("")
+                .position(500.0, 500.0)
+                .input()
+                .output()
+                .data(json!({ "label": "Node 3" }))
+                .build();
+        });
 
         cx.open_window(WindowOptions::default(), |window, cx| {
             cx.new(|ctx| {
