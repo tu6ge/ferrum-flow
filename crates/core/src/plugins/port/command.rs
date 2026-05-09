@@ -110,7 +110,7 @@ mod command_interop_tests {
     #[test]
     fn create_port_command_interop() {
         let mut base = Graph::new();
-        let node_id = base.create_node("x").position(0.0, 0.0).build().unwrap();
+        let node_id = base.create_node("x").position(0.0, 0.0).build();
         let port = PortBuilder::new(base.next_port_id())
             .kind(PortKind::Output)
             .node_id(node_id)
@@ -130,18 +130,8 @@ mod command_interop_tests {
     #[test]
     fn create_edge_command_interop() {
         let mut base = Graph::new();
-        let n1 = base
-            .create_node("a")
-            .position(0.0, 0.0)
-            .output()
-            .build()
-            .unwrap();
-        let n2 = base
-            .create_node("b")
-            .position(100.0, 0.0)
-            .input()
-            .build()
-            .unwrap();
+        let n1 = base.create_node("a").position(0.0, 0.0).output().build();
+        let n2 = base.create_node("b").position(100.0, 0.0).input().build();
         let n1_node = base.get_node(&n1).expect("source node exists");
         let n2_node = base.get_node(&n2).expect("target node exists");
         let edge = base

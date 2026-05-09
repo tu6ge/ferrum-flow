@@ -4,7 +4,7 @@ use gpui::{Bounds, Pixels, Point};
 
 use crate::{
     Edge, EdgeBuilder, EdgeId, Graph, GraphOp, Node, NodeBuilder, NodeId, Port, PortId,
-    RendererRegistry, SharedState, Viewport,
+    RendererRegistry, SharedState, Viewport, WithGraph,
     canvas::PortLayoutCache,
     plugin::{is_edge_visible, is_node_visible},
 };
@@ -152,7 +152,7 @@ impl<'a> CommandContext<'a> {
             notify,
         }
     }
-    pub fn create_node(&mut self, node_type: &str) -> NodeBuilder<'_> {
+    pub fn create_node(&mut self, node_type: &str) -> NodeBuilder<'_, WithGraph<'_>> {
         self.graph.create_node(node_type)
     }
 

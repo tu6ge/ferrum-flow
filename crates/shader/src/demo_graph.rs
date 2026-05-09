@@ -46,7 +46,6 @@ fn scalar(graph: &mut Graph, x: f32, y: f32, label: &str, value: f32) -> NodeId 
         .output()
         .data(json!({ "label": label, "value": value }))
         .build()
-        .unwrap()
 }
 
 /// Aurora bands: time-driven sine scales noise, smoothstep bands, two-color mix; radial |UV−center| for extensions.
@@ -59,8 +58,7 @@ pub fn sample_shader_graph() -> Graph {
         .size(160.0, 72.0)
         .output()
         .data(json!({ "label": "UV", "hint": "0‥1 screen space" }))
-        .build()
-        .unwrap();
+        .build();
 
     let s05a = scalar(&mut graph, 48.0, 200.0, "½", 0.5);
     let s05b = scalar(&mut graph, 48.0, 292.0, "½", 0.5);
@@ -73,8 +71,7 @@ pub fn sample_shader_graph() -> Graph {
         .input()
         .output()
         .data(json!({ "label": "Screen center", "hint": "vec2(0.5,0.5)" }))
-        .build()
-        .unwrap();
+        .build();
 
     let delta = graph
         .create_node("sub_vec2")
@@ -84,8 +81,7 @@ pub fn sample_shader_graph() -> Graph {
         .input()
         .output()
         .data(json!({ "label": "UV − center", "hint": "radial" }))
-        .build()
-        .unwrap();
+        .build();
 
     let _r_len = graph
         .create_node("length_v2")
@@ -94,8 +90,7 @@ pub fn sample_shader_graph() -> Graph {
         .input()
         .output()
         .data(json!({ "label": "|ΔUV|", "hint": "vignette hook" }))
-        .build()
-        .unwrap();
+        .build();
 
     let time = graph
         .create_node("time")
@@ -103,8 +98,7 @@ pub fn sample_shader_graph() -> Graph {
         .size(160.0, 72.0)
         .output()
         .data(json!({ "label": "Time", "hint": "uniform" }))
-        .build()
-        .unwrap();
+        .build();
 
     let sin_w = graph
         .create_node("sin_f")
@@ -113,8 +107,7 @@ pub fn sample_shader_graph() -> Graph {
         .input()
         .output()
         .data(json!({ "label": "sin(t)", "hint": "domain warp" }))
-        .build()
-        .unwrap();
+        .build();
 
     let s4 = scalar(&mut graph, 48.0, 540.0, "×4", 4.0);
     let s8 = scalar(&mut graph, 48.0, 632.0, "+8", 8.0);
@@ -127,8 +120,7 @@ pub fn sample_shader_graph() -> Graph {
         .input()
         .output()
         .data(json!({ "label": "wave ×4", "hint": "f·f" }))
-        .build()
-        .unwrap();
+        .build();
 
     let scale_fac = graph
         .create_node("add_ff")
@@ -138,8 +130,7 @@ pub fn sample_shader_graph() -> Graph {
         .input()
         .output()
         .data(json!({ "label": "freq", "hint": "8+4sin" }))
-        .build()
-        .unwrap();
+        .build();
 
     let uv_scaled = graph
         .create_node("mul_vec2_f")
@@ -149,8 +140,7 @@ pub fn sample_shader_graph() -> Graph {
         .input()
         .output()
         .data(json!({ "label": "Warped UV", "hint": "uv·freq" }))
-        .build()
-        .unwrap();
+        .build();
 
     let noise_n = graph
         .create_node("noise")
@@ -159,8 +149,7 @@ pub fn sample_shader_graph() -> Graph {
         .input()
         .output()
         .data(json!({ "label": "Noise", "hint": "hash sample" }))
-        .build()
-        .unwrap();
+        .build();
 
     let low_s = scalar(&mut graph, 900.0, 272.0, "lo", 0.22);
     let high_s = scalar(&mut graph, 900.0, 364.0, "hi", 0.68);
@@ -174,8 +163,7 @@ pub fn sample_shader_graph() -> Graph {
         .input()
         .output()
         .data(json!({ "label": "Aurora bands", "hint": "smoothstep" }))
-        .build()
-        .unwrap();
+        .build();
 
     let col_a = graph
         .create_node("color")
@@ -183,8 +171,7 @@ pub fn sample_shader_graph() -> Graph {
         .size(196.0, 82.0)
         .output()
         .data(json!({ "label": "Deep", "hint": "vec3 #1a0a2e" }))
-        .build()
-        .unwrap();
+        .build();
 
     let col_b = graph
         .create_node("color")
@@ -192,8 +179,7 @@ pub fn sample_shader_graph() -> Graph {
         .size(196.0, 82.0)
         .output()
         .data(json!({ "label": "Glow", "hint": "vec3 #ff6b9d" }))
-        .build()
-        .unwrap();
+        .build();
 
     let mix_rgb = graph
         .create_node("mix")
@@ -204,8 +190,7 @@ pub fn sample_shader_graph() -> Graph {
         .input()
         .output()
         .data(json!({ "label": "Blend", "hint": "mix(a,b,t)" }))
-        .build()
-        .unwrap();
+        .build();
 
     let frag = graph
         .create_node("output")
@@ -213,8 +198,7 @@ pub fn sample_shader_graph() -> Graph {
         .size(208.0, 92.0)
         .input()
         .data(json!({ "label": "Fragment", "hint": "@location(0) vec4" }))
-        .build()
-        .unwrap();
+        .build();
 
     wire(&mut graph, s05a, 0, center, 0);
     wire(&mut graph, s05b, 0, center, 1);
@@ -256,8 +240,7 @@ pub fn empty_shader_graph() -> Graph {
         .size(176.0, 72.0)
         .output()
         .data(json!({ "label": "Neutral gray", "value": [0.42, 0.44, 0.48] }))
-        .build()
-        .unwrap();
+        .build();
 
     let frag = graph
         .create_node("output")
@@ -265,8 +248,7 @@ pub fn empty_shader_graph() -> Graph {
         .size(200.0, 88.0)
         .input()
         .data(json!({ "label": "Fragment", "hint": "vec3 to vec4" }))
-        .build()
-        .unwrap();
+        .build();
 
     wire(&mut graph, fill, 0, frag, 0);
     graph
@@ -282,8 +264,7 @@ pub fn radial_gradient_demo_graph() -> Graph {
         .size(152.0, 68.0)
         .output()
         .data(json!({ "label": "UV" }))
-        .build()
-        .unwrap();
+        .build();
 
     let s05a = scalar(&mut graph, 40.0, 220.0, "½", 0.5);
     let s05b = scalar(&mut graph, 40.0, 312.0, "½", 0.5);
@@ -296,8 +277,7 @@ pub fn radial_gradient_demo_graph() -> Graph {
         .input()
         .output()
         .data(json!({ "label": "center" }))
-        .build()
-        .unwrap();
+        .build();
 
     let delta = graph
         .create_node("sub_vec2")
@@ -307,8 +287,7 @@ pub fn radial_gradient_demo_graph() -> Graph {
         .input()
         .output()
         .data(json!({ "label": "Δuv" }))
-        .build()
-        .unwrap();
+        .build();
 
     let rad = graph
         .create_node("length_v2")
@@ -317,8 +296,7 @@ pub fn radial_gradient_demo_graph() -> Graph {
         .input()
         .output()
         .data(json!({ "label": "|Δ|" }))
-        .build()
-        .unwrap();
+        .build();
 
     let e0 = scalar(&mut graph, 232.0, 400.0, "lo", 0.0);
     let e1 = scalar(&mut graph, 232.0, 492.0, "hi", 0.72);
@@ -332,8 +310,7 @@ pub fn radial_gradient_demo_graph() -> Graph {
         .input()
         .output()
         .data(json!({ "label": "falloff" }))
-        .build()
-        .unwrap();
+        .build();
 
     let col_in = graph
         .create_node("color")
@@ -341,8 +318,7 @@ pub fn radial_gradient_demo_graph() -> Graph {
         .size(180.0, 76.0)
         .output()
         .data(json!({ "label": "Inner", "value": [0.95, 0.92, 0.82] }))
-        .build()
-        .unwrap();
+        .build();
 
     let col_out = graph
         .create_node("color")
@@ -350,8 +326,7 @@ pub fn radial_gradient_demo_graph() -> Graph {
         .size(180.0, 76.0)
         .output()
         .data(json!({ "label": "Outer", "value": [0.12, 0.18, 0.38] }))
-        .build()
-        .unwrap();
+        .build();
 
     let blend = graph
         .create_node("mix")
@@ -362,8 +337,7 @@ pub fn radial_gradient_demo_graph() -> Graph {
         .input()
         .output()
         .data(json!({ "label": "mix" }))
-        .build()
-        .unwrap();
+        .build();
 
     let frag = graph
         .create_node("output")
@@ -371,8 +345,7 @@ pub fn radial_gradient_demo_graph() -> Graph {
         .size(200.0, 88.0)
         .input()
         .data(json!({ "label": "out" }))
-        .build()
-        .unwrap();
+        .build();
 
     wire(&mut graph, s05a, 0, center, 0);
     wire(&mut graph, s05b, 0, center, 1);
@@ -400,8 +373,7 @@ pub fn postprocess_vignette_demo_graph() -> Graph {
         .size(152.0, 68.0)
         .output()
         .data(json!({ "label": "UV" }))
-        .build()
-        .unwrap();
+        .build();
 
     let n = graph
         .create_node("noise")
@@ -410,8 +382,7 @@ pub fn postprocess_vignette_demo_graph() -> Graph {
         .input()
         .output()
         .data(json!({ "label": "grain" }))
-        .build()
-        .unwrap();
+        .build();
 
     let cool = graph
         .create_node("color")
@@ -419,8 +390,7 @@ pub fn postprocess_vignette_demo_graph() -> Graph {
         .size(176.0, 72.0)
         .output()
         .data(json!({ "label": "Shadow tint", "value": [0.15, 0.22, 0.42] }))
-        .build()
-        .unwrap();
+        .build();
 
     let warm = graph
         .create_node("color")
@@ -428,8 +398,7 @@ pub fn postprocess_vignette_demo_graph() -> Graph {
         .size(176.0, 72.0)
         .output()
         .data(json!({ "label": "Highlight tint", "value": [0.98, 0.72, 0.38] }))
-        .build()
-        .unwrap();
+        .build();
 
     let graded = graph
         .create_node("mix")
@@ -440,8 +409,7 @@ pub fn postprocess_vignette_demo_graph() -> Graph {
         .input()
         .output()
         .data(json!({ "label": "Color grade" }))
-        .build()
-        .unwrap();
+        .build();
 
     let s05a = scalar(&mut graph, 448.0, 336.0, "½", 0.5);
     let s05b = scalar(&mut graph, 448.0, 428.0, "½", 0.5);
@@ -454,8 +422,7 @@ pub fn postprocess_vignette_demo_graph() -> Graph {
         .input()
         .output()
         .data(json!({ "label": "ctr" }))
-        .build()
-        .unwrap();
+        .build();
 
     let delta = graph
         .create_node("sub_vec2")
@@ -465,8 +432,7 @@ pub fn postprocess_vignette_demo_graph() -> Graph {
         .input()
         .output()
         .data(json!({ "label": "Δ" }))
-        .build()
-        .unwrap();
+        .build();
 
     let rad = graph
         .create_node("length_v2")
@@ -475,8 +441,7 @@ pub fn postprocess_vignette_demo_graph() -> Graph {
         .input()
         .output()
         .data(json!({ "label": "r" }))
-        .build()
-        .unwrap();
+        .build();
 
     let v0 = scalar(&mut graph, 688.0, 512.0, "v0", 0.85);
     let v1 = scalar(&mut graph, 688.0, 604.0, "v1", 0.28);
@@ -490,8 +455,7 @@ pub fn postprocess_vignette_demo_graph() -> Graph {
         .input()
         .output()
         .data(json!({ "label": "vignette" }))
-        .build()
-        .unwrap();
+        .build();
 
     let black = graph
         .create_node("color")
@@ -499,8 +463,7 @@ pub fn postprocess_vignette_demo_graph() -> Graph {
         .size(168.0, 72.0)
         .output()
         .data(json!({ "label": "Crush black", "value": [0.02, 0.02, 0.05] }))
-        .build()
-        .unwrap();
+        .build();
 
     let comp = graph
         .create_node("mix")
@@ -511,8 +474,7 @@ pub fn postprocess_vignette_demo_graph() -> Graph {
         .input()
         .output()
         .data(json!({ "label": "Composite" }))
-        .build()
-        .unwrap();
+        .build();
 
     let frag = graph
         .create_node("output")
@@ -520,8 +482,7 @@ pub fn postprocess_vignette_demo_graph() -> Graph {
         .size(200.0, 88.0)
         .input()
         .data(json!({ "label": "Fragment" }))
-        .build()
-        .unwrap();
+        .build();
 
     wire(&mut graph, uv, 0, n, 0);
     wire(&mut graph, n, 0, graded, 0);

@@ -203,33 +203,21 @@ mod command_interop_tests {
     #[test]
     fn delete_command_interop_single_node_with_port() {
         let mut base = Graph::new();
-        let src_id = base
-            .create_node("x")
-            .position(-220.0, 0.0)
-            .output()
-            .build()
-            .unwrap();
+        let src_id = base.create_node("x").position(-220.0, 0.0).output().build();
         let dst_id = base
             .create_node("x")
             .position(220.0, 0.0)
             .input()
             .output()
-            .build()
-            .unwrap();
-        let other_id = base
-            .create_node("x")
-            .position(440.0, 0.0)
-            .input()
-            .build()
-            .unwrap();
+            .build();
+        let other_id = base.create_node("x").position(440.0, 0.0).input().build();
         // Put selected node at the end so execute+undo preserves node_order with current command behavior.
         let selected_id = base
             .create_node("x")
             .position(0.0, 0.0)
             .input()
             .output()
-            .build()
-            .unwrap();
+            .build();
 
         let selected_node = base.get_node(&selected_id).expect("selected node").clone();
         let src_node = base.get_node(&src_id).expect("src node").clone();
