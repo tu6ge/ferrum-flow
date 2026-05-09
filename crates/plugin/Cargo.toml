@@ -1,0 +1,11 @@
+[package]
+name = "gpui-canvas-plugin"
+version = "0.0.1"
+edition = "2024"
+license = "Apache-2.0"
+authors = ["tu6ge"]
+repository = "https://github.com/tu6ge/ferrum-flow"
+description = "GPUI-oriented, host-agnostic plugin stage trait (step toward a reusable ECS-style plugin layer)."
+
+[dependencies]
+gpui = { workspace = true }
