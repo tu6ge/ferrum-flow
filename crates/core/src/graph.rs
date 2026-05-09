@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::edge::{Edge, EdgeId};
 use crate::node::{Node, NodeId, Port, PortId};
-use crate::{EdgeBuilder, NodeBuilder, PortKind, PortPosition, Viewport};
+use crate::{EdgeBuilder, NodeBuilder, PortKind, PortPosition, Viewport, WithGraph};
 
 mod store;
 
@@ -100,7 +100,7 @@ impl Graph {
         }
     }
 
-    pub fn create_node(&mut self, renderer_key: &str) -> NodeBuilder<'_> {
+    pub fn create_node(&mut self, renderer_key: &str) -> NodeBuilder<'_, WithGraph<'_>> {
         NodeBuilder::new(renderer_key).graph(self)
     }
 

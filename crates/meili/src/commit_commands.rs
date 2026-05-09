@@ -2,7 +2,7 @@
 
 use ferrum_flow::{
     Command, CommandContext, CompositeCommand, CreateEdge, CreateNode, CreatePort, GraphOp,
-    PortKind, PortPosition,
+    PortKind, PortPosition, WithGraph,
 };
 use gpui::SharedString;
 
@@ -13,8 +13,8 @@ use crate::plugins::pick_link_event::PickNodeTypeForPendingLink;
 fn with_opposite_port<'a>(
     kind: PortKind,
     preset: NodeKindPreset,
-    b: ferrum_flow::NodeBuilder<'a>,
-) -> ferrum_flow::NodeBuilder<'a> {
+    b: ferrum_flow::NodeBuilder<'a, WithGraph<'a>>,
+) -> ferrum_flow::NodeBuilder<'a, WithGraph<'a>> {
     match kind {
         PortKind::Output => match preset {
             NodeKindPreset::Tool => b.input_at(PortPosition::Top),

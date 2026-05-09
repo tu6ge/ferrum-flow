@@ -8,7 +8,7 @@ use gpui::{
 
 use crate::{
     Edge, EdgeBuilder, EdgeId, FlowCanvas, FlowTheme, Graph, GraphOp, Node, NodeBuilder, NodeId,
-    NodeRenderer, Port, PortId, PortPosition, RendererRegistry, SharedState, Viewport,
+    NodeRenderer, Port, PortId, PortPosition, RendererRegistry, SharedState, Viewport, WithGraph,
     canvas::{
         Command, CommandContext, HistoryProvider, Interaction, InteractionState, PortLayoutCache,
     },
@@ -97,7 +97,7 @@ impl<'a, 'b> InitPluginContext<'a, 'b> {
             shared_state,
         }
     }
-    pub fn create_node(&mut self, node_type: &str) -> NodeBuilder<'_> {
+    pub fn create_node(&mut self, node_type: &str) -> NodeBuilder<'_, WithGraph<'_>> {
         self.graph.create_node(node_type)
     }
 
@@ -485,7 +485,7 @@ impl<'a> PluginContext<'a> {
         self.history.clear();
     }
 
-    pub fn create_node(&mut self, node_type: &str) -> NodeBuilder<'_> {
+    pub fn create_node(&mut self, node_type: &str) -> NodeBuilder<'_, WithGraph<'_>> {
         self.graph.create_node(node_type)
     }
 

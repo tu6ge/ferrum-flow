@@ -81,18 +81,8 @@ mod command_interop_tests {
     #[test]
     fn select_edge_command_interop() {
         let mut base = Graph::new();
-        let n1 = base
-            .create_node("a")
-            .position(0.0, 0.0)
-            .output()
-            .build()
-            .unwrap();
-        let n2 = base
-            .create_node("b")
-            .position(100.0, 0.0)
-            .input()
-            .build()
-            .unwrap();
+        let n1 = base.create_node("a").position(0.0, 0.0).output().build();
+        let n2 = base.create_node("b").position(100.0, 0.0).input().build();
         let n1_node = base.get_node(&n1).expect("n1");
         let n2_node = base.get_node(&n2).expect("n2");
         let source_port = n1_node.outputs()[0];
@@ -124,18 +114,8 @@ mod command_interop_tests {
     #[test]
     fn clear_edge_command_interop() {
         let mut base = Graph::new();
-        let n1 = base
-            .create_node("a")
-            .position(0.0, 0.0)
-            .output()
-            .build()
-            .unwrap();
-        let n2 = base
-            .create_node("b")
-            .position(100.0, 0.0)
-            .input()
-            .build()
-            .unwrap();
+        let n1 = base.create_node("a").position(0.0, 0.0).output().build();
+        let n2 = base.create_node("b").position(100.0, 0.0).input().build();
         let n1_node = base.get_node(&n1).expect("n1");
         let n2_node = base.get_node(&n2).expect("n2");
         let source_port = n1_node.outputs()[0];

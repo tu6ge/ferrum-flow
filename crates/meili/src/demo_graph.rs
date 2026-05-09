@@ -19,8 +19,7 @@ fn build_main_pipeline(graph: &mut Graph) {
             "subtitle": "Chat · API · webhook"
         }))
         .output()
-        .build()
-        .unwrap();
+        .build();
     let out_in = graph.get_node(&n_in).unwrap().outputs()[0];
 
     let n_preprocess = graph
@@ -33,8 +32,7 @@ fn build_main_pipeline(graph: &mut Graph) {
         }))
         .input()
         .output()
-        .build()
-        .unwrap();
+        .build();
     let in_pre = graph.get_node(&n_preprocess).unwrap().inputs()[0];
     let out_pre = graph.get_node(&n_preprocess).unwrap().outputs()[0];
 
@@ -49,8 +47,7 @@ fn build_main_pipeline(graph: &mut Graph) {
         .input()
         .output()
         .output()
-        .build()
-        .unwrap();
+        .build();
     let in_agent = graph.get_node(&n_agent).unwrap().inputs()[0];
     let out_agent_plan = graph.get_node(&n_agent).unwrap().outputs()[0];
     let out_agent_rag = graph.get_node(&n_agent).unwrap().outputs()[1];
@@ -65,8 +62,7 @@ fn build_main_pipeline(graph: &mut Graph) {
         }))
         .input()
         .output()
-        .build()
-        .unwrap();
+        .build();
     let in_llm = graph.get_node(&n_llm).unwrap().inputs()[0];
     let out_llm = graph.get_node(&n_llm).unwrap().outputs()[0];
 
@@ -80,8 +76,7 @@ fn build_main_pipeline(graph: &mut Graph) {
         }))
         .input_at(PortPosition::Top)
         .output_at(PortPosition::Bottom)
-        .build()
-        .unwrap();
+        .build();
     let in_rag = graph.get_node(&n_rag).unwrap().inputs()[0];
     let out_rag = graph.get_node(&n_rag).unwrap().outputs()[0];
 
@@ -96,8 +91,7 @@ fn build_main_pipeline(graph: &mut Graph) {
         .input()
         .input()
         .output()
-        .build()
-        .unwrap();
+        .build();
     let in_merge_a = graph.get_node(&n_merge).unwrap().inputs()[0];
     let in_merge_b = graph.get_node(&n_merge).unwrap().inputs()[1];
     let out_merge = graph.get_node(&n_merge).unwrap().outputs()[0];
@@ -112,8 +106,7 @@ fn build_main_pipeline(graph: &mut Graph) {
         }))
         .input()
         .output()
-        .build()
-        .unwrap();
+        .build();
     let in_search = graph.get_node(&n_search).unwrap().inputs()[0];
     let out_search = graph.get_node(&n_search).unwrap().outputs()[0];
 
@@ -127,8 +120,7 @@ fn build_main_pipeline(graph: &mut Graph) {
         }))
         .input()
         .output()
-        .build()
-        .unwrap();
+        .build();
     let in_gate = graph.get_node(&n_gate).unwrap().inputs()[0];
     let out_gate = graph.get_node(&n_gate).unwrap().outputs()[0];
 
@@ -142,8 +134,7 @@ fn build_main_pipeline(graph: &mut Graph) {
         }))
         .input()
         .output()
-        .build()
-        .unwrap();
+        .build();
     let in_format = graph.get_node(&n_format).unwrap().inputs()[0];
     let out_format = graph.get_node(&n_format).unwrap().outputs()[0];
 
@@ -156,8 +147,7 @@ fn build_main_pipeline(graph: &mut Graph) {
             "subtitle": "Stream · SSE · client"
         }))
         .input()
-        .build()
-        .unwrap();
+        .build();
     let in_out = graph.get_node(&n_out).unwrap().inputs()[0];
 
     graph.create_edge().source(out_in).target(in_pre).build();
@@ -215,8 +205,7 @@ fn build_batch_lane(graph: &mut Graph) {
             "subtitle": "File · queue · cron"
         }))
         .output()
-        .build()
-        .unwrap();
+        .build();
     let out_batch_in = graph.get_node(&n_batch_in).unwrap().outputs()[0];
 
     let n_score = graph
@@ -229,8 +218,7 @@ fn build_batch_lane(graph: &mut Graph) {
         }))
         .input()
         .output()
-        .build()
-        .unwrap();
+        .build();
     let in_score = graph.get_node(&n_score).unwrap().inputs()[0];
     let out_score = graph.get_node(&n_score).unwrap().outputs()[0];
 
@@ -244,8 +232,7 @@ fn build_batch_lane(graph: &mut Graph) {
         }))
         .input()
         .output()
-        .build()
-        .unwrap();
+        .build();
     let in_tool_b = graph.get_node(&n_tool_batch).unwrap().inputs()[0];
     let out_tool_b = graph.get_node(&n_tool_batch).unwrap().outputs()[0];
 
@@ -259,8 +246,7 @@ fn build_batch_lane(graph: &mut Graph) {
         }))
         .input()
         .output()
-        .build()
-        .unwrap();
+        .build();
     let in_stub = graph.get_node(&n_stub).unwrap().inputs()[0];
     let out_stub = graph.get_node(&n_stub).unwrap().outputs()[0];
 
@@ -274,8 +260,7 @@ fn build_batch_lane(graph: &mut Graph) {
         }))
         .input()
         .output()
-        .build()
-        .unwrap();
+        .build();
     let in_ba = graph.get_node(&n_batch_agent).unwrap().inputs()[0];
     let out_ba = graph.get_node(&n_batch_agent).unwrap().outputs()[0];
 
@@ -288,8 +273,7 @@ fn build_batch_lane(graph: &mut Graph) {
             "subtitle": "Metrics dashboard"
         }))
         .input()
-        .build()
-        .unwrap();
+        .build();
     let in_batch_out = graph.get_node(&n_batch_out).unwrap().inputs()[0];
 
     graph

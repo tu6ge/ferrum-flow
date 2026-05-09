@@ -206,8 +206,7 @@ mod tests {
             .input()
             .output()
             .data(json!({"label":"A","tag":"node-a","nested":{"k":1}}))
-            .build()
-            .expect("node-a should be created");
+            .build();
         let n2 = harness
             .graph
             .create_node("default")
@@ -217,8 +216,7 @@ mod tests {
             .input()
             .output()
             .data(json!({"label":"B","tag":"node-b","nested":{"k":2}}))
-            .build()
-            .expect("node-b should be created");
+            .build();
 
         harness.graph.add_selected_node(n1, false);
         harness.graph.add_selected_node(n2, true);

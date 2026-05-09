@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Display, str::FromStr};
+use std::{collections::HashMap, fmt::Display, marker::PhantomData, str::FromStr};
 
 use gpui::{Bounds, Pixels, Point, Size, px};
 use serde::{Deserialize, Serialize};
@@ -456,8 +456,13 @@ impl FromStr for PortPosition {
     }
 }
 
-pub struct NodeBuilder<'a> {
-    graph: Option<&'a mut Graph>,
+pub struct WithGraph<'a>(pub &'a mut Graph);
+pub struct NoGraph;
+
+pub struct NodeBuilder<'a, G = NoGraph> {
+    graph: G,
+    _phantom: PhantomData<&'a ()>,
+
     node_type: String,
     execute_type: String,
     x: Pixels,
@@ -574,10 +579,11 @@ impl PortBuilder {
     }
 }
 
-impl<'a> NodeBuilder<'a> {
-    pub fn new(renderer_key: impl Into<String>) -> NodeBuilder<'static> {
-        NodeBuilder {
-            graph: None,
+impl<'a> NodeBuilder<'a, NoGraph> {
+    pub fn new(renderer_key: impl Into<String>) -> Self {
+        Self {
+            graph: NoGraph,
+            _phantom: PhantomData,
             node_type: renderer_key.into(),
             execute_type: String::new(),
             x: px(0.0),
@@ -592,11 +598,23 @@ impl<'a> NodeBuilder<'a> {
         }
     }
 
-    pub fn graph(mut self, graph: &'a mut Graph) -> NodeBuilder<'a> {
-        self.graph = Some(graph);
-        self
+    pub fn graph(self, graph: &'a mut Graph) -> NodeBuilder<'a, WithGraph<'a>> {
+        NodeBuilder {
+            graph: WithGraph(graph),
+            _phantom: PhantomData,
+            node_type: self.node_type,
+            execute_type: self.execute_type,
+            x: self.x,
+            y: self.y,
+            size: self.size,
+            inputs: self.inputs,
+            outputs: self.outputs,
+            data: self.data,
+        }
     }
+}
 
+impl<'a, G> NodeBuilder<'a, G> {
     pub fn execute_type(mut self, execute_type: impl Into<String>) -> Self {
         self.execute_type = execute_type.into();
         self
@@ -693,7 +711,7 @@ impl<'a> NodeBuilder<'a> {
     }
 
     #[allow(deprecated)]
-    pub fn build_raw(self) -> (Node, Vec<Port>, Option<&'a mut Graph>) {
+    pub fn build_raw(self) -> (Node, Vec<Port>, G) {
         let node_id = NodeId::new();
 
         let mut inputs = Vec::new();
@@ -762,15 +780,16 @@ impl<'a> NodeBuilder<'a> {
             self.graph,
         )
     }
+}
 
-    pub fn build(self) -> Option<NodeId> {
+impl<'a> NodeBuilder<'a, WithGraph<'a>> {
+    pub fn build(self) -> NodeId {
         let (node, ports, graph) = self.build_raw();
         let id = node.id();
-        let graph = graph?;
-        graph.add_node(node);
+        graph.0.add_node(node);
         for port in ports {
-            graph.add_port(port);
+            graph.0.add_port(port);
         }
-        Some(id)
+        id
     }
 }
