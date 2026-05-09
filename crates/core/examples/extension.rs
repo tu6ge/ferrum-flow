@@ -7,24 +7,22 @@ use serde_json::json;
 
 fn main() {
     Application::new().run(|cx| {
-        let mut graph = Graph::new();
+        let graph = Graph::build(|g| {
+            g.create_node("number")
+                .position(100.0, 100.0)
+                .size(300.0, 150.0)
+                .output()
+                .data(json!({ "label": "Number Node" }))
+                .build();
 
-        graph
-            .create_node("number")
-            .position(100.0, 100.0)
-            .size(300.0, 150.0)
-            .output()
-            .data(json!({ "label": "Number Node" }))
-            .build();
+            g.create_node("").position(300.0, 400.0).input().build();
 
-        graph.create_node("").position(300.0, 400.0).input().build();
-
-        graph
-            .create_node("undefined")
-            .position(500.0, 500.0)
-            .input()
-            .output()
-            .build();
+            g.create_node("undefined")
+                .position(500.0, 500.0)
+                .input()
+                .output()
+                .build();
+        });
 
         cx.open_window(WindowOptions::default(), |window, cx| {
             cx.new(|ctx| {

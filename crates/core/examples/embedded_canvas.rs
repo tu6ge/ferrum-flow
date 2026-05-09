@@ -78,21 +78,19 @@ impl Render for ParentShell {
 
 fn main() {
     Application::new().run(|cx| {
-        let mut graph = Graph::new();
+        let graph = Graph::build(|g| {
+            g.create_node("default")
+                .position(120.0, 100.0)
+                .output()
+                .data(json!({ "label": "First Node" }))
+                .build();
 
-        graph
-            .create_node("default")
-            .position(120.0, 100.0)
-            .output()
-            .data(json!({ "label": "First Node" }))
-            .build();
-
-        graph
-            .create_node("default")
-            .position(380.0, 260.0)
-            .input()
-            .data(json!({ "label": "Second Node" }))
-            .build();
+            g.create_node("default")
+                .position(380.0, 260.0)
+                .input()
+                .data(json!({ "label": "Second Node" }))
+                .build();
+        });
 
         cx.open_window(WindowOptions::default(), |window, cx| {
             let canvas = cx.new(|ctx| {

@@ -48,15 +48,14 @@ impl Plugin for DarkGridThemePlugin {
 
 fn main() {
     Application::new().run(|cx| {
-        let mut graph = Graph::new();
-
-        graph
-            .create_node("")
-            .position(100.0, 100.0)
-            .output()
-            .output()
-            .data(json!({ "label": "Themed" }))
-            .build();
+        let graph = Graph::build(|g| {
+            g.create_node("")
+                .position(100.0, 100.0)
+                .output()
+                .output()
+                .data(json!({ "label": "Themed" }))
+                .build();
+        });
 
         cx.open_window(WindowOptions::default(), |window, cx| {
             cx.new(|ctx| {

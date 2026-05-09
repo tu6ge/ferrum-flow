@@ -50,36 +50,33 @@ impl NodeRenderer for SyncBasicNodeRenderer {
 
 fn main() {
     Application::new().run(|cx| {
-        let mut graph = Graph::new();
+        let graph = Graph::build(|g| {
+            g.create_node("sync")
+                .position(100.0, 100.0)
+                .output()
+                .output()
+                .output_with(PortPosition::Bottom, Size::new(px(20.0), px(20.0)))
+                .output_at(PortPosition::Bottom)
+                .build();
 
-        graph
-            .create_node("sync")
-            .position(100.0, 100.0)
-            .output()
-            .output()
-            .output_with(PortPosition::Bottom, Size::new(px(20.0), px(20.0)))
-            .output_at(PortPosition::Bottom)
-            .build();
+            g.create_node("sync")
+                .position(300.0, 400.0)
+                .input()
+                .input_at(PortPosition::Top)
+                .input_at(PortPosition::Top)
+                .output()
+                .output_at(PortPosition::Bottom)
+                .output_at(PortPosition::Bottom)
+                .build();
 
-        graph
-            .create_node("sync")
-            .position(300.0, 400.0)
-            .input()
-            .input_at(PortPosition::Top)
-            .input_at(PortPosition::Top)
-            .output()
-            .output_at(PortPosition::Bottom)
-            .output_at(PortPosition::Bottom)
-            .build();
+            g.create_node("sync")
+                .position(500.0, 500.0)
+                .input()
+                .output()
+                .build();
+        });
 
-        graph
-            .create_node("sync")
-            .position(500.0, 500.0)
-            .input()
-            .output()
-            .build();
-
-        graph = if std::env::var("IS_INIT").unwrap_or_default() == "1" {
+        let graph = if std::env::var("IS_INIT").unwrap_or_default() == "1" {
             graph
         } else {
             Graph::new()

@@ -11,15 +11,14 @@ use serde_json::json;
 /// `cargo run -p ferrum-flow --example plugin`
 fn main() {
     Application::new().run(|cx| {
-        let mut graph = Graph::new();
-
-        graph
-            .create_node("default")
-            .position(120.0, 120.0)
-            .input()
-            .output()
-            .data(json!({ "label": "Base Node" }))
-            .build();
+        let graph = Graph::build(|g| {
+            g.create_node("default")
+                .position(120.0, 120.0)
+                .input()
+                .output()
+                .data(json!({ "label": "Base Node" }))
+                .build();
+        });
 
         cx.open_window(WindowOptions::default(), |window, cx| {
             cx.new(|ctx| {
