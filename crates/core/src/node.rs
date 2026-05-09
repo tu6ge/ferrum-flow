@@ -6,6 +6,7 @@ use serde_json::json;
 use uuid::Uuid;
 
 use crate::Graph;
+use crate::builder_state::{Set, Unset};
 
 pub const DEFAULT_NODE_WIDTH: Pixels = px(120.0);
 pub const DEFAULT_NODE_HEIGHT: Pixels = px(60.0);
@@ -456,10 +457,9 @@ impl FromStr for PortPosition {
     }
 }
 
-pub struct WithGraph<'a>(pub &'a mut Graph);
-pub struct NoGraph;
+pub type NodeBuilderInGraph<'a> = NodeBuilder<'a, Set<&'a mut Graph>>;
 
-pub struct NodeBuilder<'a, G = NoGraph> {
+pub struct NodeBuilder<'a, G = Unset> {
     graph: G,
     _phantom: PhantomData<&'a ()>,
 
@@ -579,10 +579,10 @@ impl PortBuilder {
     }
 }
 
-impl<'a> NodeBuilder<'a, NoGraph> {
+impl<'a> NodeBuilder<'a, Unset> {
     pub fn new(renderer_key: impl Into<String>) -> Self {
         Self {
-            graph: NoGraph,
+            graph: Unset,
             _phantom: PhantomData,
             node_type: renderer_key.into(),
             execute_type: String::new(),
@@ -598,9 +598,9 @@ impl<'a> NodeBuilder<'a, NoGraph> {
         }
     }
 
-    pub fn graph(self, graph: &'a mut Graph) -> NodeBuilder<'a, WithGraph<'a>> {
+    pub fn graph(self, graph: &'a mut Graph) -> NodeBuilderInGraph<'a> {
         NodeBuilder {
-            graph: WithGraph(graph),
+            graph: Set(graph),
             _phantom: PhantomData,
             node_type: self.node_type,
             execute_type: self.execute_type,
@@ -782,7 +782,7 @@ impl<'a, G> NodeBuilder<'a, G> {
     }
 }
 
-impl<'a> NodeBuilder<'a, WithGraph<'a>> {
+impl<'a> NodeBuilderInGraph<'a> {
     pub fn build(self) -> NodeId {
         let (node, ports, graph) = self.build_raw();
         let id = node.id();

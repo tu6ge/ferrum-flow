@@ -1,6 +1,6 @@
 //! Shared node-kind presets for [`super::node_type_picker::NodeTypePickerPlugin`] and [`super::add_node::MeiliAddNodePlugin`].
 
-use ferrum_flow::{NodeBuilder, WithGraph};
+use ferrum_flow::NodeBuilderInGraph;
 use serde_json::{Value, json};
 
 #[derive(Clone, Copy)]
@@ -108,8 +108,8 @@ impl NodeKindPreset {
     /// Ports when creating a node from the add dialog (no dangling edge).
     pub(crate) fn apply_standalone_ports<'a>(
         self,
-        b: NodeBuilder<'a, WithGraph<'a>>,
-    ) -> NodeBuilder<'a, WithGraph<'a>> {
+        b: NodeBuilderInGraph<'a>,
+    ) -> NodeBuilderInGraph<'a> {
         match self {
             Self::IoStart => b.output(),
             Self::IoEnd => b.input(),
