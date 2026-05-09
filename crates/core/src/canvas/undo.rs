@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use gpui::{Bounds, Pixels, Point};
 
 use crate::{
-    Edge, EdgeBuilder, EdgeId, Graph, GraphOp, Node, NodeBuilder, NodeId, Port, PortId,
-    RendererRegistry, SharedState, Viewport, WithGraph,
+    Edge, EdgeBuilderInGraph, EdgeId, Graph, GraphOp, Node, NodeBuilderInGraph, NodeId, Port,
+    PortId, RendererRegistry, SharedState, Viewport,
     canvas::PortLayoutCache,
     plugin::{is_edge_visible, is_node_visible},
 };
@@ -152,11 +152,11 @@ impl<'a> CommandContext<'a> {
             notify,
         }
     }
-    pub fn create_node(&mut self, node_type: &str) -> NodeBuilder<'_, WithGraph<'_>> {
+    pub fn create_node(&mut self, node_type: &str) -> NodeBuilderInGraph<'_> {
         self.graph.create_node(node_type)
     }
 
-    pub fn create_edge(&mut self) -> EdgeBuilder<'_> {
+    pub fn create_edge(&mut self) -> EdgeBuilderInGraph<'_> {
         self.graph.create_edge()
     }
 

@@ -229,22 +229,19 @@ mod command_interop_tests {
             .create_edge()
             .source(src_node.outputs()[0])
             .target(selected_node.inputs()[0])
-            .build()
-            .expect("cascade in edge");
+            .build();
         // This edge IS selected and also touches selected node.
         let selected_edge = base
             .create_edge()
             .source(selected_node.outputs()[0])
             .target(dst_node.inputs()[0])
-            .build()
-            .expect("selected edge");
+            .build();
         // Unrelated edge should remain untouched.
         let _unrelated = base
             .create_edge()
             .source(dst_node.outputs()[0])
             .target(other_node.inputs()[0])
-            .build()
-            .expect("unrelated edge");
+            .build();
 
         base.add_selected_node(selected_id, false);
         base.add_selected_edge(selected_edge, true);

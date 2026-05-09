@@ -1,3 +1,4 @@
+pub mod builder_state;
 mod canvas;
 #[cfg(any(feature = "testing", test))]
 pub mod command_interop;

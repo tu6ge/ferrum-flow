@@ -7,8 +7,9 @@ use gpui::{
 };
 
 use crate::{
-    Edge, EdgeBuilder, EdgeId, FlowCanvas, FlowTheme, Graph, GraphOp, Node, NodeBuilder, NodeId,
-    NodeRenderer, Port, PortId, PortPosition, RendererRegistry, SharedState, Viewport, WithGraph,
+    Edge, EdgeBuilderInGraph, EdgeId, FlowCanvas, FlowTheme, Graph, GraphOp, Node, NodeBuilder,
+    NodeBuilderInGraph, NodeId, NodeRenderer, Port, PortId, PortPosition, RendererRegistry,
+    SharedState, Viewport,
     canvas::{
         Command, CommandContext, HistoryProvider, Interaction, InteractionState, PortLayoutCache,
     },
@@ -97,11 +98,11 @@ impl<'a, 'b> InitPluginContext<'a, 'b> {
             shared_state,
         }
     }
-    pub fn create_node(&mut self, node_type: &str) -> NodeBuilder<'_, WithGraph<'_>> {
+    pub fn create_node(&mut self, node_type: &str) -> NodeBuilderInGraph<'_> {
         self.graph.create_node(node_type)
     }
 
-    pub fn create_edge(&mut self) -> EdgeBuilder<'_> {
+    pub fn create_edge(&mut self) -> EdgeBuilderInGraph<'_> {
         self.graph.create_edge()
     }
 
@@ -485,11 +486,11 @@ impl<'a> PluginContext<'a> {
         self.history.clear();
     }
 
-    pub fn create_node(&mut self, node_type: &str) -> NodeBuilder<'_, WithGraph<'_>> {
+    pub fn create_node(&mut self, node_type: &str) -> NodeBuilderInGraph<'_> {
         self.graph.create_node(node_type)
     }
 
-    pub fn create_edge(&mut self) -> EdgeBuilder<'_> {
+    pub fn create_edge(&mut self) -> EdgeBuilderInGraph<'_> {
         self.graph.create_edge()
     }
 

@@ -1,9 +1,11 @@
-use std::{fmt::Display, str::FromStr as _};
+use std::{fmt::Display, marker::PhantomData, str::FromStr as _};
 
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{Graph, PortId};
+use crate::Graph;
+use crate::builder_state::{Set, Unset};
+use crate::node::PortId;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct EdgeId(Uuid);
@@ -69,46 +71,75 @@ impl Edge {
     }
 }
 
-pub struct EdgeBuilder<'a> {
-    graph: Option<&'a mut Graph>,
-    source: Option<PortId>,
-    target: Option<PortId>,
+/// Edge construction with typestate over `graph`, `source`, and `target` ([`Unset`] / [`Set`]).
+///
+/// Start with [`EdgeBuilder::new`], or from [`Graph::create_edge`] which already binds the graph.
+pub struct EdgeBuilder<'a, G = Unset, S = Unset, T = Unset> {
+    graph: G,
+    source: S,
+    target: T,
+    _phantom: PhantomData<&'a ()>,
 }
 
-impl<'a> Default for EdgeBuilder<'a> {
+/// [`EdgeBuilder`] after [`Graph::create_edge`] (graph field is [`Set`]).
+pub type EdgeBuilderInGraph<'a> = EdgeBuilder<'a, Set<&'a mut Graph>, Unset, Unset>;
+
+impl<'a> Default for EdgeBuilder<'a, Unset, Unset, Unset> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<'a> EdgeBuilder<'a> {
+impl<'a> EdgeBuilder<'a, Unset, Unset, Unset> {
     pub fn new() -> Self {
         Self {
-            graph: None,
-            source: None,
-            target: None,
+            graph: Unset,
+            source: Unset,
+            target: Unset,
+            _phantom: PhantomData,
         }
     }
+}
 
-    pub fn graph(mut self, graph: &'a mut Graph) -> Self {
-        self.graph = Some(graph);
-        self
+impl<'a, S, T> EdgeBuilder<'a, Unset, S, T> {
+    pub fn graph(self, graph: &'a mut Graph) -> EdgeBuilder<'a, Set<&'a mut Graph>, S, T> {
+        EdgeBuilder {
+            graph: Set(graph),
+            source: self.source,
+            target: self.target,
+            _phantom: PhantomData,
+        }
     }
+}
 
-    pub fn source(mut self, port: PortId) -> Self {
-        self.source = Some(port);
-        self
+impl<'a, G, T> EdgeBuilder<'a, G, Unset, T> {
+    pub fn source(self, port: PortId) -> EdgeBuilder<'a, G, Set<PortId>, T> {
+        EdgeBuilder {
+            graph: self.graph,
+            source: Set(port),
+            target: self.target,
+            _phantom: PhantomData,
+        }
     }
+}
 
-    pub fn target(mut self, port: PortId) -> Self {
-        self.target = Some(port);
-        self
+impl<'a, G, S> EdgeBuilder<'a, G, S, Unset> {
+    pub fn target(self, port: PortId) -> EdgeBuilder<'a, G, S, Set<PortId>> {
+        EdgeBuilder {
+            graph: self.graph,
+            source: self.source,
+            target: Set(port),
+            _phantom: PhantomData,
+        }
     }
+}
 
-    pub fn build(self) -> Option<EdgeId> {
-        let graph = self.graph?;
-        let source = self.source?;
-        let target = self.target?;
+impl<'a> EdgeBuilder<'a, Set<&'a mut Graph>, Set<PortId>, Set<PortId>> {
+    /// Inserts the edge into the bound graph and returns its id.
+    pub fn build(self) -> EdgeId {
+        let graph = self.graph.0;
+        let source = self.source.0;
+        let target = self.target.0;
 
         let edge_id = graph.next_edge_id();
 
@@ -118,6 +149,6 @@ impl<'a> EdgeBuilder<'a> {
             target_port: target,
         });
 
-        Some(edge_id)
+        edge_id
     }
 }

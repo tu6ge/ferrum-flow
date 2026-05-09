@@ -91,8 +91,7 @@ mod command_interop_tests {
             .create_edge()
             .source(source_port)
             .target(target_port)
-            .build()
-            .expect("edge");
+            .build();
 
         let old_selected_edge = base.selected_edge().clone();
         let old_selected_node = base.selected_node().clone();
@@ -124,8 +123,7 @@ mod command_interop_tests {
             .create_edge()
             .source(source_port)
             .target(target_port)
-            .build()
-            .expect("edge");
+            .build();
         base.add_selected_edge(edge_id, false);
 
         let old_selected_edge = base.selected_edge().clone();

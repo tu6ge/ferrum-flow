@@ -5,9 +5,9 @@ use std::collections::{HashMap, HashSet};
 use gpui::{Bounds, Pixels, Point, Size, px};
 use serde::{Deserialize, Serialize};
 
-use crate::edge::{Edge, EdgeId};
+use crate::edge::{Edge, EdgeBuilderInGraph, EdgeId};
 use crate::node::{Node, NodeId, Port, PortId};
-use crate::{EdgeBuilder, NodeBuilder, PortKind, PortPosition, Viewport, WithGraph};
+use crate::{EdgeBuilder, NodeBuilder, NodeBuilderInGraph, PortKind, PortPosition, Viewport};
 
 mod store;
 
@@ -100,16 +100,16 @@ impl Graph {
         }
     }
 
-    pub fn create_node(&mut self, renderer_key: &str) -> NodeBuilder<'_, WithGraph<'_>> {
+    pub fn create_node(&mut self, renderer_key: &str) -> NodeBuilderInGraph<'_> {
         NodeBuilder::new(renderer_key).graph(self)
     }
 
-    pub fn create_edge(&mut self) -> EdgeBuilder<'_> {
+    pub fn create_edge(&mut self) -> EdgeBuilderInGraph<'_> {
         EdgeBuilder::new().graph(self)
     }
 
     #[deprecated(note = "use `Graph::create_edge`")]
-    pub fn create_dege(&mut self) -> EdgeBuilder<'_> {
+    pub fn create_dege(&mut self) -> EdgeBuilderInGraph<'_> {
         EdgeBuilder::new().graph(self)
     }
 
