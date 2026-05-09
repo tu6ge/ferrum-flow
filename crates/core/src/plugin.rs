@@ -952,6 +952,10 @@ impl<'a> RenderContext<'a> {
         }
     }
 
+    pub fn node_card_shell_custom(&self, node: &Node) -> Stateful<Div> {
+        self.node_card_shell(node, false, NodeCardVariant::Custom)
+    }
+
     /// [`Viewport::screen_to_world`]: `p` is GPUI **window** space.
     pub fn screen_to_world(&self, p: Point<Pixels>) -> Point<Pixels> {
         self.viewport.screen_to_world(p)
