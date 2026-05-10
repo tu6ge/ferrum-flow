@@ -65,28 +65,34 @@ impl Plugin for EdgePlugin {
             .map(|(id, _)| *id)
             .collect();
 
-        let edges: Vec<_> = ctx
+        // Port offsets must be cached before `edge_geometry2` calls `port_screen_center_by_port_id`.
+        // (Edges render in [`RenderLayer::Edges`], before nodes; node `render` also caches ports, but
+        // that runs later in the same frame — so caching here is required for the first paint.)
+        let visible_edges: Vec<(EdgeId, &Edge)> = ctx
             .graph
             .edges()
             .iter()
-            .filter(|(_, edge)| {
-                let Some(source_port) = ctx.graph.get_port(&edge.source_port) else {
-                    return false;
-                };
-                let Some(target_port) = ctx.graph.get_port(&edge.target_port) else {
-                    return false;
-                };
-
-                visible_nodes.contains(&source_port.node_id())
+            .filter_map(|(id, edge)| {
+                let source_port = ctx.graph.get_port(&edge.source_port)?;
+                let target_port = ctx.graph.get_port(&edge.target_port)?;
+                if visible_nodes.contains(&source_port.node_id())
                     || visible_nodes.contains(&target_port.node_id())
+                {
+                    Some((*id, edge))
+                } else {
+                    None
+                }
             })
-            .map(|(k, v)| (*k, edge_geometry2(v, ctx)))
             .collect();
 
-        let edge_ids = edges.iter().map(|(id, _)| *id);
-        for edge_id in edge_ids {
-            ctx.cache_port_offset_with_edge(&edge_id);
+        for (_, edge) in &visible_edges {
+            ctx.cache_port_offset_with_edge(&edge.id);
         }
+
+        let edges: Vec<_> = visible_edges
+            .iter()
+            .map(|(id, edge)| (*id, edge_geometry2(edge, ctx)))
+            .collect();
 
         let selected_edges = ctx.graph.selected_edge().clone();
         let stroke = ctx.theme.edge_stroke;
