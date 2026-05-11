@@ -1,3 +1,7 @@
+<p align="center">
+  <img width="120" alt="ferrum-flow-logo" src="https://github.com/user-attachments/assets/99063140-6b80-4a3d-913e-2b14f424cfb7" />
+</p>
+
 # FerrumFlow
 
 A high-performance, extensible node-based editor built with Rust and gpui.
