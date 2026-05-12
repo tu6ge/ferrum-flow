@@ -1,11 +1,13 @@
-//! Multiple GPUI windows, each with a different graph. **⌘⇧G / Ctrl⇧G** runs auto-layout: DAG demos
-//! use [`LayeredDagLayout`] or [`LayeredThenForceLayout`]; the **directed cycle** window uses
-//! [`ForceDirectedLayout`] so you can compare pure force on a ring.
+//! Multiple GPUI windows, each with a different graph. **⌘⇧G / Ctrl⇧G** runs auto-layout: most
+//! DAG windows use [`LayeredDagLayout`]; the **directed cycle** window uses [`ForceDirectedLayout`];
+//! the diamond window uses a hand-built [`LayoutPipeline`] (layered, then force).
 //!
 //! Run: `cargo run -p ferrum-flow --example layout_windows`
 
+use std::sync::Arc;
+
 use ferrum_flow::{
-    layout::{ForceDirectedLayout, LayeredDagLayout, LayeredThenForceLayout},
+    layout::{ForceDirectedLayout, LayeredDagLayout, LayoutPhase, LayoutPipeline},
     *,
 };
 use gpui::{
@@ -66,7 +68,15 @@ fn main() {
                     let auto = match layout_kind {
                         LayoutKind::Layered => AutoLayoutPlugin::new().strategy(LayeredDagLayout),
                         LayoutKind::LayeredThenForce => {
-                            AutoLayoutPlugin::new().strategy(LayeredThenForceLayout::default())
+                            AutoLayoutPlugin::new().strategy(LayoutPipeline::with_meta(
+                                "layered_then_force",
+                                "Layered → force",
+                                LayoutPhase::Optimizer,
+                                vec![
+                                    Arc::new(LayeredDagLayout),
+                                    Arc::new(ForceDirectedLayout::default()),
+                                ],
+                            ))
                         }
                         LayoutKind::Force => {
                             AutoLayoutPlugin::new().strategy(ForceDirectedLayout::default())
