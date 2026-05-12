@@ -1,9 +1,13 @@
-//! Multiple GPUI windows, each with a different graph, to exercise [`LayeredDagLayout`] (⌘⇧G /
-//! Ctrl⇧G) under varied topologies.
+//! Multiple GPUI windows, each with a different graph. **⌘⇧G / Ctrl⇧G** runs auto-layout: most
+//! windows use [`LayeredDagLayout`]; the **directed cycle** demo uses [`ForceDirectedLayout`] so
+//! you can compare DAG layering vs. force on a ring.
 //!
 //! Run: `cargo run -p ferrum-flow --example layout_windows`
 
-use ferrum_flow::{layout::LayeredDagLayout, *};
+use ferrum_flow::{
+    layout::{ForceDirectedLayout, LayeredDagLayout},
+    *,
+};
 use gpui::{
     AppContext as _, Application, Bounds, Point, Size, TitlebarOptions, WindowBounds,
     WindowOptions, px,
@@ -12,18 +16,28 @@ use serde_json::json;
 
 fn main() {
     Application::new().run(|cx| {
-        let demos: Vec<(&'static str, Graph)> = vec![
-            ("1: linear chain", graph_linear_chain()),
-            ("2: directed cycle → grid", graph_directed_cycle()),
-            ("3: diamond DAG", graph_diamond()),
-            ("4: two components", graph_two_components()),
-            ("5: single node", graph_single_node()),
-            ("6: fan-out", graph_fan_out()),
+        #[derive(Clone, Copy)]
+        enum LayoutKind {
+            Layered,
+            Force,
+        }
+
+        let demos: Vec<(&'static str, Graph, LayoutKind)> = vec![
+            ("1: linear chain", graph_linear_chain(), LayoutKind::Layered),
+            (
+                "2: directed cycle (force)",
+                graph_directed_cycle(),
+                LayoutKind::Force,
+            ),
+            ("3: diamond DAG", graph_diamond(), LayoutKind::Layered),
+            ("4: two components", graph_two_components(), LayoutKind::Layered),
+            ("5: single node", graph_single_node(), LayoutKind::Layered),
+            ("6: fan-out", graph_fan_out(), LayoutKind::Layered),
         ];
 
         let col_w = 440.0;
         let row_h = 380.0;
-        for (i, (title, graph)) in demos.into_iter().enumerate() {
+        for (i, (title, graph, layout_kind)) in demos.into_iter().enumerate() {
             let col = (i % 3) as f32;
             let row = (i / 3) as f32;
             let origin = Point::new(px(32.0 + col * col_w), px(28.0 + row * row_h));
@@ -40,11 +54,19 @@ fn main() {
 
             cx.open_window(opts, |window, cx| {
                 cx.new(|ctx| {
+                    let auto = match layout_kind {
+                        LayoutKind::Layered => {
+                            AutoLayoutPlugin::new().strategy(LayeredDagLayout)
+                        }
+                        LayoutKind::Force => {
+                            AutoLayoutPlugin::new().strategy(ForceDirectedLayout::default())
+                        }
+                    };
                     FlowCanvas::builder(graph, ctx, window)
                         .default_plugins()
                         .plugin(FitAllGraphPlugin::new())
                         .plugin(ToastPlugin::new())
-                        .plugin(AutoLayoutPlugin::new().strategy(LayeredDagLayout))
+                        .plugin(auto)
                         .build()
                 })
             })
