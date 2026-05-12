@@ -289,14 +289,13 @@ mod tests {
         };
         assert!(d.has_changes());
 
-        let lonely_y = d
-            .to
-            .iter()
-            .find_map(|(id, p)| {
-                let n = graph.get_node(id)?;
-                (n.data_ref().get("label") == Some(&json!("lonely"))).then_some(px_f32(p.y))
-            })
-            .expect("lonely node");
+        let lonely_y =
+            d.to.iter()
+                .find_map(|(id, p)| {
+                    let n = graph.get_node(id)?;
+                    (n.data_ref().get("label") == Some(&json!("lonely"))).then_some(px_f32(p.y))
+                })
+                .expect("lonely node");
         assert!(
             lonely_y >= 56.0,
             "isolated node should sit below connected bbox, y={lonely_y}"

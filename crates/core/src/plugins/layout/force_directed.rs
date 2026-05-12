@@ -330,6 +330,9 @@ mod tests {
                 None,
             )
             .expect("compute");
-        assert!(matches!(out, LayoutOutput::Delta(_) | LayoutOutput::Unchanged));
+        assert!(matches!(
+            out,
+            LayoutOutput::Delta(_) | LayoutOutput::Unchanged
+        ));
     }
 }

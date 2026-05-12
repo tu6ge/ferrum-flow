@@ -54,49 +54,63 @@ fn auto_for(recipe: Recipe) -> AutoLayoutPlugin {
                 Arc::new(ForceDirectedLayout::default()),
             ],
         )),
-        Recipe::LayeredThenForcePack => AutoLayoutPlugin::new()
-            .options(opts_pack_on())
-            .strategy(LayoutPipeline::with_meta(
-                "l_f_p",
-                "L→F→pack",
-                LayoutPhase::Optimizer,
-                vec![
-                    Arc::new(LayeredDagLayout) as Arc<dyn LayoutStrategy>,
-                    Arc::new(ForceDirectedLayout::default()),
-                    Arc::new(PackIsolatedNodesLayout),
-                ],
-            )),
-        Recipe::LayeredThenPack => AutoLayoutPlugin::new()
-            .options(opts_pack_on())
-            .strategy(LayoutPipeline::with_meta(
-                "l_p",
-                "L→pack",
-                LayoutPhase::Optimizer,
-                vec![
-                    Arc::new(LayeredDagLayout) as Arc<dyn LayoutStrategy>,
-                    Arc::new(PackIsolatedNodesLayout),
-                ],
-            )),
-        Recipe::ForceThenPack => AutoLayoutPlugin::new()
-            .options(opts_pack_on())
-            .strategy(LayoutPipeline::with_meta(
-                "f_p",
-                "F→pack",
-                LayoutPhase::Optimizer,
-                vec![
-                    Arc::new(ForceDirectedLayout::default()) as Arc<dyn LayoutStrategy>,
-                    Arc::new(PackIsolatedNodesLayout),
-                ],
-            )),
+        Recipe::LayeredThenForcePack => {
+            AutoLayoutPlugin::new()
+                .options(opts_pack_on())
+                .strategy(LayoutPipeline::with_meta(
+                    "l_f_p",
+                    "L→F→pack",
+                    LayoutPhase::Optimizer,
+                    vec![
+                        Arc::new(LayeredDagLayout) as Arc<dyn LayoutStrategy>,
+                        Arc::new(ForceDirectedLayout::default()),
+                        Arc::new(PackIsolatedNodesLayout),
+                    ],
+                ))
+        }
+        Recipe::LayeredThenPack => {
+            AutoLayoutPlugin::new()
+                .options(opts_pack_on())
+                .strategy(LayoutPipeline::with_meta(
+                    "l_p",
+                    "L→pack",
+                    LayoutPhase::Optimizer,
+                    vec![
+                        Arc::new(LayeredDagLayout) as Arc<dyn LayoutStrategy>,
+                        Arc::new(PackIsolatedNodesLayout),
+                    ],
+                ))
+        }
+        Recipe::ForceThenPack => {
+            AutoLayoutPlugin::new()
+                .options(opts_pack_on())
+                .strategy(LayoutPipeline::with_meta(
+                    "f_p",
+                    "F→pack",
+                    LayoutPhase::Optimizer,
+                    vec![
+                        Arc::new(ForceDirectedLayout::default()) as Arc<dyn LayoutStrategy>,
+                        Arc::new(PackIsolatedNodesLayout),
+                    ],
+                ))
+        }
     }
 }
 
 fn main() {
     Application::new().run(|cx| {
         let demos: Vec<(&'static str, Graph, Recipe)> = vec![
-            ("01 layered | chain", graph_linear_chain(), Recipe::LayeredOnly),
+            (
+                "01 layered | chain",
+                graph_linear_chain(),
+                Recipe::LayeredOnly,
+            ),
             ("02 force | ring", graph_directed_cycle(), Recipe::ForceOnly),
-            ("03 L→F | diamond", graph_diamond(), Recipe::LayeredThenForce),
+            (
+                "03 L→F | diamond",
+                graph_diamond(),
+                Recipe::LayeredThenForce,
+            ),
             (
                 "04 L→F→pack | diamond (no ∅)",
                 graph_diamond(),
@@ -117,14 +131,22 @@ fn main() {
                 graph_chain_with_orphans(),
                 Recipe::ForceThenPack,
             ),
-            ("08 layered | 2 comp", graph_two_components(), Recipe::LayeredOnly),
+            (
+                "08 layered | 2 comp",
+                graph_two_components(),
+                Recipe::LayeredOnly,
+            ),
             ("09 L→F | fan", graph_fan_out(), Recipe::LayeredThenForce),
             (
                 "10 L→F→pack | fan+∅",
                 graph_fan_with_orphan(),
                 Recipe::LayeredThenForcePack,
             ),
-            ("11 layered | 1 node", graph_single_node(), Recipe::LayeredOnly),
+            (
+                "11 layered | 1 node",
+                graph_single_node(),
+                Recipe::LayeredOnly,
+            ),
         ];
 
         let cols = 3;
