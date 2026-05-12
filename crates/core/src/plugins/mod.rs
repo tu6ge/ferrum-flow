@@ -18,6 +18,8 @@ mod viewport;
 mod viewport_frame;
 mod zoom_controls;
 
+pub mod layout;
+
 pub use align::AlignPlugin;
 pub use background::BackgroundPlugin;
 pub use clipboard::ClipboardPlugin;
@@ -27,6 +29,7 @@ pub use edge::EdgePlugin;
 pub use fit_all::FitAllGraphPlugin;
 pub use focus_selection::FocusSelectionPlugin;
 pub use history::HistoryPlugin;
+pub use layout::AutoLayoutPlugin;
 pub use minimap::MinimapPlugin;
 pub use node::{
     ActiveNodeDrag, NODE_DRAG_TICK_INTERVAL, NodeDragEvent, NodeInteractionPlugin, NodePlugin,
