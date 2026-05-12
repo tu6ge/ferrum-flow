@@ -1,8 +1,7 @@
 //! Pluggable graph layout: [`LayoutStrategy`], [`LayoutPhase`], [`PositionHint`], and options.
 //!
-//! Implementations live in sibling modules (e.g. layered DAG, force). A future
-//! [`super::pipeline::LayoutPipeline`](super::pipeline) will chain strategies using
-//! [`LayoutStrategy::compute`]’s `hint` argument.
+//! Implementations live in sibling modules (e.g. layered DAG, force). [`super::LayeredThenForceLayout`]
+//! chains initializer + optimizer using [`LayoutStrategy::compute`]’s `hint` argument.
 
 use std::collections::HashMap;
 use std::fmt;

@@ -1,11 +1,11 @@
-//! Multiple GPUI windows, each with a different graph. **⌘⇧G / Ctrl⇧G** runs auto-layout: most
-//! windows use [`LayeredDagLayout`]; the **directed cycle** demo uses [`ForceDirectedLayout`] so
-//! you can compare DAG layering vs. force on a ring.
+//! Multiple GPUI windows, each with a different graph. **⌘⇧G / Ctrl⇧G** runs auto-layout: DAG demos
+//! use [`LayeredDagLayout`] or [`LayeredThenForceLayout`]; the **directed cycle** window uses
+//! [`ForceDirectedLayout`] so you can compare pure force on a ring.
 //!
 //! Run: `cargo run -p ferrum-flow --example layout_windows`
 
 use ferrum_flow::{
-    layout::{ForceDirectedLayout, LayeredDagLayout},
+    layout::{ForceDirectedLayout, LayeredDagLayout, LayeredThenForceLayout},
     *,
 };
 use gpui::{
@@ -19,6 +19,7 @@ fn main() {
         #[derive(Clone, Copy)]
         enum LayoutKind {
             Layered,
+            LayeredThenForce,
             Force,
         }
 
@@ -29,8 +30,16 @@ fn main() {
                 graph_directed_cycle(),
                 LayoutKind::Force,
             ),
-            ("3: diamond DAG", graph_diamond(), LayoutKind::Layered),
-            ("4: two components", graph_two_components(), LayoutKind::Layered),
+            (
+                "3: diamond (layered→force)",
+                graph_diamond(),
+                LayoutKind::LayeredThenForce,
+            ),
+            (
+                "4: two components",
+                graph_two_components(),
+                LayoutKind::Layered,
+            ),
             ("5: single node", graph_single_node(), LayoutKind::Layered),
             ("6: fan-out", graph_fan_out(), LayoutKind::Layered),
         ];
@@ -55,8 +64,9 @@ fn main() {
             cx.open_window(opts, |window, cx| {
                 cx.new(|ctx| {
                     let auto = match layout_kind {
-                        LayoutKind::Layered => {
-                            AutoLayoutPlugin::new().strategy(LayeredDagLayout)
+                        LayoutKind::Layered => AutoLayoutPlugin::new().strategy(LayeredDagLayout),
+                        LayoutKind::LayeredThenForce => {
+                            AutoLayoutPlugin::new().strategy(LayeredThenForceLayout::default())
                         }
                         LayoutKind::Force => {
                             AutoLayoutPlugin::new().strategy(ForceDirectedLayout::default())
