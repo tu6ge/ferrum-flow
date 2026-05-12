@@ -1,6 +1,6 @@
 //! Automatic graph layout.
 //!
-//! - [`strategy`] — [`LayoutStrategy`], [`LayoutOptions`], [`LayoutOutput`], [`LayoutError`].
+//! - [`strategy`] — [`LayoutStrategy`], [`LayoutPhase`], [`PositionHint`], [`LayoutOptions`], …
 //! - [`layered_dag`] — [`LayeredDagLayout`] (longest-path layers; cycles → grid fallback).
 //! - [`force_directed`] — [`ForceDirectedLayout`] (FR-style; cycles OK).
 //! - [`AutoLayoutPlugin`] — optional single strategy + shortcut; see that type’s docs.
@@ -14,5 +14,6 @@ pub use auto_layout::AutoLayoutPlugin;
 pub use force_directed::ForceDirectedLayout;
 pub use layered_dag::LayeredDagLayout;
 pub use strategy::{
-    LayoutDirection, LayoutError, LayoutOptions, LayoutOutput, LayoutStrategy, NodePositionDelta,
+    LayoutDirection, LayoutError, LayoutOptions, LayoutOutput, LayoutPhase, LayoutStrategy,
+    NodePositionDelta, PositionHint,
 };

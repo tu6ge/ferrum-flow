@@ -11,7 +11,8 @@ use gpui::{Point, px};
 use crate::{Graph, NodeId};
 
 use super::strategy::{
-    LayoutDirection, LayoutError, LayoutOptions, LayoutOutput, LayoutStrategy, NodePositionDelta,
+    LayoutDirection, LayoutError, LayoutOptions, LayoutOutput, LayoutPhase, LayoutStrategy,
+    NodePositionDelta, PositionHint,
 };
 
 /// Longest-path layering; cycles fall back to a fixed grid ordered by [`Graph::node_order`].
@@ -27,7 +28,16 @@ impl LayoutStrategy for LayeredDagLayout {
         "Layered DAG"
     }
 
-    fn compute(&self, graph: &Graph, options: &LayoutOptions) -> Result<LayoutOutput, LayoutError> {
+    fn phase(&self) -> LayoutPhase {
+        LayoutPhase::Initializer
+    }
+
+    fn compute(
+        &self,
+        graph: &Graph,
+        options: &LayoutOptions,
+        _hint: Option<&PositionHint>,
+    ) -> Result<LayoutOutput, LayoutError> {
         if graph.nodes().is_empty() {
             return Err(LayoutError::EmptyGraph);
         }
@@ -158,11 +168,8 @@ fn layered_positions(
     let col_pitch = max_w + options.layer_spacing.max(8.0);
     let row_gap = options.sibling_spacing.max(8.0);
 
-    let order_index: HashMap<NodeId, usize> = ordered
-        .iter()
-        .enumerate()
-        .map(|(i, id)| (*id, i))
-        .collect();
+    let order_index: HashMap<NodeId, usize> =
+        ordered.iter().enumerate().map(|(i, id)| (*id, i)).collect();
 
     let max_layer = layers.values().copied().max().unwrap_or(0);
     let mut by_layer: Vec<Vec<NodeId>> = vec![Vec::new(); max_layer + 1];
@@ -300,6 +307,7 @@ mod tests {
                     direction: LayoutDirection::LeftToRight,
                     ..Default::default()
                 },
+                None,
             )
             .expect("compute");
 
@@ -308,11 +316,7 @@ mod tests {
         };
         assert!(d.has_changes());
         // Three distinct layers → x order increasing along chain
-        let mut xs: Vec<f32> = d
-            .to
-            .iter()
-            .map(|(_, p)| px_f32(p.x))
-            .collect();
+        let mut xs: Vec<f32> = d.to.iter().map(|(_, p)| px_f32(p.x)).collect();
         xs.sort_by(|a, b| a.partial_cmp(b).unwrap());
         assert!(xs[0] < xs[1] && xs[1] < xs[2], "xs={xs:?}");
     }

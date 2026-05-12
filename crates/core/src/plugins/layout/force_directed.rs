@@ -9,7 +9,10 @@ use gpui::{Point, px};
 
 use crate::{Graph, NodeId};
 
-use super::strategy::{LayoutError, LayoutOptions, LayoutOutput, LayoutStrategy, NodePositionDelta};
+use super::strategy::{
+    LayoutError, LayoutOptions, LayoutOutput, LayoutPhase, LayoutStrategy, NodePositionDelta,
+    PositionHint,
+};
 
 const EPS: f32 = 1e-4;
 
@@ -43,7 +46,16 @@ impl LayoutStrategy for ForceDirectedLayout {
         "Force-directed"
     }
 
-    fn compute(&self, graph: &Graph, options: &LayoutOptions) -> Result<LayoutOutput, LayoutError> {
+    fn phase(&self) -> LayoutPhase {
+        LayoutPhase::Optimizer
+    }
+
+    fn compute(
+        &self,
+        graph: &Graph,
+        options: &LayoutOptions,
+        hint: Option<&PositionHint>,
+    ) -> Result<LayoutOutput, LayoutError> {
         if graph.nodes().is_empty() {
             return Err(LayoutError::EmptyGraph);
         }
@@ -59,15 +71,19 @@ impl LayoutStrategy for ForceDirectedLayout {
         let mut pos: HashMap<NodeId, (f32, f32)> = HashMap::new();
         for id in &ids {
             let n = graph.get_node(id).expect("node exists");
-            pos.insert(*id, (px_f32(n.point().x), px_f32(n.point().y)));
+            let p = hint.and_then(|h| h.get(id)).unwrap_or_else(|| n.point());
+            pos.insert(*id, (px_f32(p.x), px_f32(p.y)));
         }
 
-        let iters = self.iterations.max(20).min(800);
+        let iters = self
+            .iterations
+            .min(options.force_iterations.max(1) as usize)
+            .clamp(20, 800);
         for it in 0..iters {
-            let t = self.initial_temperature
-                * (1.0 - it as f32 / iters as f32).max(0.05);
+            let t = self.initial_temperature * (1.0 - it as f32 / iters as f32).max(0.05);
 
-            let mut disp: HashMap<NodeId, (f32, f32)> = ids.iter().map(|&id| (id, (0.0, 0.0))).collect();
+            let mut disp: HashMap<NodeId, (f32, f32)> =
+                ids.iter().map(|&id| (id, (0.0, 0.0))).collect();
 
             // Repulsion: all unordered pairs
             for i in 0..ids.len() {
@@ -245,7 +261,7 @@ mod tests {
             initial_temperature: 80.0,
         };
         let out = s
-            .compute(&graph, &LayoutOptions::default())
+            .compute(&graph, &LayoutOptions::default(), None)
             .expect("compute");
 
         let LayoutOutput::Delta(d) = out else {
@@ -254,7 +270,10 @@ mod tests {
         assert!(d.has_changes());
 
         let mut min_d2 = f32::MAX;
-        let to_map: HashMap<_, _> = d.to.iter().map(|(id, p)| (*id, (px_f32(p.x), px_f32(p.y)))).collect();
+        let to_map: HashMap<_, _> =
+            d.to.iter()
+                .map(|(id, p)| (*id, (px_f32(p.x), px_f32(p.y))))
+                .collect();
         let ids: Vec<_> = to_map.keys().copied().collect();
         for i in 0..ids.len() {
             for j in (i + 1)..ids.len() {
@@ -265,6 +284,10 @@ mod tests {
                 min_d2 = min_d2.min(dx * dx + dy * dy);
             }
         }
-        assert!(min_d2.sqrt() > 20.0, "nodes should spread apart, min dist={}", min_d2.sqrt());
+        assert!(
+            min_d2.sqrt() > 20.0,
+            "nodes should spread apart, min dist={}",
+            min_d2.sqrt()
+        );
     }
 }

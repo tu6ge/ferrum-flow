@@ -1,14 +1,72 @@
-//! Pluggable graph layout: [`LayoutStrategy`] and shared input/output types.
+//! Pluggable graph layout: [`LayoutStrategy`], [`LayoutPhase`], [`PositionHint`], and options.
 //!
-//! Implementations live in sibling modules (e.g. layered DAG, force). The
-//! [`crate::plugins::layout::AutoLayoutPlugin`](super::AutoLayoutPlugin) (or a host shell) picks a
-//! strategy and applies [`LayoutOutput::Delta`] via [`crate::plugins::node::DragNodesCommand`].
+//! Implementations live in sibling modules (e.g. layered DAG, force). A future
+//! [`super::pipeline::LayoutPipeline`](super::pipeline) will chain strategies using
+//! [`LayoutStrategy::compute`]’s `hint` argument.
 
+use std::collections::HashMap;
 use std::fmt;
+use std::sync::Arc;
 
 use gpui::{Pixels, Point};
 
 use crate::{Graph, NodeId};
+
+/// Role of a strategy inside a multi-stage layout pipeline.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum LayoutPhase {
+    /// Coarse placement from topology (layering, tree, …).
+    #[default]
+    Initializer,
+    /// Refinement using positions from earlier stages (`hint`).
+    Optimizer,
+    /// Cosmetic pass (snap, pack isolates, …).
+    PostProcessor,
+}
+
+/// Warm-start positions between pipeline stages. Cheap to clone ([`Arc`]).
+#[derive(Debug, Clone, Default)]
+pub struct PositionHint {
+    positions: Arc<HashMap<NodeId, Point<Pixels>>>,
+}
+
+impl PositionHint {
+    /// Current node centers from `graph` (world space).
+    pub fn from_graph(graph: &Graph) -> Self {
+        let mut m = HashMap::new();
+        for id in graph.nodes().keys() {
+            if let Some(n) = graph.get_node(id) {
+                m.insert(*id, n.point());
+            }
+        }
+        Self {
+            positions: Arc::new(m),
+        }
+    }
+
+    pub fn from_positions(positions: HashMap<NodeId, Point<Pixels>>) -> Self {
+        Self {
+            positions: Arc::new(positions),
+        }
+    }
+
+    /// Take proposed centers from a previous stage’s [`LayoutOutput::Delta`].
+    pub fn from_delta_to(delta: &NodePositionDelta) -> Self {
+        Self::from_positions(delta.to.iter().map(|(id, p)| (*id, *p)).collect())
+    }
+
+    pub fn positions(&self) -> &HashMap<NodeId, Point<Pixels>> {
+        &self.positions
+    }
+
+    pub fn get(&self, id: &NodeId) -> Option<Point<Pixels>> {
+        self.positions.get(id).copied()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.positions.is_empty()
+    }
+}
 
 /// Tunable knobs for layout passes. Marked [`non_exhaustive`] so new fields can be added without
 /// breaking downstream struct literals.
@@ -21,6 +79,13 @@ pub struct LayoutOptions {
     pub sibling_spacing: f32,
     /// Primary flow direction for layered layouts.
     pub direction: LayoutDirection,
+
+    /// Force-directed phase: iteration budget (algorithms may clamp).
+    pub force_iterations: u32,
+    /// Force-directed phase: stop when max displacement per tick falls below this (reserved).
+    pub force_convergence_threshold: f32,
+    /// If true, run a separate packing pass for isolated nodes (reserved for post-processors).
+    pub pack_isolated_nodes: bool,
 }
 
 impl Default for LayoutOptions {
@@ -29,6 +94,9 @@ impl Default for LayoutOptions {
             layer_spacing: 120.0,
             sibling_spacing: 48.0,
             direction: LayoutDirection::LeftToRight,
+            force_iterations: 200,
+            force_convergence_threshold: 1.0,
+            pack_isolated_nodes: false,
         }
     }
 }
@@ -96,8 +164,7 @@ impl fmt::Display for LayoutError {
 
 impl std::error::Error for LayoutError {}
 
-/// One layout algorithm (layered DAG, force, grid, …). Register multiple behind
-/// [`super::AutoLayoutPlugin`](super::AutoLayoutPlugin) or a small `Vec`/`HashMap` by [`Self::id`].
+/// One layout algorithm (layered DAG, force, grid, …) or a composite pipeline.
 ///
 /// Object-safe: use `&Graph` and owned output; keep impls [`Send`] + [`Sync`] so the canvas can
 /// hold `Arc<dyn LayoutStrategy>` across threads if needed.
@@ -110,6 +177,22 @@ pub trait LayoutStrategy: Send + Sync {
         self.id()
     }
 
+    /// Pipeline role; used to document ordering and future UI grouping.
+    fn phase(&self) -> LayoutPhase;
+
+    /// If `false`, a pipeline may skip this stage for the current graph.
+    fn can_apply(&self, graph: &Graph) -> bool {
+        let _ = graph;
+        true
+    }
+
     /// Compute new positions. Must not mutate `graph`; callers apply [`LayoutOutput::Delta`].
-    fn compute(&self, graph: &Graph, options: &LayoutOptions) -> Result<LayoutOutput, LayoutError>;
+    ///
+    /// `hint` carries centers from earlier pipeline stages; [`None`] for the first stage.
+    fn compute(
+        &self,
+        graph: &Graph,
+        options: &LayoutOptions,
+        hint: Option<&PositionHint>,
+    ) -> Result<LayoutOutput, LayoutError>;
 }

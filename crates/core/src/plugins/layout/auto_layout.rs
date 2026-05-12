@@ -25,8 +25,7 @@ pub struct AutoLayoutPlugin {
 }
 
 impl AutoLayoutPlugin {
-    /// No strategy: shortcut is a no-op until you call [`Self::with_strategy`] /
-    /// [`Self::set_strategy`].
+    /// No strategy: shortcut is a no-op until you call [`Self::strategy`].
     pub fn new() -> Self {
         Self {
             strategy: None,
@@ -75,7 +74,7 @@ impl Plugin for AutoLayoutPlugin {
                     return crate::plugin::EventResult::Stop;
                 };
 
-                match strategy.compute(ctx.graph, &self.options) {
+                match strategy.compute(ctx.graph, &self.options, None) {
                     Ok(LayoutOutput::Unchanged) => {}
                     Ok(LayoutOutput::Delta(delta)) => {
                         if delta.has_changes() {
