@@ -65,34 +65,31 @@ impl Plugin for AutoLayoutPlugin {
         event: &FlowEvent,
         ctx: &mut PluginContext,
     ) -> crate::plugin::EventResult {
-        if let FlowEvent::Input(crate::plugin::InputEvent::KeyDown(ev)) = event {
-            if primary_platform_modifier(ev)
-                && ev.keystroke.modifiers.shift
-                && ev.keystroke.key == "g"
-            {
-                let Some(strategy) = self.strategy.as_ref() else {
-                    return crate::plugin::EventResult::Stop;
-                };
+        if let FlowEvent::Input(crate::plugin::InputEvent::KeyDown(ev)) = event
+            && primary_platform_modifier(ev)
+            && ev.keystroke.modifiers.shift
+            && ev.keystroke.key == "g"
+        {
+            let Some(strategy) = self.strategy.as_ref() else {
+                return crate::plugin::EventResult::Stop;
+            };
 
-                match strategy.compute(ctx.graph, &self.options, None) {
-                    Ok(LayoutOutput::Unchanged) => {}
-                    Ok(LayoutOutput::Delta(delta)) => {
-                        if delta.has_changes() {
-                            ctx.execute_command(DragNodesCommand::from_positions(
-                                delta.from, delta.to,
-                            ));
-                            ctx.cache_all_node_port_offset();
-                        }
-                    }
-                    Err(e) => {
-                        ctx.emit(FlowEvent::custom(ToastMessage::warning(format!(
-                            "Layout ({}): {e}",
-                            strategy.id()
-                        ))));
+            match strategy.compute(ctx.graph, &self.options, None) {
+                Ok(LayoutOutput::Unchanged) => {}
+                Ok(LayoutOutput::Delta(delta)) => {
+                    if delta.has_changes() {
+                        ctx.execute_command(DragNodesCommand::from_positions(delta.from, delta.to));
+                        ctx.cache_all_node_port_offset();
                     }
                 }
-                return crate::plugin::EventResult::Stop;
+                Err(e) => {
+                    ctx.emit(FlowEvent::custom(ToastMessage::warning(format!(
+                        "Layout ({}): {e}",
+                        strategy.id()
+                    ))));
+                }
             }
+            return crate::plugin::EventResult::Stop;
         }
         crate::plugin::EventResult::Continue
     }
