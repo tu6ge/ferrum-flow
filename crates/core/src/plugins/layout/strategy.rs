@@ -81,9 +81,11 @@ pub struct LayoutOptions {
 
     /// Force-directed phase: iteration budget (algorithms may clamp).
     pub force_iterations: u32,
-    /// Force-directed phase: stop when max displacement per tick falls below this (reserved).
+    /// Force-directed phase: when **> 0** and finite, stop once the largest capped displacement in
+    /// an iteration falls **strictly below** this value (world pixels). Use `0.0` to disable early
+    /// exit (always run up to the iteration budget).
     pub force_convergence_threshold: f32,
-    /// If true, run a separate packing pass for isolated nodes (reserved for post-processors).
+    /// When true, [`crate::plugins::layout::PackIsolatedNodesLayout`] moves degree-0 nodes into a strip under the connected subgraph.
     pub pack_isolated_nodes: bool,
 }
 

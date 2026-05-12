@@ -79,6 +79,9 @@ impl LayoutStrategy for ForceDirectedLayout {
             .iterations
             .min(options.force_iterations.max(1) as usize)
             .clamp(20, 800);
+        let conv = options.force_convergence_threshold;
+        let use_conv = conv > 0.0 && conv.is_finite();
+
         for it in 0..iters {
             let t = self.initial_temperature * (1.0 - it as f32 / iters as f32).max(0.05);
 
@@ -131,7 +134,8 @@ impl LayoutStrategy for ForceDirectedLayout {
                 dv.1 -= ay;
             }
 
-            // Apply capped displacement
+            // Apply capped displacement; optionally stop when the largest step is tiny.
+            let mut max_step = 0.0f32;
             for id in &ids {
                 let (dx, dy) = disp[id];
                 let mag = (dx * dx + dy * dy).sqrt();
@@ -139,9 +143,16 @@ impl LayoutStrategy for ForceDirectedLayout {
                     continue;
                 }
                 let scale = t / mag;
+                let step_x = dx * scale;
+                let step_y = dy * scale;
+                max_step = max_step.max((step_x * step_x + step_y * step_y).sqrt());
                 let (px_, py_) = pos.get_mut(id).unwrap();
-                *px_ += dx * scale;
-                *py_ += dy * scale;
+                *px_ += step_x;
+                *py_ += step_y;
+            }
+
+            if use_conv && max_step < conv {
+                break;
             }
         }
 
@@ -289,5 +300,36 @@ mod tests {
             "nodes should spread apart, min dist={}",
             min_d2.sqrt()
         );
+    }
+
+    #[test]
+    fn convergence_threshold_zero_disables_early_exit() {
+        let graph = Graph::build(|g| {
+            let (_, _, o) = g
+                .create_node("")
+                .position(0.0, 0.0)
+                .output()
+                .data(json!({}))
+                .build_with_ports();
+            let (_, i, _) = g
+                .create_node("")
+                .position(40.0, 0.0)
+                .input()
+                .data(json!({}))
+                .build_with_ports();
+            g.create_edge().source(o[0]).target(i[0]).build();
+        });
+        let s = ForceDirectedLayout::default();
+        let out = s
+            .compute(
+                &graph,
+                &LayoutOptions {
+                    force_convergence_threshold: 0.0,
+                    ..Default::default()
+                },
+                None,
+            )
+            .expect("compute");
+        assert!(matches!(out, LayoutOutput::Delta(_) | LayoutOutput::Unchanged));
     }
 }
