@@ -1,24 +1,48 @@
 //! Keyboard entry point for automatic graph layout.
 //!
-//! Layout geometry is delegated to [`crate::plugins::layout`]. Until algorithms land, triggering
-//! layout shows an optional info toast (when [`crate::ToastPlugin`] is registered).
+//! Holds at most **one** [`LayoutStrategy`] ([`AutoLayoutPlugin::strategy`]). By default it is
+//! unset; call [`AutoLayoutPlugin::with_strategy`] (or [`AutoLayoutPlugin::set_strategy`]) with a
+//! built-in or user-defined implementation, then **⌘⇧G** / **Ctrl⇧G** runs
+//! [`LayoutStrategy::compute`] and applies [`LayoutOutput::Delta`] via [`DragNodesCommand`].
 //!
-//! Shortcut: **primary modifier + Shift + G** (e.g. ⌘⇧G / Ctrl⇧G), chosen to avoid overlap with
-//! [`crate::AlignPlugin`](crate::plugins::AlignPlugin) (⌘⇧L/R/T/B/H/V).
+//! [`crate::ToastPlugin`] is optional: warnings are emitted on [`LayoutError`] only when toast is
+//! registered.
+
+use std::sync::Arc;
 
 use crate::{
     ToastMessage,
     plugin::{FlowEvent, Plugin, PluginContext, primary_platform_modifier},
+    plugins::node::DragNodesCommand,
 };
 
-use super::{AutoLayoutComputeResult, compute};
+use super::{LayoutOptions, LayoutOutput, LayoutStrategy};
 
-/// Triggers automatic layout; algorithms live in [`crate::plugins::layout`].
-pub struct AutoLayoutPlugin;
+/// Runs the configured [`LayoutStrategy`] when the user hits the layout shortcut.
+pub struct AutoLayoutPlugin {
+    strategy: Option<Arc<dyn LayoutStrategy>>,
+    options: LayoutOptions,
+}
 
 impl AutoLayoutPlugin {
+    /// No strategy: shortcut is a no-op until you call [`Self::with_strategy`] /
+    /// [`Self::set_strategy`].
     pub fn new() -> Self {
-        Self
+        Self {
+            strategy: None,
+            options: LayoutOptions::default(),
+        }
+    }
+
+    /// Use a concrete algorithm (built-in struct or your own `impl LayoutStrategy`).
+    pub fn strategy(mut self, strategy: impl LayoutStrategy + 'static) -> Self {
+        self.strategy = Some(Arc::new(strategy));
+        self
+    }
+
+    pub fn options(mut self, options: LayoutOptions) -> Self {
+        self.options = options;
+        self
     }
 }
 
@@ -47,12 +71,25 @@ impl Plugin for AutoLayoutPlugin {
                 && ev.keystroke.modifiers.shift
                 && ev.keystroke.key == "g"
             {
-                match compute(ctx.graph) {
-                    AutoLayoutComputeResult::NoNodes => {}
-                    AutoLayoutComputeResult::Pending => {
-                        ctx.emit(FlowEvent::custom(ToastMessage::info(
-                            "Auto-layout: algorithms not implemented yet (see plugins::layout).",
-                        )));
+                let Some(strategy) = self.strategy.as_ref() else {
+                    return crate::plugin::EventResult::Stop;
+                };
+
+                match strategy.compute(ctx.graph, &self.options) {
+                    Ok(LayoutOutput::Unchanged) => {}
+                    Ok(LayoutOutput::Delta(delta)) => {
+                        if delta.has_changes() {
+                            ctx.execute_command(DragNodesCommand::from_positions(
+                                delta.from, delta.to,
+                            ));
+                            ctx.cache_all_node_port_offset();
+                        }
+                    }
+                    Err(e) => {
+                        ctx.emit(FlowEvent::custom(ToastMessage::warning(format!(
+                            "Layout ({}): {e}",
+                            strategy.id()
+                        ))));
                     }
                 }
                 return crate::plugin::EventResult::Stop;

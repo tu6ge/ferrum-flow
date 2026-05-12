@@ -44,8 +44,8 @@ pub enum LayoutDirection {
 /// Before / after node positions for one layout pass (same length, paired by index).
 #[derive(Debug, Clone)]
 pub struct NodePositionDelta {
-    from: Vec<(NodeId, Point<Pixels>)>,
-    to: Vec<(NodeId, Point<Pixels>)>,
+    pub(crate) from: Vec<(NodeId, Point<Pixels>)>,
+    pub(crate) to: Vec<(NodeId, Point<Pixels>)>,
 }
 
 impl NodePositionDelta {
