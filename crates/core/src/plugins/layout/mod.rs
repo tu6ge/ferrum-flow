@@ -1,15 +1,18 @@
 //! Automatic graph layout (**scaffold**).
 //!
-//! Layered DAG, force-directed, and tree passes will live here. [`compute`] is the single entry
-//! point the [`super::AutoLayoutPlugin`](crate::plugins::AutoLayoutPlugin) calls; it currently
-//! returns [`AutoLayoutComputeResult::Pending`] when the graph has nodes so the UI can show a
-//! hint until real coordinates are produced.
+//! - [`strategy`] — [`LayoutStrategy`], [`LayoutOptions`], [`LayoutOutput`], [`LayoutError`].
+//! - [`compute`] — temporary stub used by [`AutoLayoutPlugin`](auto_layout::AutoLayoutPlugin);
+//!   new algorithms should implement [`LayoutStrategy`] and be invoked from the plugin instead.
 
 use crate::Graph;
 
 mod auto_layout;
+mod strategy;
 
 pub use auto_layout::AutoLayoutPlugin;
+pub use strategy::{
+    LayoutDirection, LayoutError, LayoutOptions, LayoutOutput, LayoutStrategy, NodePositionDelta,
+};
 
 /// Outcome of a layout pass over the current graph.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
