@@ -9,6 +9,7 @@ pub mod layered_dag;
 mod strategy;
 
 pub use auto_layout::AutoLayoutPlugin;
+pub use layered_dag::LayeredDagLayout;
 pub use strategy::{
     LayoutDirection, LayoutError, LayoutOptions, LayoutOutput, LayoutStrategy, NodePositionDelta,
 };

@@ -1,9 +1,9 @@
 //! Keyboard entry point for automatic graph layout.
 //!
-//! Holds at most **one** [`LayoutStrategy`] ([`AutoLayoutPlugin::strategy`]). By default it is
-//! unset; call [`AutoLayoutPlugin::with_strategy`] (or [`AutoLayoutPlugin::set_strategy`]) with a
-//! built-in or user-defined implementation, then **⌘⇧G** / **Ctrl⇧G** runs
-//! [`LayoutStrategy::compute`] and applies [`LayoutOutput::Delta`] via [`DragNodesCommand`].
+//! Holds at most **one** [`LayoutStrategy`]. By default it is unset; use
+//! [`AutoLayoutPlugin::strategy`] when wiring the plugin to supply a built-in or custom
+//! implementation, then **⌘⇧G** / **Ctrl⇧G** runs [`LayoutStrategy::compute`] and applies
+//! [`LayoutOutput::Delta`] via [`DragNodesCommand`].
 //!
 //! [`crate::ToastPlugin`] is optional: warnings are emitted on [`LayoutError`] only when toast is
 //! registered.
