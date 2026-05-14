@@ -107,6 +107,10 @@ Current mapping snapshot (as of this README update):
 | Devtools-style state inspector parity | N/A (currently) | missing |  |
 | Collaboration / multi-user awareness | Plugin: `sync_plugin` (Yrs + awareness) | different by design (done) | Implemented via plugin architecture, not RF-style built-in surface. |
 
+### Roadmap
+
+- Nested parent–child nodes
+
 ### Beyond React Flow (FerrumFlow-specific strengths)
 
 FerrumFlow is not only targeting parity. Some capabilities are intentionally stronger or more explicit than typical React Flow usage patterns:

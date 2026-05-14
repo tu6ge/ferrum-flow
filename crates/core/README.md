@@ -234,6 +234,10 @@ Designed to scale to large graphs:
 - Performance-first rendering
 - Composable architecture
 
+## Roadmap
+
+- Nested parent–child nodes
+
 ## License
 
 Apache2.0
