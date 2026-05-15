@@ -54,6 +54,9 @@ jobs:
 
     environment: cargo
 
+    permissions:
+      contents: write
+
     outputs:
       published: ${{ steps.publish.outputs.publish }}
       new_version: ${{ steps.publish.outputs.new_version }}
