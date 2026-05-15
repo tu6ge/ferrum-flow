@@ -35,10 +35,9 @@ impl ParentShell {
                 if ev
                     .as_custom::<NodeDragEvent>()
                     .is_some_and(|e| matches!(e, NodeDragEvent::End))
+                    && let Ok(mut slot) = pending_for_outbound.lock()
                 {
-                    if let Ok(mut slot) = pending_for_outbound.lock() {
-                        *slot = Some("Canvas → parent: primary node drag ended".into());
-                    }
+                    *slot = Some("Canvas → parent: primary node drag ended".into());
                 }
             })));
         });

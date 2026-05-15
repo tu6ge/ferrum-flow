@@ -135,7 +135,7 @@ impl PluginTestHarness {
     /// Call this only in tests that already have a GPUI window.
     pub fn run_render(&mut self, plugin: &mut dyn Plugin, window: &Window) -> Option<AnyElement> {
         let mut ctx = RenderContext::new(
-            &mut self.graph,
+            &self.graph,
             &mut self.port_offset_cache,
             &self.viewport,
             &self.renderers,
