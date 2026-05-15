@@ -1,10 +1,12 @@
+# CI on all branch pushes + PRs to master; **crate publish + GitHub Release only on push to master**
+# after quality checks pass in the same run (`needs: rust-ci` + job-level `if` on `publish`).
 name: CI
 
 on:
   push:
     branches: ["**"]
   pull_request:
-    branches: [ "master" ]
+    branches: ["master"]
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -19,31 +21,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
-      - name: Install system dependencies (gpui)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            pkg-config \
-            cmake \
-            libssl-dev \
-            libasound2-dev \
-            libfontconfig1-dev \
-            libfreetype6-dev \
-            libwayland-dev \
-            libxkbcommon-dev \
-            libxkbcommon-x11-dev \
-            libx11-dev \
-            libx11-xcb-dev \
-            libxcb-render0-dev \
-            libxcb-shape0-dev \
-            libxcb-xfixes0-dev \
-            libxrandr-dev \
-            libxi-dev \
-            libxcursor-dev \
-            libxinerama-dev \
-            libgl1-mesa-dev
+      - name: Install GPUI apt dependencies
+        uses: ./.github/actions/install-gpui-apt
 
       - name: Cache cargo artifacts
         uses: Swatinem/rust-cache@v2
@@ -63,3 +44,78 @@ jobs:
         run: |
           cargo test -p ferrum-flow --all-targets --no-fail-fast
           cargo test -p ferrum-flow-sync-plugin --all-targets --no-fail-fast
+
+  publish:
+    name: Publish crate
+    runs-on: ubuntu-latest
+    needs: rust-ci
+    # Security: publishing only from the default branch via direct push (not PR events).
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+
+    environment: cargo
+
+    outputs:
+      published: ${{ steps.publish.outputs.publish }}
+      new_version: ${{ steps.publish.outputs.new_version }}
+      new_version_value: ${{ steps.publish.outputs.new_version_value }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install GPUI apt dependencies
+        uses: ./.github/actions/install-gpui-apt
+
+      - name: Cache cargo artifacts
+        uses: Swatinem/rust-cache@v2
+
+      - name: Run publish-action
+        id: publish
+        uses: tu6ge/publish-action@v0.5.3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        with:
+          DIR: "/crates/core"
+          TAG_PREFIX: "v"
+
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: publish
+    if: needs.publish.outputs.published == 'true'
+
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version from publish job
+        id: version
+        run: |
+          VERSION="${{ needs.publish.outputs.new_version_value }}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Generate changelog
+        uses: orhun/git-cliff-action@v4
+        id: cliff
+        with:
+          config: cliff.toml
+          args: --latest --strip header
+        env:
+          OUTPUT: CHANGES.md
+          GITHUB_REPO: ${{ github.repository }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.tag }}
+          body: ${{ steps.cliff.outputs.content }}
+          draft: false
+          prerelease: false
