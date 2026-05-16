@@ -373,11 +373,9 @@ impl SyncPlugin for YrsSyncPlugin {
             FlowEvent::Input(InputEvent::MouseMove(event)) => {
                 self.on_mouse_move(ctx.screen_to_world(event.position));
             }
-            FlowEvent::Input(InputEvent::Hover(hovered)) => {
-                if !*hovered {
-                    self.last_awareness_push = None;
-                    self.awareness.clean_local_state();
-                }
+            FlowEvent::Input(InputEvent::Hover(hovered)) if !*hovered => {
+                self.last_awareness_push = None;
+                self.awareness.clean_local_state();
             }
             _ => {}
         }
