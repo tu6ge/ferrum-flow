@@ -308,35 +308,17 @@ pub enum PortType {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Port {
-    // Transitional API: these fields stay public for compatibility in this release.
-    // Prefer using methods on `Port`; fields will become private in a future release.
-    #[deprecated(note = "Use `Port::id()` instead; fields will be private in next release.")]
-    pub id: PortId,
-    #[deprecated(note = "Use `Port::kind()` instead; fields will be private in next release.")]
-    pub kind: PortKind,
-    #[deprecated(
-        note = "Use `Port::index()` / `Port::set_index()` instead; fields will be private in next release."
-    )]
-    pub index: usize,
-    #[deprecated(note = "Use `Port::node_id()` instead; fields will be private in next release.")]
-    pub node_id: NodeId,
-    #[deprecated(
-        note = "Use `Port::position()` / `Port::set_position()` instead; fields will be private in next release."
-    )]
-    pub position: PortPosition,
-    #[deprecated(
-        note = "Use `Port::size_ref()` / `Port::set_size()` instead; fields will be private in next release."
-    )]
-    pub size: Size<Pixels>,
-    #[deprecated(
-        note = "Use `Port::port_type_ref()` / `Port::port_type_mut()` instead; fields will be private in next release."
-    )]
-    pub port_type: PortType,
+    id: PortId,
+    kind: PortKind,
+    index: usize,
+    node_id: NodeId,
+    position: PortPosition,
+    size: Size<Pixels>,
+    port_type: PortType,
 }
 
 impl Port {
     #[allow(clippy::too_many_arguments)]
-    #[allow(deprecated)]
     pub fn new(
         id: PortId,
         kind: PortKind,
@@ -357,67 +339,54 @@ impl Port {
         }
     }
 
-    #[allow(deprecated)]
     pub fn id(&self) -> PortId {
         self.id
     }
 
-    #[allow(deprecated)]
     pub fn kind(&self) -> PortKind {
         self.kind
     }
 
-    #[allow(deprecated)]
     pub fn index(&self) -> usize {
         self.index
     }
 
-    #[allow(deprecated)]
     pub fn node_id(&self) -> NodeId {
         self.node_id
     }
 
-    #[allow(deprecated)]
     pub fn position(&self) -> PortPosition {
         self.position
     }
 
-    #[allow(deprecated)]
     pub fn size_ref(&self) -> &Size<Pixels> {
         &self.size
     }
 
-    #[allow(deprecated)]
     pub fn port_type_ref(&self) -> &PortType {
         &self.port_type
     }
 
-    #[allow(deprecated)]
     pub fn port_type_mut(&mut self) -> &mut PortType {
         &mut self.port_type
     }
 
-    #[allow(deprecated)]
     pub fn set_size(&mut self, size: Size<Pixels>) {
         self.size = size;
     }
 
-    #[allow(deprecated)]
     pub fn set_index(&mut self, index: usize) {
         self.index = index;
     }
 
-    #[allow(deprecated)]
     pub fn set_position(&mut self, position: PortPosition) {
         self.position = position;
     }
 
-    #[allow(deprecated)]
     pub fn set_id(&mut self, id: PortId) {
         self.id = id;
     }
 
-    #[allow(deprecated)]
     pub fn set_node_id(&mut self, node_id: NodeId) {
         self.node_id = node_id;
     }
