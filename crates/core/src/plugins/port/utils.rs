@@ -1,12 +1,6 @@
 use gpui::{Bounds, Path, PathBuilder, Pixels, Point, Size, px};
 
-use crate::{PortId, PortPosition, RenderContext, Viewport};
-
-#[deprecated(note = "use `ctx.port_screen_center_by_port_id(port_id)`")]
-#[allow(dead_code)] // kept for re-export; callers should migrate to `RenderContext` methods
-pub fn port_screen_position(port_id: PortId, ctx: &RenderContext) -> Option<Point<Pixels>> {
-    ctx.port_screen_center_by_port_id(port_id)
-}
+use crate::{PortId, PortPosition, Viewport};
 
 pub fn port_screen_bounds(
     port_id: PortId,

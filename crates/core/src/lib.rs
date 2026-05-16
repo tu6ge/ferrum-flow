@@ -14,9 +14,6 @@ mod shared_state;
 mod theme;
 mod viewport;
 
-/// Prefer [`RenderContext::port_screen_frame`](crate::plugin::RenderContext::port_screen_frame).
-#[allow(deprecated)]
-pub use canvas::port_screen_position;
 pub use canvas::{
     Command, CommandContext, CompositeCommand, FlowCanvas, FlowCanvasOutbound, HistoryProvider,
     Interaction, InteractionResult, InteractionState, LocalHistory, NodeRenderer, RendererRegistry,

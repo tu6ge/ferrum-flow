@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use crate::node::Node;
 use crate::plugin::{NodeCardVariant, RenderContext};
-use crate::{Graph, Port, PortId, PortPosition};
+use crate::{Graph, Port, PortPosition};
 
 pub trait NodeRenderer: Send + Sync {
     /// render node inner UI
@@ -141,15 +141,6 @@ impl NodeRenderer for UndefinedNodeRenderer {
             )
             .into_any()
     }
-}
-
-#[deprecated(note = "use `ctx.port_screen_center(node, port_id)`")]
-pub fn port_screen_position(
-    node: &Node,
-    port_id: PortId,
-    ctx: &RenderContext,
-) -> Option<Point<Pixels>> {
-    ctx.port_screen_center(node, port_id)
 }
 
 fn data_title(data: &serde_json::Value) -> Option<String> {

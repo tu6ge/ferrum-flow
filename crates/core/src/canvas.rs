@@ -26,8 +26,6 @@ pub use undo::{Command, CommandContext, CompositeCommand, HistoryProvider, Local
 
 pub use types::{Interaction, InteractionResult, InteractionState};
 
-#[allow(deprecated)]
-pub use node_renderer::port_screen_position;
 pub use node_renderer::{NodeRenderer, RendererRegistry, default_node_caption};
 
 /// Host-side callback for **outbound** [`FlowEvent`]s: invoked synchronously whenever a plugin calls
