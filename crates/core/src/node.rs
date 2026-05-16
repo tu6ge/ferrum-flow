@@ -45,49 +45,18 @@ impl NodeId {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Node {
-    // Transitional API: these fields stay public for compatibility in this release.
-    // Prefer using methods on `Node`; fields will become private in a future release.
-    #[deprecated(note = "Use `Node::id()` instead; fields will be private in next release.")]
-    pub id: NodeId,
-    #[deprecated(
-        note = "Use `Node::renderer_key()` / `Node::set_renderer_key()` instead; fields will be private in next release."
-    )]
-    pub node_type: String,
-    #[deprecated(
-        note = "Use `Node::execute_type_ref()` / `Node::set_execute_type()` instead; fields will be private in next release."
-    )]
-    pub execute_type: String,
-    #[deprecated(
-        note = "Use `Node::position()` / `Node::set_position()` instead; fields will be private in next release."
-    )]
-    pub x: Pixels,
-    #[deprecated(
-        note = "Use `Node::position()` / `Node::set_position()` instead; fields will be private in next release."
-    )]
-    pub y: Pixels,
-    #[deprecated(
-        note = "Use `Node::size_ref()` / `Node::set_size_mut()` instead; fields will be private in next release."
-    )]
-    pub size: Size<Pixels>,
-
-    #[deprecated(
-        note = "Use `Node::inputs()` / `Node::push_input()` instead; fields will be private in next release."
-    )]
-    pub inputs: Vec<PortId>,
-    #[deprecated(
-        note = "Use `Node::outputs()` / `Node::push_output()` instead; fields will be private in next release."
-    )]
-    pub outputs: Vec<PortId>,
-    #[deprecated(
-        note = "Use `Node::data_ref()` / `Node::data_mut()` / `Node::set_data()` instead; fields will be private in next release."
-    )]
-    pub data: serde_json::Value,
+    id: NodeId,
+    node_type: String,
+    execute_type: String,
+    x: Pixels,
+    y: Pixels,
+    size: Size<Pixels>,
+    inputs: Vec<PortId>,
+    outputs: Vec<PortId>,
+    data: serde_json::Value,
 }
 
 impl Node {
-    // Transitional period: `Node` fields are deprecated for external callers,
-    // but internal constructors/methods still need to read/write those fields.
-    #[allow(deprecated)]
     pub fn new(x: f32, y: f32) -> Self {
         Self {
             id: NodeId::new(),
@@ -105,142 +74,115 @@ impl Node {
         }
     }
 
-    #[allow(deprecated)]
     pub fn id(&self) -> NodeId {
         self.id
     }
 
-    #[allow(deprecated)]
     pub(crate) fn set_id(&mut self, id: NodeId) {
         self.id = id;
     }
 
-    #[allow(deprecated)]
     pub fn renderer_key(&self) -> &str {
         &self.node_type
     }
 
-    #[allow(deprecated)]
     pub fn execute_type_ref(&self) -> &str {
         &self.execute_type
     }
 
-    #[allow(deprecated)]
     pub fn set_renderer_key(&mut self, node_type: impl Into<String>) {
         self.node_type = node_type.into();
     }
 
-    #[allow(deprecated)]
     pub fn set_execute_type(&mut self, execute_type: impl Into<String>) {
         self.execute_type = execute_type.into();
     }
 
-    #[allow(deprecated)]
     pub fn position(&self) -> (Pixels, Pixels) {
         (self.x, self.y)
     }
 
-    #[allow(deprecated)]
     pub fn position_point(&self) -> Point<Pixels> {
         Point::new(self.x, self.y)
     }
 
-    #[allow(deprecated)]
     pub fn size_ref(&self) -> &Size<Pixels> {
         &self.size
     }
 
-    #[allow(deprecated)]
     pub fn inputs(&self) -> &[PortId] {
         &self.inputs
     }
 
-    #[allow(deprecated)]
     pub fn outputs(&self) -> &[PortId] {
         &self.outputs
     }
 
-    #[allow(deprecated)]
     pub fn data_ref(&self) -> &serde_json::Value {
         &self.data
     }
 
-    #[allow(deprecated)]
     pub fn data_mut(&mut self) -> &mut serde_json::Value {
         &mut self.data
     }
 
-    #[allow(deprecated)]
     pub fn set_position(&mut self, x: Pixels, y: Pixels) {
         self.x = x;
         self.y = y;
     }
 
-    #[allow(deprecated)]
     pub fn set_position_with_point(&mut self, point: Point<Pixels>) {
         self.x = point.x;
         self.y = point.y;
     }
 
-    #[allow(deprecated)]
     pub fn set_size_mut(&mut self, size: Size<Pixels>) {
         self.size = size;
     }
 
-    #[allow(deprecated)]
     pub fn set_size_width(&mut self, width: Pixels) {
         self.size.width = width;
     }
 
-    #[allow(deprecated)]
     pub fn set_size_height(&mut self, height: Pixels) {
         self.size.height = height;
     }
 
-    #[allow(deprecated)]
     pub fn set_data(&mut self, data: serde_json::Value) {
         self.data = data;
     }
 
-    #[allow(deprecated)]
     pub fn push_input(&mut self, id: PortId) {
         self.inputs.push(id);
     }
 
-    #[allow(deprecated)]
     pub fn push_output(&mut self, id: PortId) {
         self.outputs.push(id);
     }
 
-    #[allow(deprecated)]
     pub fn clear_port_refs(&mut self) {
         self.inputs.clear();
         self.outputs.clear();
     }
 
-    #[allow(deprecated)]
     pub fn point(&self) -> Point<Pixels> {
         Point::new(self.x, self.y)
     }
 
-    #[allow(deprecated)]
     pub fn bounds(&self) -> Bounds<Pixels> {
         Bounds::new(self.point(), self.size)
     }
 
-    #[allow(deprecated)]
     pub fn set_size(mut self, size: Size<Pixels>) -> Self {
         self.size = size;
         self
     }
 
-    #[allow(deprecated)]
     pub fn output(mut self, id: PortId) -> Self {
         self.outputs.push(id);
         self
     }
 
-    #[allow(deprecated)]
     pub fn input(mut self, id: PortId) -> Self {
         self.inputs.push(id);
         self
@@ -659,7 +601,6 @@ impl<'a, G> NodeBuilder<'a, G> {
     /// Like [`Self::build_raw`], but uses the given node id and input/output port id lists.
     /// Returns an empty port vector: port records are expected to be loaded separately
     /// (e.g. from persistence). Any [`PortSpec`]s on this builder are ignored.
-    #[allow(deprecated)]
     pub fn build_raw_with_port_ids(
         self,
         node_id: NodeId,
@@ -679,7 +620,6 @@ impl<'a, G> NodeBuilder<'a, G> {
         }
     }
 
-    #[allow(deprecated)]
     pub fn build_raw(self) -> (Node, Vec<Port>, G) {
         let node_id = NodeId::new();
 
