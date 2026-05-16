@@ -138,30 +138,6 @@ impl FlowCanvas {
         .detach();
     }
 
-    #[deprecated(note = "use builder instead")]
-    pub fn new(graph: Graph, cx: &mut Context<Self>) -> Self {
-        let focus_handle = cx.focus_handle();
-        let (delayed_notify_tx, _rx) = mpsc::unbounded::<()>();
-        let mut canvas = Self {
-            graph,
-            viewport: Viewport::new(),
-            plugins_registry: PluginRegistry::new(),
-            sync_plugin: None,
-            renderers: RendererRegistry::new(),
-            focus_handle,
-            interaction: InteractionState::new(),
-            history: Box::new(LocalHistory::new()),
-            event_queue: vec![],
-            port_offset_cache: PortLayoutCache::new(),
-            theme: FlowTheme::default(),
-            shared_state: SharedState::new(),
-            delayed_notify_tx,
-            outbound: None,
-        };
-        canvas.init_delayed_notify_channel(cx);
-        canvas
-    }
-
     pub fn builder<'a, 'b>(
         graph: Graph,
         ctx: &'a mut Context<'b, Self>,
