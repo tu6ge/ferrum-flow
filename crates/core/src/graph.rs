@@ -116,11 +116,6 @@ impl Graph {
         EdgeBuilder::new().graph(self)
     }
 
-    #[deprecated(note = "use `Graph::create_edge`")]
-    pub fn create_dege(&mut self) -> EdgeBuilderInGraph<'_> {
-        EdgeBuilder::new().graph(self)
-    }
-
     pub fn next_node_id(&self) -> NodeId {
         NodeId::new()
     }
