@@ -109,7 +109,8 @@ Current mapping snapshot (as of this README update):
 
 ### Roadmap
 
-- Nested parent–child nodes
+- [ ] Nested parent–child nodes
+- [ ] Combine [petgraph](https://crates.io/crates/petgraph)
 
 ### Beyond React Flow (FerrumFlow-specific strengths)
 
