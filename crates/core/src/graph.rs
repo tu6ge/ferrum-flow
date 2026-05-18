@@ -81,12 +81,21 @@ impl Iterator for DescendantsIter<'_> {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ParentDeletePolicy {
     /// Delete the parent node and all its children.
     Cascade,
     /// Promote the children to the parent's level and delete the parent.
     Promote,
+}
+
+impl std::fmt::Display for ParentDeletePolicy {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ParentDeletePolicy::Cascade => write!(f, "cascade"),
+            ParentDeletePolicy::Promote => write!(f, "promote"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -151,9 +160,14 @@ impl Graph {
     pub fn apply(&mut self, op: GraphChangeKind) {
         match op {
             GraphChangeKind::NodeAdded(node) => self.add_node(node).unwrap(),
+            GraphChangeKind::NodeParentChanged { id, parent } => {
+                self.reparent(id, parent).unwrap();
+            }
             GraphChangeKind::NodeRemoved { id } => {
-                //self.remove_node(&id)
-                todo!()
+                self.remove_node(&id, ParentDeletePolicy::Promote).unwrap();
+            }
+            GraphChangeKind::NodeRemovedWithPolicy { id, policy } => {
+                self.remove_node(&id, policy).unwrap();
             }
             GraphChangeKind::NodeMoved { id, x, y } => {
                 if let Some(node) = self.nodes.get_mut(&id) {

@@ -21,7 +21,9 @@ pub fn invalidate_port_layout_cache_for_graph_change(
 ) {
     match kind {
         GraphChangeKind::NodeRemoved { id } => cache.clear_node(id),
+        GraphChangeKind::NodeRemovedWithPolicy { id, .. } => cache.clear_node(id),
         GraphChangeKind::NodeAdded(node) => cache.clear_node(&node.id()),
+        GraphChangeKind::NodeParentChanged { id, .. } => cache.clear_node(id),
         GraphChangeKind::NodeSetWidthed { id, .. }
         | GraphChangeKind::NodeSetHeighted { id, .. }
         | GraphChangeKind::NodeDataUpdated { id, .. } => cache.clear_node(id),
