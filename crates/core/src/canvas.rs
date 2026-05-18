@@ -619,7 +619,7 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
             .add(NodePlugin::new())
             .add(PortInteractionPlugin::new())
             .add(EdgePlugin::new())
-            .add(DeletePlugin::new())
+            .add(DeletePlugin::default())
             .add(HistoryPlugin::new());
         self
     }

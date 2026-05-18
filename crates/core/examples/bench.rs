@@ -38,7 +38,7 @@ fn main() {
                     .plugin(NodePlugin::new())
                     .plugin(PortInteractionPlugin::new())
                     .plugin(EdgePlugin::new())
-                    .plugin(DeletePlugin::new())
+                    .plugin(DeletePlugin::default())
                     .plugin(HistoryPlugin::new())
                     .plugin(MinimapPlugin::new())
                     .plugin(ClipboardPlugin::new())
