@@ -1,26 +1,28 @@
 use crate::{
-    Edge, EdgeId, GraphOp, Node, Port,
+    Edge, EdgeId, GraphOp, Node, ParentDeletePolicy, Port,
     canvas::Command,
     plugin::{FlowEvent, Plugin},
 };
 use std::collections::HashSet;
 
-pub struct DeletePlugin;
+pub struct DeletePlugin {
+    policy: ParentDeletePolicy,
+}
 
 impl DeletePlugin {
-    pub fn new() -> Self {
-        Self {}
+    pub fn new(policy: ParentDeletePolicy) -> Self {
+        Self { policy }
     }
 }
 
 impl Default for DeletePlugin {
     fn default() -> Self {
-        Self::new()
+        Self::new(ParentDeletePolicy::Promote)
     }
 }
 
-pub(crate) fn delete_selection(ctx: &mut crate::plugin::PluginContext) {
-    ctx.execute_command(DeleteCommand::new(ctx));
+pub(crate) fn delete_selection(ctx: &mut crate::plugin::PluginContext, policy: ParentDeletePolicy) {
+    ctx.execute_command(DeleteCommand::new(ctx, policy));
 }
 
 impl Plugin for DeletePlugin {
@@ -36,7 +38,7 @@ impl Plugin for DeletePlugin {
         if let FlowEvent::Input(crate::plugin::InputEvent::KeyDown(ev)) = event
             && (ev.keystroke.key == "delete" || ev.keystroke.key == "backspace")
         {
-            ctx.execute_command(DeleteCommand::new(ctx));
+            ctx.execute_command(DeleteCommand::new(ctx, self.policy));
             return crate::plugin::EventResult::Stop;
         }
         crate::plugin::EventResult::Continue
@@ -48,6 +50,7 @@ struct DeleteCommand {
     originally_selected_edge_ids: HashSet<EdgeId>,
     selected_node: Vec<Node>,
     selected_port: Vec<Port>,
+    policy: ParentDeletePolicy,
 }
 
 impl DeleteCommand {
@@ -73,7 +76,7 @@ impl DeleteCommand {
         edges
     }
 
-    fn new(ctx: &crate::plugin::PluginContext) -> Self {
+    fn new(ctx: &crate::plugin::PluginContext, policy: ParentDeletePolicy) -> Self {
         let selected_node: Vec<Node> = ctx
             .graph
             .selected_node()
@@ -103,6 +106,7 @@ impl DeleteCommand {
                 .filter_map(|port_id| ctx.graph.get_port(port_id).cloned())
                 .collect(),
             selected_node,
+            policy,
         }
     }
 }
@@ -113,7 +117,7 @@ impl Command for DeleteCommand {
     }
     fn execute(&mut self, ctx: &mut crate::canvas::CommandContext) {
         ctx.remove_selected_edge();
-        ctx.remove_selected_node();
+        ctx.remove_selected_node(self.policy);
     }
     fn undo(&mut self, ctx: &mut crate::canvas::CommandContext) {
         for node in &self.selected_node {
@@ -163,11 +167,11 @@ impl Command for DeleteCommand {
 mod command_interop_tests {
     use std::collections::HashSet;
 
-    use crate::{Graph, command_interop::assert_command_interop};
+    use crate::{Graph, ParentDeletePolicy, command_interop::assert_command_interop};
 
     use super::DeleteCommand;
 
-    fn delete_command_like_new(graph: &Graph) -> DeleteCommand {
+    fn delete_command_like_new(graph: &Graph, policy: ParentDeletePolicy) -> DeleteCommand {
         let selected_node: Vec<crate::Node> = graph
             .selected_node()
             .iter()
@@ -197,6 +201,7 @@ mod command_interop_tests {
             originally_selected_edge_ids,
             selected_node,
             selected_port,
+            policy,
         }
     }
 
@@ -246,7 +251,7 @@ mod command_interop_tests {
         base.add_selected_node(selected_id, false);
         base.add_selected_edge(selected_edge, true);
 
-        let cmd = delete_command_like_new(&base);
+        let cmd = delete_command_like_new(&base, ParentDeletePolicy::Promote);
         assert_command_interop(
             &base,
             || {
@@ -255,6 +260,7 @@ mod command_interop_tests {
                     originally_selected_edge_ids: cmd.originally_selected_edge_ids.clone(),
                     selected_node: cmd.selected_node.clone(),
                     selected_port: cmd.selected_port.clone(),
+                    policy: ParentDeletePolicy::Promote,
                 })
             },
             "DeleteCommand",

@@ -100,7 +100,7 @@ fn main() {
                     .plugin(FitAllGraphPlugin::new())
                     .plugin(PortInteractionPlugin::new())
                     .plugin(EdgePlugin::new())
-                    .plugin(DeletePlugin::new())
+                    .plugin(DeletePlugin::default())
                     .plugin(HistoryPlugin::new())
                     .node_renderer("sync", SyncBasicNodeRenderer)
                     .sync_plugin(

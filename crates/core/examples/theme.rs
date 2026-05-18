@@ -76,7 +76,7 @@ fn main() {
                     .plugin(AlignPlugin::new())
                     .plugin(FocusSelectionPlugin::new())
                     .plugin(FitAllGraphPlugin::new())
-                    .plugin(DeletePlugin::new())
+                    .plugin(DeletePlugin::default())
                     .plugin(HistoryPlugin::new())
                     .build()
             })

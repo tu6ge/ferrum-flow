@@ -6,7 +6,7 @@ use gpui::{
 };
 
 use crate::{
-    NodeId,
+    NodeId, ParentDeletePolicy,
     plugin::{
         EventResult, FlowEvent, InputEvent, Plugin, PluginContext, RenderContext, RenderLayer,
     },
@@ -270,7 +270,7 @@ impl ContextMenuPlugin {
                         set_clipboard_subgraph(ctx, s);
                     }
                 }
-                MenuBuiltin::Delete => delete_selection(ctx),
+                MenuBuiltin::Delete => delete_selection(ctx, ParentDeletePolicy::Promote),
                 MenuBuiltin::BringToFront(id) => ctx.bring_node_to_front(*id),
             },
             MenuItem::Custom { action, .. } => action.call(ctx, menu_world),

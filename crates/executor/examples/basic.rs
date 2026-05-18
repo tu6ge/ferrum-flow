@@ -246,7 +246,7 @@ fn main() {
                     .plugin(EdgePlugin::new())
                     .plugin(ClipboardPlugin::new())
                     .plugin(ContextMenuPlugin::new())
-                    .plugin(DeletePlugin::new())
+                    .plugin(DeletePlugin::default())
                     .plugin(HistoryPlugin::new())
                     .node_renderer("calc_demo", CalcDemoRenderer)
                     .build()
