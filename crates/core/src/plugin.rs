@@ -8,8 +8,8 @@ use gpui::{
 
 use crate::{
     Edge, EdgeBuilderInGraph, EdgeId, FlowCanvas, FlowTheme, Graph, GraphOp, Node, NodeBuilder,
-    NodeBuilderInGraph, NodeId, NodeRenderer, Port, PortId, PortPosition, RendererRegistry,
-    SharedState, Viewport,
+    NodeBuilderInGraph, NodeId, NodeRenderer, ParentDeletePolicy, Port, PortId, PortPosition,
+    RendererRegistry, SharedState, Viewport,
     canvas::{
         Command, CommandContext, HistoryProvider, Interaction, InteractionState, PortLayoutCache,
     },
@@ -133,8 +133,9 @@ impl<'a, 'b> InitPluginContext<'a, 'b> {
     pub fn get_node_mut(&mut self, id: &NodeId) -> Option<&mut Node> {
         self.graph.get_node_mut(id)
     }
-    pub fn remove_node(&mut self, id: &NodeId) {
-        self.graph.remove_node(id);
+    pub fn remove_node(&mut self, id: &NodeId, policy: ParentDeletePolicy) {
+        self.graph.remove_node(id, policy);
+        self.port_offset_cache.clear_node(id);
     }
     pub fn nodes(&self) -> &HashMap<NodeId, Node> {
         self.graph.nodes()
@@ -161,8 +162,8 @@ impl<'a, 'b> InitPluginContext<'a, 'b> {
     pub fn clear_selected_node(&mut self) {
         self.graph.clear_selected_node();
     }
-    pub fn remove_selected_node(&mut self) -> bool {
-        self.graph.remove_selected_node()
+    pub fn remove_selected_node(&mut self, policy: ParentDeletePolicy) -> bool {
+        self.graph.remove_selected_node(policy)
     }
 
     pub fn add_selected_edge(&mut self, id: EdgeId, shift: bool) {
@@ -543,8 +544,8 @@ impl<'a> PluginContext<'a> {
     pub fn get_node_mut(&mut self, id: &NodeId) -> Option<&mut Node> {
         self.graph.get_node_mut(id)
     }
-    pub fn remove_node(&mut self, id: &NodeId) {
-        self.graph.remove_node(id);
+    pub fn remove_node(&mut self, id: &NodeId, policy: ParentDeletePolicy) {
+        self.graph.remove_node(id, policy);
         self.port_offset_cache.clear_node(id);
     }
     pub fn nodes(&self) -> &HashMap<NodeId, Node> {
@@ -572,8 +573,8 @@ impl<'a> PluginContext<'a> {
     pub fn clear_selected_node(&mut self) {
         self.graph.clear_selected_node();
     }
-    pub fn remove_selected_node(&mut self) -> bool {
-        self.graph.remove_selected_node()
+    pub fn remove_selected_node(&mut self, policy: ParentDeletePolicy) -> bool {
+        self.graph.remove_selected_node(policy)
     }
 
     pub fn add_selected_edge(&mut self, id: EdgeId, shift: bool) {
