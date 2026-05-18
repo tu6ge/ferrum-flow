@@ -46,10 +46,9 @@ jobs:
           cargo test -p ferrum-flow-sync-plugin --all-targets --no-fail-fast
 
   publish:
-    name: Publish crate
+    name: Publish ${{ matrix.package }}
     runs-on: ubuntu-latest
     needs: rust-ci
-    # Security: publishing only from the default branch via direct push (not PR events).
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
 
     environment: cargo
@@ -57,10 +56,26 @@ jobs:
     permissions:
       contents: write
 
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - package: ferrum-flow
+            dir: /crates/core
+            tag_prefix: v
+            cliff_config: cliff.ferrum-flow.toml
+          - package: ferrum-flow-sync-plugin
+            dir: /crates/sync_plugin
+            tag_prefix: sync-plugin-v
+            cliff_config: cliff.sync-plugin.toml
+
     outputs:
       published: ${{ steps.publish.outputs.publish }}
       new_version: ${{ steps.publish.outputs.new_version }}
       new_version_value: ${{ steps.publish.outputs.new_version_value }}
+      tag_prefix: ${{ matrix.tag_prefix }}
+      package: ${{ matrix.package }}
+      cliff_config: ${{ matrix.cliff_config }}
 
     steps:
       - uses: actions/checkout@v6.0.2
@@ -80,11 +95,12 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         with:
-          DIR: "/crates/core"
-          TAG_PREFIX: "v"
+          DIR: ${{ matrix.dir }}
+          TAG_PREFIX: ${{ matrix.tag_prefix }}
 
+  # One release job per matrix leg of `publish` (do not add a second matrix here).
   release:
-    name: Create Release
+    name: Release ${{ needs.publish.outputs.package }}
     runs-on: ubuntu-latest
     needs: publish
     if: needs.publish.outputs.published == 'true'
@@ -97,19 +113,20 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Get version from publish job
+      - name: Resolve tag for this crate
         id: version
         run: |
           VERSION="${{ needs.publish.outputs.new_version_value }}"
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+          TAG="${{ needs.publish.outputs.tag_prefix }}${VERSION}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
       - name: Generate changelog
         uses: orhun/git-cliff-action@v4
         id: cliff
         with:
-          config: cliff.toml
-          args: --latest --strip header
+          config: ${{ needs.publish.outputs.cliff_config }}
+          args: --tag ${{ steps.version.outputs.tag }} --strip header
         env:
           OUTPUT: CHANGES.md
           GITHUB_REPO: ${{ github.repository }}
@@ -118,7 +135,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
-          name: ${{ steps.version.outputs.tag }}
+          name: ${{ needs.publish.outputs.package }} ${{ steps.version.outputs.tag }}
           body: ${{ steps.cliff.outputs.content }}
           draft: false
           prerelease: false
