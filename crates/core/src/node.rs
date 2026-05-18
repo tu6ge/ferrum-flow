@@ -54,6 +54,9 @@ pub struct Node {
     inputs: Vec<PortId>,
     outputs: Vec<PortId>,
     data: serde_json::Value,
+
+    parent: Option<NodeId>,
+    children: Vec<NodeId>,
 }
 
 impl Node {
@@ -71,6 +74,9 @@ impl Node {
             inputs: vec![],
             outputs: vec![],
             data: json!({}),
+
+            parent: None,
+            children: vec![],
         }
     }
 
@@ -617,6 +623,8 @@ impl<'a, G> NodeBuilder<'a, G> {
             inputs: input_ids,
             outputs: output_ids,
             data: self.data,
+            parent: None,
+            children: vec![],
         }
     }
 
@@ -684,6 +692,8 @@ impl<'a, G> NodeBuilder<'a, G> {
                 inputs,
                 outputs,
                 data: self.data,
+                parent: None,
+                children: vec![],
             },
             ports,
             self.graph,
