@@ -1,7 +1,7 @@
 use gpui::{Pixels, Size};
 use serde::{Deserialize, Serialize};
 
-use crate::{Edge, EdgeId, Node, NodeId, Port, PortId};
+use crate::{Edge, EdgeId, Node, NodeId, ParentDeletePolicy, Port, PortId};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
@@ -9,17 +9,43 @@ pub enum GraphOp {
     // --- Node ---
     AddNode(Node),
 
-    RemoveNode { id: NodeId },
+    ChangeParentNode {
+        id: NodeId,
+        parent: Option<NodeId>,
+    },
 
-    MoveNode { id: NodeId, x: f32, y: f32 },
+    RemoveNode {
+        id: NodeId,
+    },
 
-    ResizeNode { id: NodeId, size: Size<Pixels> },
+    RemoveNodeWithPolicy {
+        id: NodeId,
+        policy: ParentDeletePolicy,
+    },
 
-    UpdateNodeData { id: NodeId, data: serde_json::Value },
+    MoveNode {
+        id: NodeId,
+        x: f32,
+        y: f32,
+    },
+
+    ResizeNode {
+        id: NodeId,
+        size: Size<Pixels>,
+    },
+
+    UpdateNodeData {
+        id: NodeId,
+        data: serde_json::Value,
+    },
 
     // --- node_order ---
-    NodeOrderInsert { id: NodeId },
-    NodeOrderRemove { index: usize },
+    NodeOrderInsert {
+        id: NodeId,
+    },
+    NodeOrderRemove {
+        index: usize,
+    },
 
     // --- Port ---
     AddPort(Port),
@@ -59,8 +85,16 @@ pub enum ChangeSource {
 pub enum GraphChangeKind {
     // --- Node ---
     NodeAdded(Node),
+    NodeParentChanged {
+        id: NodeId,
+        parent: Option<NodeId>,
+    },
     NodeRemoved {
         id: NodeId,
+    },
+    NodeRemovedWithPolicy {
+        id: NodeId,
+        policy: ParentDeletePolicy,
     },
     NodeMoved {
         id: NodeId,

@@ -213,7 +213,9 @@ impl YrsSyncPlugin {
                 self.update_node_position(txn, &id, x, y);
             }
             GraphOp::AddNode(node) => self.insert_node(txn, &node),
+            GraphOp::ChangeParentNode { .. } => todo!(),
             GraphOp::RemoveNode { id } => self.remove_node(txn, &id),
+            GraphOp::RemoveNodeWithPolicy { .. } => todo!(),
             GraphOp::ResizeNode { .. } => todo!(),
             GraphOp::UpdateNodeData { .. } => todo!(),
             GraphOp::NodeOrderInsert { id } => self.add_node_order(txn, &id),
