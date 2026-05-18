@@ -193,6 +193,31 @@ impl Node {
         self.inputs.push(id);
         self
     }
+
+    pub fn parent(&self) -> Option<NodeId> {
+        self.parent
+    }
+
+    pub fn children(&self) -> &[NodeId] {
+        &self.children
+    }
+
+    pub(crate) fn set_parent(&mut self, parent: Option<NodeId>) {
+        self.parent = parent;
+    }
+
+    pub(crate) fn push_child(&mut self, child: NodeId) {
+        if !self.children.contains(&child) {
+            self.children.push(child);
+        }
+    }
+
+    pub(crate) fn remove_child_ref(&mut self, child: NodeId) {
+        self.children
+            .iter()
+            .position(|id| *id == child)
+            .map(|index| self.children.remove(index));
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

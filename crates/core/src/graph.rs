@@ -13,11 +13,91 @@ mod store;
 
 pub use store::{ChangeSource, GraphChange, GraphChangeKind, GraphOp};
 
+/// Hierarchy and graph invariant violations when linking parent/child nodes.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum GraphError {
+    /// A referenced node id is not in the graph.
+    NodeNotFound(NodeId),
+    /// A node cannot be its own parent or child.
+    SelfReference { node: NodeId },
+    /// Linking `child` under `parent` would create a cycle in the tree.
+    WouldCreateCycle { parent: NodeId, child: NodeId },
+    /// `child` is not a direct child of `parent`.
+    NotParentChild { parent: NodeId, child: NodeId },
+}
+
+impl std::fmt::Display for GraphError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            GraphError::NodeNotFound(id) => write!(f, "node not found: {id}"),
+            GraphError::SelfReference { node } => write!(f, "node cannot reference itself: {node}"),
+            GraphError::WouldCreateCycle { parent, child } => {
+                write!(f, "would create cycle: parent {parent}, child {child}")
+            }
+            GraphError::NotParentChild { parent, child } => {
+                write!(f, "node {child} is not a child of {parent}")
+            }
+        }
+    }
+}
+
+impl std::error::Error for GraphError {}
+
+/// Walks from `node`'s parent upward (excludes `node` itself).
+struct AncestorsIter<'a> {
+    graph: &'a Graph,
+    next: Option<NodeId>,
+}
+
+impl Iterator for AncestorsIter<'_> {
+    type Item = NodeId;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let id = self.next?;
+        self.next = self.graph.nodes.get(&id).and_then(|n| n.parent());
+        Some(id)
+    }
+}
+
+/// Depth-first walk of all descendants (excludes the start node).
+struct DescendantsIter<'a> {
+    graph: &'a Graph,
+    stack: Vec<NodeId>,
+}
+
+impl Iterator for DescendantsIter<'_> {
+    type Item = NodeId;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while let Some(id) = self.stack.pop() {
+            if let Some(node) = self.graph.nodes.get(&id) {
+                for &child in node.children().iter().rev() {
+                    self.stack.push(child);
+                }
+            }
+            return Some(id);
+        }
+        None
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ParentDeletePolicy {
+    /// Delete the parent node and all its children.
+    Cascade,
+    /// Promote the children to the parent's level and delete the parent.
+    Promote,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Graph {
     nodes: HashMap<NodeId, Node>,
     node_order: Vec<NodeId>,
     ports: HashMap<PortId, Port>,
+    /// Map of node id to its children node ids
+    children_index: HashMap<NodeId, Vec<NodeId>>,
+    /// List of root node ids
+    roots: Vec<NodeId>,
 
     edges: HashMap<EdgeId, Edge>,
 
@@ -37,6 +117,8 @@ impl Graph {
             nodes: HashMap::new(),
             node_order: vec![],
             ports: HashMap::new(),
+            children_index: HashMap::new(),
+            roots: vec![],
             edges: HashMap::new(),
             selected_edge: HashSet::new(),
             selected_node: HashSet::new(),
@@ -68,8 +150,11 @@ impl Graph {
 
     pub fn apply(&mut self, op: GraphChangeKind) {
         match op {
-            GraphChangeKind::NodeAdded(node) => self.add_node(node),
-            GraphChangeKind::NodeRemoved { id } => self.remove_node(&id),
+            GraphChangeKind::NodeAdded(node) => self.add_node(node).unwrap(),
+            GraphChangeKind::NodeRemoved { id } => {
+                //self.remove_node(&id)
+                todo!()
+            }
             GraphChangeKind::NodeMoved { id, x, y } => {
                 if let Some(node) = self.nodes.get_mut(&id) {
                     node.set_position(px(x), px(y));
@@ -128,10 +213,28 @@ impl Graph {
         EdgeId::new()
     }
 
-    pub fn add_node(&mut self, node: Node) {
+    pub fn add_node(&mut self, node: Node) -> Result<(), GraphError> {
         let node_id = node.id();
-        self.nodes.insert(node.id(), node);
+        let parent = node.parent();
+        self.nodes.insert(node_id, node);
         self.node_order.push(node_id);
+        self.children_index.entry(node_id).or_default();
+
+        if let Some(parent_id) = parent {
+            self.roots
+                .iter()
+                .position(|id| *id == node_id)
+                .map(|index| self.roots.remove(index));
+            if self.nodes.contains_key(&parent_id) {
+                self.link_child_under_parent(parent_id, node_id);
+            } else {
+                return Err(GraphError::NodeNotFound(parent_id));
+            }
+        } else if !self.roots.contains(&node_id) {
+            self.roots.push(node_id);
+        }
+
+        Ok(())
     }
     #[cfg(any(test, feature = "testing"))]
     pub(crate) fn add_node_without_order(&mut self, node: Node) {
@@ -149,6 +252,19 @@ impl Graph {
 
     pub fn nodes(&self) -> &HashMap<NodeId, Node> {
         &self.nodes
+    }
+
+    /// Nodes with no parent (top-level / canvas roots).
+    pub fn roots(&self) -> &[NodeId] {
+        &self.roots
+    }
+
+    /// Direct children of `parent` (empty if unknown parent or no children).
+    pub fn children_of(&self, parent: NodeId) -> &[NodeId] {
+        self.children_index
+            .get(&parent)
+            .map(|v| v.as_slice())
+            .unwrap_or(&[])
     }
 
     pub fn node_order(&self) -> &Vec<NodeId> {
@@ -218,10 +334,41 @@ impl Graph {
         self.nodes.get_mut(id)
     }
 
-    pub fn remove_node(&mut self, id: &NodeId) {
-        let Some(node) = &self.nodes.get(id) else {
-            return;
+    pub fn remove_node(
+        &mut self,
+        id: &NodeId,
+        policy: ParentDeletePolicy,
+    ) -> Result<(), GraphError> {
+        match policy {
+            ParentDeletePolicy::Cascade => self.remove_node_cascade(id),
+            ParentDeletePolicy::Promote => self.remove_node_promote(id),
+        }
+    }
+
+    pub fn remove_node_cascade(&mut self, id: &NodeId) -> Result<(), GraphError> {
+        todo!()
+    }
+
+    pub fn remove_node_promote(&mut self, id: &NodeId) -> Result<(), GraphError> {
+        let Some(node) = self.nodes.get(id).cloned() else {
+            return Err(GraphError::NodeNotFound(*id));
         };
+
+        let children: Vec<NodeId> = self
+            .nodes
+            .get(id)
+            .map(|n| n.children().to_vec())
+            .unwrap_or_default();
+        for child in children {
+            self.reparent(child, None)?;
+            // TODO When the child node is promoted, local coordinates → world coordinates
+        }
+        self.detach_from_parent(*id);
+        self.children_index.remove(id);
+        self.roots
+            .iter()
+            .position(|root| *root == *id)
+            .map(|index| self.roots.remove(index));
 
         let mut edge_ids_to_remove = HashSet::new();
         for port_id in node.inputs().iter().chain(node.outputs().iter()).copied() {
@@ -239,10 +386,12 @@ impl Graph {
 
         self.nodes.remove(id);
         self.selected_node.remove(id);
-        let index = self.node_order.iter().position(|v| *v == *id);
-        if let Some(index) = index {
-            self.node_order.remove(index);
-        }
+        self.node_order
+            .iter()
+            .position(|v| *v == *id)
+            .map(|index| self.node_order.remove(index));
+
+        Ok(())
     }
 
     pub fn add_selected_node(&mut self, id: NodeId, shift: bool) {
@@ -261,7 +410,7 @@ impl Graph {
         self.selected_node.clear();
     }
 
-    pub fn remove_selected_node(&mut self) -> bool {
+    pub fn remove_selected_node(&mut self, policy: ParentDeletePolicy) -> bool {
         if self.selected_node.is_empty() {
             return false;
         }
@@ -271,7 +420,7 @@ impl Graph {
             ids.push(*id);
         }
         for id in ids.iter() {
-            self.remove_node(id);
+            self.remove_node(id, policy);
         }
         self.selected_node.clear();
         true
@@ -411,5 +560,234 @@ impl Graph {
             .values()
             .filter(|p| p.node_id() == node_id && p.kind() == kind && p.position() == position)
             .collect()
+    }
+
+    pub fn add_child(&mut self, parent: NodeId, child: NodeId) -> Result<(), GraphError> {
+        self.ensure_node(parent)?;
+        self.ensure_node(child)?;
+
+        if parent == child {
+            return Err(GraphError::SelfReference { node: parent });
+        }
+        if self.is_ancestor(child, parent) {
+            return Err(GraphError::WouldCreateCycle { parent, child });
+        }
+
+        if self.nodes.get(&child).and_then(|n| n.parent()) == Some(parent) {
+            return Ok(());
+        }
+
+        self.detach_from_parent(child);
+        self.link_child_under_parent(parent, child);
+        Ok(())
+    }
+
+    pub fn remove_child(&mut self, parent: NodeId, child: NodeId) {
+        let Ok(()) = self.ensure_node(parent) else {
+            return;
+        };
+        let Ok(()) = self.ensure_node(child) else {
+            return;
+        };
+
+        if self.nodes.get(&child).and_then(|n| n.parent()) != Some(parent) {
+            return;
+        }
+
+        self.unlink_child_from_parent(parent, child);
+    }
+
+    pub fn reparent(&mut self, node: NodeId, new_parent: Option<NodeId>) -> Result<(), GraphError> {
+        self.ensure_node(node)?;
+
+        match new_parent {
+            None => {
+                self.detach_from_parent(node);
+            }
+            Some(parent) => {
+                self.add_child(parent, node)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    pub fn ancestors(&self, node: NodeId) -> impl Iterator<Item = NodeId> + '_ {
+        let start = self.nodes.get(&node).and_then(|n| n.parent());
+        AncestorsIter {
+            graph: self,
+            next: start,
+        }
+    }
+
+    pub fn descendants(&self, node: NodeId) -> impl Iterator<Item = NodeId> + '_ {
+        let mut stack = Vec::new();
+        if let Some(n) = self.nodes.get(&node) {
+            for &child in n.children().iter().rev() {
+                stack.push(child);
+            }
+        }
+        DescendantsIter { graph: self, stack }
+    }
+
+    pub fn is_ancestor(&self, ancestor: NodeId, target: NodeId) -> bool {
+        self.ancestors(target).any(|id| id == ancestor)
+    }
+
+    fn ensure_node(&self, id: NodeId) -> Result<(), GraphError> {
+        if self.nodes.contains_key(&id) {
+            Ok(())
+        } else {
+            Err(GraphError::NodeNotFound(id))
+        }
+    }
+
+    /// Detach `child` from its current parent and register it as a root node.
+    fn detach_from_parent(&mut self, child: NodeId) {
+        let Some(old_parent) = self.nodes.get(&child).and_then(|n| n.parent()) else {
+            if !self.roots.contains(&child) {
+                self.roots.push(child);
+            }
+            return;
+        };
+        self.unlink_child_from_parent(old_parent, child);
+    }
+
+    fn unlink_child_from_parent(&mut self, parent: NodeId, child: NodeId) {
+        if let Some(p) = self.nodes.get_mut(&parent) {
+            p.remove_child_ref(child);
+        }
+        if let Some(children) = self.children_index.get_mut(&parent) {
+            children
+                .iter()
+                .position(|id| *id == child)
+                .map(|index| children.remove(index));
+        }
+        if let Some(c) = self.nodes.get_mut(&child) {
+            c.set_parent(None);
+        }
+        if !self.roots.contains(&child) {
+            self.roots.push(child);
+        }
+    }
+
+    /// Link `child` under `parent` without validation (caller must check invariants).
+    fn link_child_under_parent(&mut self, parent: NodeId, child: NodeId) {
+        if let Some(c) = self.nodes.get_mut(&child) {
+            c.set_parent(Some(parent));
+        }
+        if let Some(p) = self.nodes.get_mut(&parent) {
+            p.push_child(child);
+        }
+        let children = self.children_index.entry(parent).or_default();
+        if !children.contains(&child) {
+            children.push(child);
+        }
+        self.roots
+            .iter()
+            .position(|id| *id == child)
+            .map(|index| self.roots.remove(index));
+    }
+}
+
+#[cfg(test)]
+mod hierarchy_tests {
+    use super::*;
+    use serde_json::json;
+
+    fn graph_with_nodes() -> (Graph, NodeId, NodeId, NodeId) {
+        let mut g = Graph::new();
+        let a = g
+            .create_node("default")
+            .position(0.0, 0.0)
+            .data(json!({ "label": "A" }))
+            .build();
+        let b = g
+            .create_node("default")
+            .position(100.0, 0.0)
+            .data(json!({ "label": "B" }))
+            .build();
+        let c = g
+            .create_node("default")
+            .position(200.0, 0.0)
+            .data(json!({ "label": "C" }))
+            .build();
+        (g, a, b, c)
+    }
+
+    #[test]
+    fn add_child_links_parent_and_removes_from_roots() {
+        let (mut g, a, b, _) = graph_with_nodes();
+        assert!(g.roots().contains(&a));
+        assert!(g.roots().contains(&b));
+
+        g.add_child(a, b).unwrap();
+
+        assert_eq!(g.get_node(&b).unwrap().parent(), Some(a));
+        assert!(g.get_node(&a).unwrap().children().contains(&b));
+        assert!(!g.roots().contains(&b));
+        assert!(g.roots().contains(&a));
+    }
+
+    #[test]
+    fn add_child_rejects_cycle() {
+        let (mut g, a, b, c) = graph_with_nodes();
+        g.add_child(a, b).unwrap();
+        g.add_child(b, c).unwrap();
+
+        let err = g.add_child(c, a).unwrap_err();
+        assert!(matches!(
+            err,
+            GraphError::WouldCreateCycle {
+                parent,
+                child,
+            } if parent == c && child == a
+        ));
+    }
+
+    #[test]
+    fn reparent_moves_between_parents() {
+        let (mut g, a, b, c) = graph_with_nodes();
+        g.add_child(a, b).unwrap();
+        g.reparent(c, Some(a));
+
+        assert_eq!(g.get_node(&c).unwrap().parent(), Some(a));
+        assert!(g.get_node(&a).unwrap().children().contains(&c));
+    }
+
+    #[test]
+    fn remove_child_promotes_to_roots() {
+        let (mut g, a, b, _) = graph_with_nodes();
+        g.add_child(a, b).unwrap();
+        g.remove_child(a, b);
+
+        assert_eq!(g.get_node(&b).unwrap().parent(), None);
+        assert!(g.roots().contains(&b));
+        assert!(!g.get_node(&a).unwrap().children().contains(&b));
+    }
+
+    #[test]
+    fn ancestors_and_descendants() {
+        let (mut g, a, b, c) = graph_with_nodes();
+        g.add_child(a, b).unwrap();
+        g.add_child(b, c).unwrap();
+
+        assert_eq!(g.ancestors(c).collect::<Vec<_>>(), vec![b, a]);
+        assert_eq!(g.descendants(a).collect::<Vec<_>>(), vec![b, c]);
+        assert!(g.is_ancestor(a, c));
+        assert!(!g.is_ancestor(c, a));
+    }
+
+    #[test]
+    fn remove_node_promotes_children_to_roots() {
+        let (mut g, a, b, c) = graph_with_nodes();
+        g.add_child(a, b).unwrap();
+        g.add_child(b, c).unwrap();
+        g.remove_node_promote(&b);
+
+        assert!(g.get_node(&a).is_some());
+        assert!(g.get_node(&c).is_some());
+        assert_eq!(g.get_node(&c).unwrap().parent(), None);
+        assert!(g.roots().contains(&c));
     }
 }
