@@ -265,6 +265,8 @@ impl YrsSyncPlugin {
             }
             GraphOp::AddNode(node) => self.insert_node(txn, &node),
             GraphOp::ChangeParentNode { id, parent } => self.update_node_parent(txn, &id, &parent),
+            GraphOp::PushChildNode { id, child_id } => self.node_push_child(txn, &id, &child_id),
+            GraphOp::PopChildNode { id, child_id } => self.node_pop_child(txn, &id, &child_id),
             GraphOp::RemoveNode { id } => self.remove_node(txn, &id),
             GraphOp::RemoveNodeWithPolicy { .. } => todo!(),
             GraphOp::ResizeNode { .. } => todo!(),
