@@ -218,6 +218,10 @@ impl Node {
             .position(|id| *id == child)
             .map(|index| self.children.remove(index));
     }
+
+    pub(crate) fn clear_children(&mut self) {
+        self.children.clear();
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

@@ -159,7 +159,7 @@ impl Graph {
 
     pub fn apply(&mut self, op: GraphChangeKind) {
         match op {
-            GraphChangeKind::NodeAdded(node) => self.add_node(node).unwrap(),
+            GraphChangeKind::NodeAdded(node) => self.add_node(node),
             GraphChangeKind::NodeRemoved { id } => {
                 self.remove_node(&id, ParentDeletePolicy::Promote).unwrap();
             }
@@ -231,28 +231,14 @@ impl Graph {
         EdgeId::new()
     }
 
-    pub fn add_node(&mut self, node: Node) -> Result<(), GraphError> {
+    pub fn add_node(&mut self, mut node: Node) {
         let node_id = node.id();
-        let parent = node.parent();
-        if let Some(parent_id) = parent {
-            self.ensure_node(parent_id)?;
-        }
+        node.set_parent(None);
+        node.clear_children();
         self.nodes.insert(node_id, node);
         self.node_order.push(node_id);
-        self.children_index.entry(node_id).or_default();
-
-        if let Some(parent_id) = parent {
-            self.roots
-                .iter()
-                .position(|id| *id == node_id)
-                .map(|index| self.roots.remove(index));
-            self.link_child_under_parent(parent_id, node_id);
-        } else if !self.roots.contains(&node_id) {
-            self.roots.push(node_id);
-        }
-
-        Ok(())
     }
+
     #[cfg(any(test, feature = "testing"))]
     pub(crate) fn add_node_without_order(&mut self, node: Node) {
         self.nodes.insert(node.id(), node);

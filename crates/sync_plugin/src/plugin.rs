@@ -672,8 +672,22 @@ fn parse_node_change(
     match change {
         EntryChange::Inserted(value) => {
             if let yrs::Out::YMap(node_map) = value {
-                read_node_from_map(txn, node_map, id, nodes)
-                    .map(|node| GraphChangeKind::NodeAdded(node))
+                read_node_from_map(txn, node_map, id, nodes).map(|node| {
+                    let mut list = vec![GraphChangeKind::NodeAdded(node.clone())];
+                    for child_id in node.children() {
+                        list.push(GraphChangeKind::NodePushedChild {
+                            id: node.id(),
+                            child_id: *child_id,
+                        });
+                    }
+                    if let Some(parent_id) = node.parent() {
+                        list.push(GraphChangeKind::NodeParentChanged {
+                            id,
+                            parent: Some(parent_id),
+                        });
+                    }
+                    GraphChangeKind::Batch(list)
+                })
             } else {
                 None
             }
@@ -730,6 +744,19 @@ fn read_node_from_map(
         None
     };
 
+    let children_ids = node_map.get(txn, "children");
+    let mut children = vec![];
+    if let Some(Out::YArray(arr)) = children_ids {
+        for item in arr.iter(txn) {
+            if let Out::Any(Any::String(str)) = item
+                && let Ok(uuid) = str.to_string().parse::<Uuid>()
+            {
+                nodes.get(txn, &uuid.to_string())?;
+                children.push(NodeId::from_uuid(uuid));
+            }
+        }
+    }
+
     Some(
         NodeBuilder::new(node_type)
             .execute_type(execute_type)
@@ -737,6 +764,7 @@ fn read_node_from_map(
             .size(width, height)
             .data(data)
             .parent(parent_id)
+            .children(children)
             .build_raw_with_port_ids(id, inputs, outputs),
     )
 }
