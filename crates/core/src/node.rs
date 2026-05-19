@@ -279,6 +279,15 @@ pub enum PortType {
     Union(Vec<PortType>),
 }
 
+//TODO: Implement this
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum PortScope {
+    /// The port is only allowed to connect to ports within the same level of thenode.
+    Local,
+    /// The port is allowed to connect to ports within any level of the node hierarchy.
+    Boundary,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Port {
     id: PortId,
