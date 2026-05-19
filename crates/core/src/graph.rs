@@ -234,6 +234,9 @@ impl Graph {
     pub fn add_node(&mut self, node: Node) -> Result<(), GraphError> {
         let node_id = node.id();
         let parent = node.parent();
+        if let Some(parent_id) = parent {
+            self.ensure_node(parent_id)?;
+        }
         self.nodes.insert(node_id, node);
         self.node_order.push(node_id);
         self.children_index.entry(node_id).or_default();
@@ -243,11 +246,7 @@ impl Graph {
                 .iter()
                 .position(|id| *id == node_id)
                 .map(|index| self.roots.remove(index));
-            if self.nodes.contains_key(&parent_id) {
-                self.link_child_under_parent(parent_id, node_id);
-            } else {
-                return Err(GraphError::NodeNotFound(parent_id));
-            }
+            self.link_child_under_parent(parent_id, node_id);
         } else if !self.roots.contains(&node_id) {
             self.roots.push(node_id);
         }
