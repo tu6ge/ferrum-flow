@@ -318,11 +318,7 @@ impl SyncPlugin for YrsSyncPlugin {
         let undo_origin = self.undo_origin.clone();
         let nodes_ref = self.nodes.clone();
         let sub = self.nodes.observe_deep(move |txn, event| {
-            let source = match txn.origin() {
-                Some(orig) if *orig == Origin::from("local_intent") => ChangeSource::Local,
-                Some(orig) if *orig == undo_origin => ChangeSource::Undo,
-                _ => ChangeSource::Remote,
-            };
+            let source = ChangeSource::from_origin(txn.origin(), &undo_origin);
 
             for ev in event.iter() {
                 if let yrs::types::Event::Map(ev) = ev {
@@ -341,11 +337,7 @@ impl SyncPlugin for YrsSyncPlugin {
 
         let undo_origin = self.undo_origin.clone();
         let sub = self.ports.observe(move |txn, event| {
-            let source = match txn.origin() {
-                Some(orig) if *orig == Origin::from("local_intent") => ChangeSource::Local,
-                Some(orig) if *orig == undo_origin => ChangeSource::Undo,
-                _ => ChangeSource::Remote,
-            };
+            let source = ChangeSource::from_origin(txn.origin(), &undo_origin);
 
             for (key, change) in event.keys(txn) {
                 if let Some(kind) = parse_port_change(txn, key, change) {
@@ -358,11 +350,7 @@ impl SyncPlugin for YrsSyncPlugin {
         let undo_origin = self.undo_origin.clone();
 
         let sub = self.edges.observe(move |txn, event| {
-            let source = match txn.origin() {
-                Some(orig) if *orig == Origin::from("local_intent") => ChangeSource::Local,
-                Some(orig) if *orig == undo_origin => ChangeSource::Undo,
-                _ => ChangeSource::Remote,
-            };
+            let source = ChangeSource::from_origin(txn.origin(), &undo_origin);
 
             for (key, change) in event.keys(txn) {
                 if let Some(kind) = parse_edge_change(txn, key, change) {
@@ -374,11 +362,7 @@ impl SyncPlugin for YrsSyncPlugin {
 
         let undo_origin = self.undo_origin.clone();
         let sub = self.node_order.observe(move |txn, event| {
-            let source = match txn.origin() {
-                Some(orig) if *orig == Origin::from("local_intent") => ChangeSource::Local,
-                Some(orig) if *orig == undo_origin => ChangeSource::Undo,
-                _ => ChangeSource::Remote,
-            };
+            let source = ChangeSource::from_origin(txn.origin(), &undo_origin);
 
             let array = event.target();
 
@@ -860,6 +844,20 @@ impl PresenceConfig {
     pub fn with_show_remote_name(mut self, show: bool) -> Self {
         self.show_remote_name = show;
         self
+    }
+}
+
+trait FromOrigin {
+    fn from_origin(origin: Option<&Origin>, undo_origin: &Origin) -> Self;
+}
+
+impl FromOrigin for ChangeSource {
+    fn from_origin(origin: Option<&Origin>, undo_origin: &Origin) -> Self {
+        match origin {
+            Some(orig) if *orig == Origin::from("local_intent") => ChangeSource::Local,
+            Some(orig) if *orig == undo_origin.clone() => ChangeSource::Undo,
+            _ => ChangeSource::Remote,
+        }
     }
 }
 
