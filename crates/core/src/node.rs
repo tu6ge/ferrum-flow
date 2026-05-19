@@ -424,6 +424,7 @@ pub struct NodeBuilder<'a, G = Unset> {
     data: serde_json::Value,
 
     parent: Option<NodeId>,
+    children: Vec<NodeId>,
 }
 
 #[derive(Clone)]
@@ -549,6 +550,7 @@ impl<'a> NodeBuilder<'a, Unset> {
             outputs: vec![],
             data: json!({}),
             parent: None,
+            children: vec![],
         }
     }
 
@@ -565,6 +567,7 @@ impl<'a> NodeBuilder<'a, Unset> {
             outputs: self.outputs,
             data: self.data,
             parent: self.parent,
+            children: self.children,
         }
     }
 }
@@ -591,6 +594,11 @@ impl<'a, G> NodeBuilder<'a, G> {
 
     pub fn parent(mut self, parent: Option<NodeId>) -> Self {
         self.parent = parent;
+        self
+    }
+
+    pub fn children(mut self, children: Vec<NodeId>) -> Self {
+        self.children = children;
         self
     }
 
@@ -745,13 +753,6 @@ impl<'a, G> NodeBuilder<'a, G> {
 }
 
 impl<'a> NodeBuilderInGraph<'a> {
-    pub fn under_parent(mut self, parent: NodeId) -> Result<Self, GraphError> {
-        let graph = &self.graph.0;
-        graph.ensure_node(parent)?;
-        self.parent = Some(parent);
-        Ok(self)
-    }
-
     pub fn build(self) -> NodeId {
         let (node, ports, graph) = self.build_raw();
         let id = node.id();
