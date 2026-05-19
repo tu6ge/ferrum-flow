@@ -163,12 +163,63 @@ impl YrsSyncPlugin {
 
         let data_json = to_any(&node.data_ref()).unwrap_or(Any::Null);
         node_ref.insert(txn, "data", data_json);
+
+        let parent = node.parent();
+        if let Some(parent_id) = parent {
+            node_ref.insert(txn, "parent", parent_id.to_string());
+        } else {
+            node_ref.insert(txn, "parent", Any::Null);
+        }
+
+        let children = node.children();
+        if !children.is_empty() {
+            let children_array = node_ref.insert(txn, "children", ArrayRef::default_prelim());
+            for child_id in children {
+                children_array.push_back(txn, child_id.to_string());
+            }
+        }
     }
 
     fn update_node_position(&self, txn: &mut TransactionMut, id: &NodeId, x: f32, y: f32) {
         if let Some(yrs::Out::YMap(node_ref)) = self.nodes.get(txn, &id.to_string()) {
             node_ref.insert(txn, "x", x);
             node_ref.insert(txn, "y", y);
+        }
+    }
+
+    fn update_node_parent(
+        &self,
+        txn: &mut TransactionMut,
+        id: &NodeId,
+        parent_id: &Option<NodeId>,
+    ) {
+        let node_map = MapPrelim::default();
+        let node_ref = self.nodes.insert(txn, id.to_string(), node_map);
+        if let Some(parent_id) = parent_id {
+            node_ref.insert(txn, "parent", parent_id.to_string());
+        } else {
+            node_ref.insert(txn, "parent", Any::Null);
+        }
+    }
+
+    fn node_push_child(&self, txn: &mut TransactionMut, id: &NodeId, child_id: &NodeId) {
+        if let Some(yrs::Out::YMap(node_ref)) = self.nodes.get(txn, &id.to_string()) {
+            let children_array = node_ref.get(txn, "children").unwrap_or_default();
+            if let yrs::Out::YArray(children_array) = children_array {
+                children_array.push_back(txn, child_id.to_string());
+            }
+        }
+    }
+
+    fn node_pop_child(&self, txn: &mut TransactionMut, id: &NodeId, child_id: &NodeId) {
+        if let Some(yrs::Out::YMap(node_ref)) = self.nodes.get(txn, &id.to_string()) {
+            let children_array = node_ref.get(txn, "children").unwrap_or_default();
+            if let yrs::Out::YArray(children_array) = children_array {
+                children_array
+                    .iter(txn)
+                    .position(|item| item == Out::Any(Any::String(child_id.to_string().into())))
+                    .map(|index| children_array.remove(txn, index as u32));
+            }
         }
     }
 
@@ -213,7 +264,7 @@ impl YrsSyncPlugin {
                 self.update_node_position(txn, &id, x, y);
             }
             GraphOp::AddNode(node) => self.insert_node(txn, &node),
-            GraphOp::ChangeParentNode { .. } => todo!(),
+            GraphOp::ChangeParentNode { id, parent } => self.update_node_parent(txn, &id, &parent),
             GraphOp::RemoveNode { id } => self.remove_node(txn, &id),
             GraphOp::RemoveNodeWithPolicy { .. } => todo!(),
             GraphOp::ResizeNode { .. } => todo!(),
