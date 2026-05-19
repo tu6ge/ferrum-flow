@@ -160,9 +160,6 @@ impl Graph {
     pub fn apply(&mut self, op: GraphChangeKind) {
         match op {
             GraphChangeKind::NodeAdded(node) => self.add_node(node).unwrap(),
-            GraphChangeKind::NodeParentChanged { id, parent } => {
-                self.reparent(id, parent).unwrap();
-            }
             GraphChangeKind::NodeRemoved { id } => {
                 self.remove_node(&id, ParentDeletePolicy::Promote).unwrap();
             }
@@ -192,6 +189,13 @@ impl Graph {
             GraphChangeKind::NodeOrderUpdate(vec) => {
                 self.node_order = vec;
             }
+            GraphChangeKind::NodeParentChanged { id, parent } => {
+                self.reparent(id, parent).unwrap();
+            }
+            GraphChangeKind::NodePushedChild { id, child_id } => {
+                self.add_child(id, child_id).unwrap()
+            }
+            GraphChangeKind::NodePoppedChild { id, child_id } => self.remove_child(id, child_id),
             GraphChangeKind::PortAdded(port) => self.add_port(port),
             GraphChangeKind::PortRemoved { id } => {
                 self.remove_port(&id);

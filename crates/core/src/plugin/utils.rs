@@ -20,11 +20,13 @@ pub fn invalidate_port_layout_cache_for_graph_change(
     kind: &GraphChangeKind,
 ) {
     match kind {
-        GraphChangeKind::NodeRemoved { id } => cache.clear_node(id),
-        GraphChangeKind::NodeRemovedWithPolicy { id, .. } => cache.clear_node(id),
         GraphChangeKind::NodeAdded(node) => cache.clear_node(&node.id()),
-        GraphChangeKind::NodeParentChanged { id, .. } => cache.clear_node(id),
-        GraphChangeKind::NodeSetWidthed { id, .. }
+        GraphChangeKind::NodeRemoved { id }
+        | GraphChangeKind::NodeRemovedWithPolicy { id, .. }
+        | GraphChangeKind::NodeParentChanged { id, .. }
+        | GraphChangeKind::NodePushedChild { id, .. }
+        | GraphChangeKind::NodePoppedChild { id, .. }
+        | GraphChangeKind::NodeSetWidthed { id, .. }
         | GraphChangeKind::NodeSetHeighted { id, .. }
         | GraphChangeKind::NodeDataUpdated { id, .. } => cache.clear_node(id),
         GraphChangeKind::PortAdded(port) => cache.clear_node(&port.node_id()),

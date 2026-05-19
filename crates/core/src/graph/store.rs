@@ -9,11 +9,6 @@ pub enum GraphOp {
     // --- Node ---
     AddNode(Node),
 
-    ChangeParentNode {
-        id: NodeId,
-        parent: Option<NodeId>,
-    },
-
     RemoveNode {
         id: NodeId,
     },
@@ -37,6 +32,22 @@ pub enum GraphOp {
     UpdateNodeData {
         id: NodeId,
         data: serde_json::Value,
+    },
+
+    // --- Node Parent ---
+    ChangeParentNode {
+        id: NodeId,
+        parent: Option<NodeId>,
+    },
+
+    PushChildNode {
+        id: NodeId,
+        child_id: NodeId,
+    },
+
+    PopChildNode {
+        id: NodeId,
+        child_id: NodeId,
     },
 
     // --- node_order ---
@@ -85,10 +96,7 @@ pub enum ChangeSource {
 pub enum GraphChangeKind {
     // --- Node ---
     NodeAdded(Node),
-    NodeParentChanged {
-        id: NodeId,
-        parent: Option<NodeId>,
-    },
+
     NodeRemoved {
         id: NodeId,
     },
@@ -112,6 +120,20 @@ pub enum GraphChangeKind {
     NodeDataUpdated {
         id: NodeId,
         data: serde_json::Value,
+    },
+
+    // --- Node Parent ---
+    NodeParentChanged {
+        id: NodeId,
+        parent: Option<NodeId>,
+    },
+    NodePushedChild {
+        id: NodeId,
+        child_id: NodeId,
+    },
+    NodePoppedChild {
+        id: NodeId,
+        child_id: NodeId,
     },
 
     // --- node_order ---

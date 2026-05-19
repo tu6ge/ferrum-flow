@@ -53,6 +53,10 @@ fn apply_graph_op(graph: &mut Graph, op: GraphOp) {
                 .map(|n| n.to_string())
                 .unwrap_or("[none]".to_string())
         )),
+        GraphOp::PushChildNode { id, child_id } => graph
+            .add_child(id, child_id)
+            .expect(&format!("Failed to push child {child_id} to node {id}")),
+        GraphOp::PopChildNode { id, child_id } => graph.remove_child(id, child_id),
         GraphOp::RemoveNode { id } => graph
             .remove_node(&id, ParentDeletePolicy::Promote)
             .expect(&format!("Failed to remove node {id}")),
