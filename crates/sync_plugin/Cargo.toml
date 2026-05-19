@@ -1,6 +1,6 @@
 [package]
 name = "ferrum-flow-sync-plugin"
-version = "0.0.1"
+version = "0.1.0"
 edition = "2024"
 license = "Apache-2.0"
 authors = ["tu6ge"]
