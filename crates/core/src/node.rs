@@ -5,8 +5,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use uuid::Uuid;
 
-use crate::Graph;
 use crate::builder_state::{Set, Unset};
+use crate::{Graph, GraphError};
 
 pub const DEFAULT_NODE_WIDTH: Pixels = px(120.0);
 pub const DEFAULT_NODE_HEIGHT: Pixels = px(60.0);
@@ -422,6 +422,8 @@ pub struct NodeBuilder<'a, G = Unset> {
     inputs: Vec<PortSpec>,
     outputs: Vec<PortSpec>,
     data: serde_json::Value,
+
+    parent: Option<NodeId>,
 }
 
 #[derive(Clone)]
@@ -546,6 +548,7 @@ impl<'a> NodeBuilder<'a, Unset> {
             inputs: vec![],
             outputs: vec![],
             data: json!({}),
+            parent: None,
         }
     }
 
@@ -561,6 +564,7 @@ impl<'a> NodeBuilder<'a, Unset> {
             inputs: self.inputs,
             outputs: self.outputs,
             data: self.data,
+            parent: self.parent,
         }
     }
 }
@@ -582,6 +586,11 @@ impl<'a, G> NodeBuilder<'a, G> {
             width: w.into(),
             height: h.into(),
         };
+        self
+    }
+
+    pub fn parent(mut self, parent: Option<NodeId>) -> Self {
+        self.parent = parent;
         self
     }
 
@@ -657,7 +666,7 @@ impl<'a, G> NodeBuilder<'a, G> {
             inputs: input_ids,
             outputs: output_ids,
             data: self.data,
-            parent: None,
+            parent: self.parent,
             children: vec![],
         }
     }
@@ -726,7 +735,7 @@ impl<'a, G> NodeBuilder<'a, G> {
                 inputs,
                 outputs,
                 data: self.data,
-                parent: None,
+                parent: self.parent,
                 children: vec![],
             },
             ports,
@@ -736,6 +745,13 @@ impl<'a, G> NodeBuilder<'a, G> {
 }
 
 impl<'a> NodeBuilderInGraph<'a> {
+    pub fn under_parent(mut self, parent: NodeId) -> Result<Self, GraphError> {
+        let graph = &self.graph.0;
+        graph.ensure_node(parent)?;
+        self.parent = Some(parent);
+        Ok(self)
+    }
+
     pub fn build(self) -> NodeId {
         let (node, ports, graph) = self.build_raw();
         let id = node.id();

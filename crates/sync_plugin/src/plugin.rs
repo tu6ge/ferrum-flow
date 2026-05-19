@@ -621,7 +621,7 @@ fn handler_node_change(
 
     if is_nodes_map_child_change {
         for (key, change) in ev.keys(txn) {
-            if let Some(k) = parse_node_change(txn, key, change) {
+            if let Some(k) = parse_node_change(txn, key, change, nodes) {
                 kind.push(k);
             }
         }
@@ -654,6 +654,8 @@ fn handler_node_change(
         {
             kind.push(GraphChangeKind::NodeDataUpdated { id, data });
         }
+
+        //TODO parent change and children change
     }
 
     kind
@@ -663,15 +665,15 @@ fn parse_node_change(
     txn: &yrs::TransactionMut,
     key: &Arc<str>,
     change: &EntryChange,
+    nodes: &MapRef,
 ) -> Option<GraphChangeKind> {
     let id = NodeId::from_uuid(key.to_string().parse().ok()?);
 
     match change {
         EntryChange::Inserted(value) => {
             if let yrs::Out::YMap(node_map) = value {
-                Some(GraphChangeKind::NodeAdded(read_node_from_map(
-                    txn, node_map, id,
-                )))
+                read_node_from_map(txn, node_map, id, nodes)
+                    .map(|node| GraphChangeKind::NodeAdded(node))
             } else {
                 None
             }
@@ -681,7 +683,12 @@ fn parse_node_change(
     }
 }
 
-fn read_node_from_map(txn: &yrs::TransactionMut, node_map: &MapRef, id: NodeId) -> Node {
+fn read_node_from_map(
+    txn: &yrs::TransactionMut,
+    node_map: &MapRef,
+    id: NodeId,
+    nodes: &MapRef,
+) -> Option<Node> {
     let node_type: String = node_map.get_as(txn, "type").unwrap_or_default();
     let execute_type: String = node_map.get_as(txn, "execute_type").unwrap_or_default();
     let x = read_map_f32(txn, node_map, "x").unwrap_or_default();
@@ -715,12 +722,23 @@ fn read_node_from_map(txn: &yrs::TransactionMut, node_map: &MapRef, id: NodeId) 
         }
     }
 
-    NodeBuilder::new(node_type)
-        .execute_type(execute_type)
-        .position(x, y)
-        .size(width, height)
-        .data(data)
-        .build_raw_with_port_ids(id, inputs, outputs)
+    let parent_id = node_map.get_as(txn, "parent").unwrap_or(Any::Null);
+    let parent_id = if let Ok(parent_id) = parent_id.to_string().parse::<Uuid>() {
+        nodes.get(txn, &parent_id.to_string())?;
+        Some(NodeId::from_uuid(parent_id))
+    } else {
+        None
+    };
+
+    Some(
+        NodeBuilder::new(node_type)
+            .execute_type(execute_type)
+            .position(x, y)
+            .size(width, height)
+            .data(data)
+            .parent(parent_id)
+            .build_raw_with_port_ids(id, inputs, outputs),
+    )
 }
 
 fn parse_port_change(
@@ -947,7 +965,7 @@ mod tests {
             panic!("expected node map to be present in yrs document");
         };
 
-        let restored = read_node_from_map(&txn, &node_map, original.id());
+        let restored = read_node_from_map(&txn, &node_map, original.id(), &plugin.nodes).unwrap();
 
         assert_eq!(restored.id(), original.id());
         let restored_json =
