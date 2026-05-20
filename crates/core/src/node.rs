@@ -5,8 +5,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use uuid::Uuid;
 
+use crate::Graph;
 use crate::builder_state::{Set, Unset};
-use crate::{Graph, GraphError};
 
 pub const DEFAULT_NODE_WIDTH: Pixels = px(120.0);
 pub const DEFAULT_NODE_HEIGHT: Pixels = px(60.0);

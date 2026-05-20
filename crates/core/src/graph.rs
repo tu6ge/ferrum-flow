@@ -351,20 +351,24 @@ impl Graph {
         policy: ParentDeletePolicy,
     ) -> Result<(), GraphError> {
         match policy {
-            ParentDeletePolicy::Cascade => self.remove_node_cascade(id),
+            ParentDeletePolicy::Cascade => {
+                self.remove_node_cascade(id);
+                Ok(())
+            }
             ParentDeletePolicy::Promote => self.remove_node_promote(id),
         }
     }
 
-    pub fn remove_node_cascade(&mut self, id: &NodeId) -> Result<(), GraphError> {
-        self.ensure_node(*id)?;
+    pub fn remove_node_cascade(&mut self, id: &NodeId) {
+        if let Err(_) = self.ensure_node(*id) {
+            return;
+        }
         let mut order = Vec::new();
         self.collect_descendants_postorder(*id, &mut order);
         order.push(*id);
         for node_id in order {
-            self.remove_node_from_graph(&node_id)?;
+            self.remove_node_from_graph(&node_id);
         }
-        Ok(())
     }
 
     pub fn remove_node_promote(&mut self, id: &NodeId) -> Result<(), GraphError> {
@@ -377,13 +381,15 @@ impl Graph {
             self.reparent(child, None)?;
             // TODO When the child node is promoted, local coordinates → world coordinates
         }
-        self.remove_node_from_graph(id)
+        self.remove_node_from_graph(id);
+
+        Ok(())
     }
 
     /// Detach hierarchy links, drop ports/edges, and remove the node record (no child promotion).
-    fn remove_node_from_graph(&mut self, id: &NodeId) -> Result<(), GraphError> {
+    fn remove_node_from_graph(&mut self, id: &NodeId) {
         let Some(node) = self.nodes.get(id).cloned() else {
-            return Err(GraphError::NodeNotFound(*id));
+            return;
         };
 
         self.detach_from_parent(*id);
@@ -412,8 +418,6 @@ impl Graph {
         if let Some(index) = self.node_order.iter().position(|v| *v == *id) {
             self.node_order.remove(index);
         }
-
-        Ok(())
     }
 
     /// Descendants of `id` in post-order (each node before its ancestors in the subtree).
