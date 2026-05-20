@@ -270,6 +270,10 @@ impl Graph {
         &self.roots
     }
 
+    pub fn children_index(&self) -> &HashMap<NodeId, Vec<NodeId>> {
+        &self.children_index
+    }
+
     /// Direct children of `parent` (empty if unknown parent or no children).
     pub fn children_of(&self, parent: NodeId) -> &[NodeId] {
         self.children_index
@@ -830,7 +834,7 @@ mod hierarchy_tests {
         g.add_child(a, b).unwrap();
         g.add_child(b, c).unwrap();
 
-        g.remove_node_cascade(&a).unwrap();
+        g.remove_node_cascade(&a);
 
         assert!(g.get_node(&a).is_none());
         assert!(g.get_node(&b).is_none());

@@ -596,16 +596,6 @@ impl<'a, G> NodeBuilder<'a, G> {
         self
     }
 
-    pub fn parent(mut self, parent: Option<NodeId>) -> Self {
-        self.parent = parent;
-        self
-    }
-
-    pub fn children(mut self, children: Vec<NodeId>) -> Self {
-        self.children = children;
-        self
-    }
-
     fn push_input_spec(&mut self, spec: PortSpec) {
         self.inputs.push(spec);
     }

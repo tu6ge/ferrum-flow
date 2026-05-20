@@ -32,10 +32,12 @@ pub struct YrsSyncPlugin {
     doc: yrs::Doc,
     awareness: Arc<Awareness>,
     init_graph: Graph,
-    nodes: MapRef,        // ref HashMap<NodeId, Node>
-    ports: MapRef,        // ref HashMap<PortId, Port>
-    edges: MapRef,        // ref HashMap<EdgeId, Edge>
-    node_order: ArrayRef, // ref Vec<NodeId>
+    nodes: MapRef,          // ref HashMap<NodeId, Node>
+    children_index: MapRef, // Map of node id to its children node ids
+    roots: ArrayRef,        // List of root node ids
+    ports: MapRef,          // ref HashMap<PortId, Port>
+    edges: MapRef,          // ref HashMap<EdgeId, Edge>
+    node_order: ArrayRef,   // ref Vec<NodeId>
     undo_manager: yrs::UndoManager,
     undo_origin: Origin,
     _subscription_nodes: Option<yrs::Subscription>,
@@ -65,6 +67,8 @@ impl YrsSyncPlugin {
         let doc = Doc::new();
         let root = doc.get_or_insert_map("graph");
         let nodes = doc.get_or_insert_map("nodes");
+        let children_index = doc.get_or_insert_map("children_index");
+        let roots = doc.get_or_insert_array("roots");
         let ports = doc.get_or_insert_map("ports");
         let edges = doc.get_or_insert_map("edges");
         let node_order = doc.get_or_insert_array("node_order");
@@ -89,6 +93,8 @@ impl YrsSyncPlugin {
             undo_origin,
             doc,
             nodes,
+            children_index,
+            roots,
             ports,
             edges,
             node_order,
@@ -130,6 +136,14 @@ impl YrsSyncPlugin {
         for node in self.init_graph.nodes().values() {
             self.insert_node(&mut txn, node);
         }
+        for (node_id, children) in self.init_graph.children_index() {
+            self.insert_children_index(&mut txn, node_id, children);
+        }
+
+        for root in self.init_graph.roots() {
+            self.roots.push_back(&mut txn, root.to_string());
+        }
+
         for port in self.init_graph.ports_values() {
             self.add_port(&mut txn, port);
         }
@@ -177,6 +191,20 @@ impl YrsSyncPlugin {
             for child_id in children {
                 children_array.push_back(txn, child_id.to_string());
             }
+        }
+    }
+
+    fn insert_children_index(
+        &self,
+        txn: &mut TransactionMut,
+        node_id: &NodeId,
+        children: &[NodeId],
+    ) {
+        let children_array =
+            self.children_index
+                .insert(txn, node_id.to_string(), ArrayRef::default_prelim());
+        for child_id in children {
+            children_array.push_back(txn, child_id.to_string());
         }
     }
 
@@ -701,7 +729,7 @@ fn read_node_from_map(
     txn: &yrs::TransactionMut,
     node_map: &MapRef,
     id: NodeId,
-    nodes: &MapRef,
+    _nodes: &MapRef,
 ) -> Option<Node> {
     let node_type: String = node_map.get_as(txn, "type").unwrap_or_default();
     let execute_type: String = node_map.get_as(txn, "execute_type").unwrap_or_default();
@@ -736,35 +764,12 @@ fn read_node_from_map(
         }
     }
 
-    let parent_id = node_map.get_as(txn, "parent").unwrap_or(Any::Null);
-    let parent_id = if let Ok(parent_id) = parent_id.to_string().parse::<Uuid>() {
-        nodes.get(txn, &parent_id.to_string())?;
-        Some(NodeId::from_uuid(parent_id))
-    } else {
-        None
-    };
-
-    let children_ids = node_map.get(txn, "children");
-    let mut children = vec![];
-    if let Some(Out::YArray(arr)) = children_ids {
-        for item in arr.iter(txn) {
-            if let Out::Any(Any::String(str)) = item
-                && let Ok(uuid) = str.to_string().parse::<Uuid>()
-            {
-                nodes.get(txn, &uuid.to_string())?;
-                children.push(NodeId::from_uuid(uuid));
-            }
-        }
-    }
-
     Some(
         NodeBuilder::new(node_type)
             .execute_type(execute_type)
             .position(x, y)
             .size(width, height)
             .data(data)
-            .parent(parent_id)
-            .children(children)
             .build_raw_with_port_ids(id, inputs, outputs),
     )
 }
