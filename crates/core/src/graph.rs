@@ -237,6 +237,10 @@ impl Graph {
         node.clear_children();
         self.nodes.insert(node_id, node);
         self.node_order.push(node_id);
+        self.children_index.entry(node_id).or_default();
+        if !self.roots.contains(&node_id) {
+            self.roots.push(node_id);
+        }
     }
 
     #[cfg(any(test, feature = "testing"))]
@@ -349,14 +353,17 @@ impl Graph {
     }
 
     pub fn remove_node_cascade(&mut self, id: &NodeId) -> Result<(), GraphError> {
-        todo!()
+        self.ensure_node(*id)?;
+        let mut order = Vec::new();
+        self.collect_descendants_postorder(*id, &mut order);
+        order.push(*id);
+        for node_id in order {
+            self.remove_node_from_graph(&node_id)?;
+        }
+        Ok(())
     }
 
     pub fn remove_node_promote(&mut self, id: &NodeId) -> Result<(), GraphError> {
-        let Some(node) = self.nodes.get(id).cloned() else {
-            return Err(GraphError::NodeNotFound(*id));
-        };
-
         let children: Vec<NodeId> = self
             .nodes
             .get(id)
@@ -366,6 +373,15 @@ impl Graph {
             self.reparent(child, None)?;
             // TODO When the child node is promoted, local coordinates → world coordinates
         }
+        self.remove_node_from_graph(id)
+    }
+
+    /// Detach hierarchy links, drop ports/edges, and remove the node record (no child promotion).
+    fn remove_node_from_graph(&mut self, id: &NodeId) -> Result<(), GraphError> {
+        let Some(node) = self.nodes.get(id).cloned() else {
+            return Err(GraphError::NodeNotFound(*id));
+        };
+
         self.detach_from_parent(*id);
         self.children_index.remove(id);
         self.roots
@@ -389,12 +405,22 @@ impl Graph {
 
         self.nodes.remove(id);
         self.selected_node.remove(id);
-        self.node_order
-            .iter()
-            .position(|v| *v == *id)
-            .map(|index| self.node_order.remove(index));
+        if let Some(index) = self.node_order.iter().position(|v| *v == *id) {
+            self.node_order.remove(index);
+        }
 
         Ok(())
+    }
+
+    /// Descendants of `id` in post-order (each node before its ancestors in the subtree).
+    fn collect_descendants_postorder(&self, id: NodeId, out: &mut Vec<NodeId>) {
+        let Some(node) = self.nodes.get(&id) else {
+            return;
+        };
+        for child in node.children() {
+            self.collect_descendants_postorder(*child, out);
+            out.push(*child);
+        }
     }
 
     pub fn add_selected_node(&mut self, id: NodeId, shift: bool) {
@@ -752,7 +778,7 @@ mod hierarchy_tests {
     fn reparent_moves_between_parents() {
         let (mut g, a, b, c) = graph_with_nodes();
         g.add_child(a, b).unwrap();
-        g.reparent(c, Some(a));
+        g.reparent(c, Some(a)).unwrap();
 
         assert_eq!(g.get_node(&c).unwrap().parent(), Some(a));
         assert!(g.get_node(&a).unwrap().children().contains(&c));
@@ -786,11 +812,27 @@ mod hierarchy_tests {
         let (mut g, a, b, c) = graph_with_nodes();
         g.add_child(a, b).unwrap();
         g.add_child(b, c).unwrap();
-        g.remove_node_promote(&b);
+        g.remove_node_promote(&b).unwrap();
 
         assert!(g.get_node(&a).is_some());
         assert!(g.get_node(&c).is_some());
         assert_eq!(g.get_node(&c).unwrap().parent(), None);
         assert!(g.roots().contains(&c));
+    }
+
+    #[test]
+    fn remove_node_cascade_deletes_entire_subtree() {
+        let (mut g, a, b, c) = graph_with_nodes();
+        g.add_child(a, b).unwrap();
+        g.add_child(b, c).unwrap();
+
+        g.remove_node_cascade(&a).unwrap();
+
+        assert!(g.get_node(&a).is_none());
+        assert!(g.get_node(&b).is_none());
+        assert!(g.get_node(&c).is_none());
+        assert!(!g.roots().contains(&a));
+        assert!(!g.roots().contains(&b));
+        assert!(!g.roots().contains(&c));
     }
 }
