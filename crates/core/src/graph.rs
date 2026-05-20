@@ -238,6 +238,10 @@ impl Graph {
         self.nodes.insert(node_id, node);
         self.node_order.push(node_id);
         self.children_index.entry(node_id).or_default();
+        self.roots_push(node_id);
+    }
+
+    fn roots_push(&mut self, node_id: NodeId) {
         if !self.roots.contains(&node_id) {
             self.roots.push(node_id);
         }
@@ -674,9 +678,7 @@ impl Graph {
     /// Detach `child` from its current parent and register it as a root node.
     fn detach_from_parent(&mut self, child: NodeId) {
         let Some(old_parent) = self.nodes.get(&child).and_then(|n| n.parent()) else {
-            if !self.roots.contains(&child) {
-                self.roots.push(child);
-            }
+            self.roots_push(child);
             return;
         };
         self.unlink_child_from_parent(old_parent, child);
@@ -695,9 +697,7 @@ impl Graph {
         if let Some(c) = self.nodes.get_mut(&child) {
             c.set_parent(None);
         }
-        if !self.roots.contains(&child) {
-            self.roots.push(child);
-        }
+        self.roots_push(child);
     }
 
     /// Link `child` under `parent` without validation (caller must check invariants).
