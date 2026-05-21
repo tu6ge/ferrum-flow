@@ -451,9 +451,9 @@ impl Graph {
         self.selected_node.clear();
     }
 
-    pub fn remove_selected_node(&mut self, policy: ParentDeletePolicy) -> bool {
+    pub fn remove_selected_node(&mut self, policy: ParentDeletePolicy) -> Result<bool, GraphError> {
         if self.selected_node.is_empty() {
-            return false;
+            return Ok(false);
         }
 
         let mut ids = vec![];
@@ -461,10 +461,10 @@ impl Graph {
             ids.push(*id);
         }
         for id in ids.iter() {
-            self.remove_node(id, policy);
+            self.remove_node(id, policy)?;
         }
         self.selected_node.clear();
-        true
+        Ok(true)
     }
 
     pub fn add_selected_edge(&mut self, id: EdgeId, shift: bool) {

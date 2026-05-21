@@ -1,5 +1,5 @@
 use crate::{
-    Edge, EdgeId, GraphOp, Node, ParentDeletePolicy, Port,
+    Edge, EdgeId, Graph, GraphError, GraphOp, Node, ParentDeletePolicy, Port, ToastMessage,
     canvas::Command,
     plugin::{FlowEvent, Plugin},
 };
@@ -22,7 +22,13 @@ impl Default for DeletePlugin {
 }
 
 pub(crate) fn delete_selection(ctx: &mut crate::plugin::PluginContext, policy: ParentDeletePolicy) {
-    ctx.execute_command(DeleteCommand::new(ctx, policy));
+    let cmd = DeleteCommand::new(ctx, policy);
+    match cmd {
+        Ok(cmd) => ctx.execute_command(cmd),
+        Err(e) => {
+            ctx.emit(FlowEvent::custom(ToastMessage::error(e.to_string())));
+        }
+    }
 }
 
 impl Plugin for DeletePlugin {
@@ -38,7 +44,13 @@ impl Plugin for DeletePlugin {
         if let FlowEvent::Input(crate::plugin::InputEvent::KeyDown(ev)) = event
             && (ev.keystroke.key == "delete" || ev.keystroke.key == "backspace")
         {
-            ctx.execute_command(DeleteCommand::new(ctx, self.policy));
+            let cmd = DeleteCommand::new(ctx, self.policy);
+            match cmd {
+                Ok(cmd) => ctx.execute_command(cmd),
+                Err(e) => {
+                    ctx.emit(FlowEvent::custom(ToastMessage::error(e.to_string())));
+                }
+            }
             return crate::plugin::EventResult::Stop;
         }
         crate::plugin::EventResult::Continue
@@ -76,7 +88,10 @@ impl DeleteCommand {
         edges
     }
 
-    fn new(ctx: &crate::plugin::PluginContext, policy: ParentDeletePolicy) -> Self {
+    fn new(
+        ctx: &crate::plugin::PluginContext,
+        policy: ParentDeletePolicy,
+    ) -> Result<Self, GraphError> {
         let selected_node: Vec<Node> = ctx
             .graph
             .selected_node()
@@ -97,7 +112,9 @@ impl DeleteCommand {
             }
         }
 
-        Self {
+        Self::validate_delete_nodes(&selected_node, &ctx.graph, policy)?;
+
+        Ok(Self {
             selected_edge,
             originally_selected_edge_ids,
             selected_port: selected_node
@@ -107,7 +124,66 @@ impl DeleteCommand {
                 .collect(),
             selected_node,
             policy,
+        })
+    }
+
+    /// All node ids that `remove_node` will touch for the given selection and policy.
+    fn deletion_set(
+        nodes: &[Node],
+        graph: &Graph,
+        policy: ParentDeletePolicy,
+    ) -> HashSet<crate::NodeId> {
+        let mut set: HashSet<_> = nodes.iter().map(|n| n.id()).collect();
+        if matches!(policy, ParentDeletePolicy::Cascade) {
+            let mut stack: Vec<_> = set.iter().copied().collect();
+            while let Some(id) = stack.pop() {
+                let Some(node) = graph.get_node(&id) else {
+                    continue;
+                };
+                for &child in node.children() {
+                    if set.insert(child) {
+                        stack.push(child);
+                    }
+                }
+            }
         }
+        set
+    }
+
+    fn validate_delete_nodes(
+        nodes: &[Node],
+        graph: &Graph,
+        policy: ParentDeletePolicy,
+    ) -> Result<(), GraphError> {
+        if nodes.is_empty() {
+            return Ok(());
+        }
+
+        let selected: HashSet<_> = nodes.iter().map(|n| n.id()).collect();
+        let to_remove = Self::deletion_set(nodes, graph, policy);
+
+        for id in &to_remove {
+            graph.ensure_node(*id)?;
+        }
+
+        if matches!(policy, ParentDeletePolicy::Promote) {
+            //TODO move parent to parent's parent
+            for node in nodes {
+                graph.ensure_node(node.id())?;
+                let children = graph
+                    .get_node(&node.id())
+                    .map(|n| n.children().to_vec())
+                    .unwrap_or_default();
+                for child in children {
+                    if selected.contains(&child) {
+                        continue;
+                    }
+                    graph.ensure_node(child)?;
+                }
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -117,7 +193,8 @@ impl Command for DeleteCommand {
     }
     fn execute(&mut self, ctx: &mut crate::canvas::CommandContext) {
         ctx.remove_selected_edge();
-        ctx.remove_selected_node(self.policy);
+        ctx.remove_selected_node(self.policy)
+            .expect("Failed to remove selected node");
     }
     fn undo(&mut self, ctx: &mut crate::canvas::CommandContext) {
         for node in &self.selected_node {

@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use gpui::{Bounds, Pixels, Point};
 
 use crate::{
-    Edge, EdgeBuilderInGraph, EdgeId, Graph, GraphOp, Node, NodeBuilderInGraph, NodeId,
+    Edge, EdgeBuilderInGraph, EdgeId, Graph, GraphError, GraphOp, Node, NodeBuilderInGraph, NodeId,
     ParentDeletePolicy, Port, PortId, RendererRegistry, SharedState, Viewport,
     canvas::PortLayoutCache,
     plugin::{is_edge_visible, is_node_visible},
@@ -219,7 +219,7 @@ impl<'a> CommandContext<'a> {
     pub fn clear_selected_node(&mut self) {
         self.graph.clear_selected_node();
     }
-    pub fn remove_selected_node(&mut self, policy: ParentDeletePolicy) -> bool {
+    pub fn remove_selected_node(&mut self, policy: ParentDeletePolicy) -> Result<bool, GraphError> {
         self.graph.remove_selected_node(policy)
     }
 

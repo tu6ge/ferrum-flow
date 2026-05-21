@@ -7,9 +7,9 @@ use gpui::{
 };
 
 use crate::{
-    Edge, EdgeBuilderInGraph, EdgeId, FlowCanvas, FlowTheme, Graph, GraphOp, Node, NodeBuilder,
-    NodeBuilderInGraph, NodeId, NodeRenderer, ParentDeletePolicy, Port, PortId, PortPosition,
-    RendererRegistry, SharedState, Viewport,
+    Edge, EdgeBuilderInGraph, EdgeId, FlowCanvas, FlowTheme, Graph, GraphError, GraphOp, Node,
+    NodeBuilder, NodeBuilderInGraph, NodeId, NodeRenderer, ParentDeletePolicy, Port, PortId,
+    PortPosition, RendererRegistry, SharedState, Viewport,
     canvas::{
         Command, CommandContext, HistoryProvider, Interaction, InteractionState, PortLayoutCache,
     },
@@ -162,7 +162,7 @@ impl<'a, 'b> InitPluginContext<'a, 'b> {
     pub fn clear_selected_node(&mut self) {
         self.graph.clear_selected_node();
     }
-    pub fn remove_selected_node(&mut self, policy: ParentDeletePolicy) -> bool {
+    pub fn remove_selected_node(&mut self, policy: ParentDeletePolicy) -> Result<bool, GraphError> {
         self.graph.remove_selected_node(policy)
     }
 
@@ -573,7 +573,7 @@ impl<'a> PluginContext<'a> {
     pub fn clear_selected_node(&mut self) {
         self.graph.clear_selected_node();
     }
-    pub fn remove_selected_node(&mut self, policy: ParentDeletePolicy) -> bool {
+    pub fn remove_selected_node(&mut self, policy: ParentDeletePolicy) -> Result<bool, GraphError> {
         self.graph.remove_selected_node(policy)
     }
 
