@@ -200,6 +200,16 @@ impl<'a> CommandContext<'a> {
 
         Ok(())
     }
+
+    pub fn remove_node_cascade(&mut self, id: &NodeId) {
+        self.graph.remove_node_cascade(id);
+    }
+    pub fn remove_node_promote(&mut self, id: &NodeId) -> Result<(), GraphError> {
+        self.graph.remove_node_promote(id)?;
+        self.port_offset_cache.clear_node(id);
+
+        Ok(())
+    }
     pub fn nodes(&self) -> &HashMap<NodeId, Node> {
         self.graph.nodes()
     }

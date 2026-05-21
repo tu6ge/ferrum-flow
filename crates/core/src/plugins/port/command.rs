@@ -1,4 +1,4 @@
-use crate::{Edge, GraphOp, Node, ParentDeletePolicy, Port, canvas::Command};
+use crate::{Edge, GraphOp, Node, Port, canvas::Command};
 
 pub struct CreateEdge {
     edge: Edge,
@@ -50,8 +50,7 @@ impl Command for CreateNode {
         ]
     }
     fn undo(&mut self, ctx: &mut crate::canvas::CommandContext) {
-        ctx.remove_node(&self.node.id(), ParentDeletePolicy::Cascade)
-            .expect("Failed to remove node");
+        ctx.remove_node_cascade(&self.node.id());
     }
 }
 
