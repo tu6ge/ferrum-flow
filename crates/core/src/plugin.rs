@@ -133,9 +133,15 @@ impl<'a, 'b> InitPluginContext<'a, 'b> {
     pub fn get_node_mut(&mut self, id: &NodeId) -> Option<&mut Node> {
         self.graph.get_node_mut(id)
     }
-    pub fn remove_node(&mut self, id: &NodeId, policy: ParentDeletePolicy) {
-        self.graph.remove_node(id, policy);
+    pub fn remove_node(
+        &mut self,
+        id: &NodeId,
+        policy: ParentDeletePolicy,
+    ) -> Result<(), GraphError> {
+        self.graph.remove_node(id, policy)?;
         self.port_offset_cache.clear_node(id);
+
+        Ok(())
     }
     pub fn nodes(&self) -> &HashMap<NodeId, Node> {
         self.graph.nodes()
@@ -544,9 +550,15 @@ impl<'a> PluginContext<'a> {
     pub fn get_node_mut(&mut self, id: &NodeId) -> Option<&mut Node> {
         self.graph.get_node_mut(id)
     }
-    pub fn remove_node(&mut self, id: &NodeId, policy: ParentDeletePolicy) {
-        self.graph.remove_node(id, policy);
+    pub fn remove_node(
+        &mut self,
+        id: &NodeId,
+        policy: ParentDeletePolicy,
+    ) -> Result<(), GraphError> {
+        self.graph.remove_node(id, policy)?;
         self.port_offset_cache.clear_node(id);
+
+        Ok(())
     }
     pub fn nodes(&self) -> &HashMap<NodeId, Node> {
         self.graph.nodes()

@@ -50,7 +50,8 @@ impl Command for CreateNode {
         ]
     }
     fn undo(&mut self, ctx: &mut crate::canvas::CommandContext) {
-        ctx.remove_node(&self.node.id(), ParentDeletePolicy::Cascade);
+        ctx.remove_node(&self.node.id(), ParentDeletePolicy::Cascade)
+            .expect("Failed to remove node");
     }
 }
 
