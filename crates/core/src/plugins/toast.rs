@@ -84,6 +84,7 @@ struct ToastItem {
 pub struct ToastPlugin {
     queue: VecDeque<ToastItem>,
     duration: Duration,
+    max_toasts: usize,
 }
 
 impl Default for ToastPlugin {
@@ -97,11 +98,17 @@ impl ToastPlugin {
         Self {
             queue: VecDeque::new(),
             duration: DEFAULT_TOAST_DURATION,
+            max_toasts: MAX_TOASTS,
         }
     }
 
     pub fn with_duration(mut self, duration: Duration) -> Self {
         self.duration = duration;
+        self
+    }
+
+    pub fn with_max(mut self, max_toasts: usize) -> Self {
+        self.max_toasts = max_toasts;
         self
     }
 
@@ -117,7 +124,7 @@ impl ToastPlugin {
             level: msg.level,
             expires_at: Instant::now() + self.duration,
         });
-        while self.queue.len() > MAX_TOASTS {
+        while self.queue.len() > self.max_toasts {
             let _ = self.queue.pop_front();
         }
     }
