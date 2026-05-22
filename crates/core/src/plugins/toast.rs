@@ -21,9 +21,22 @@ pub enum ToastLevel {
     Error,
 }
 
+impl From<MessageLevel> for ToastLevel {
+    fn from(level: MessageLevel) -> Self {
+        match level {
+            MessageLevel::Error => ToastLevel::Error,
+            MessageLevel::Warning => ToastLevel::Warning,
+            MessageLevel::Info => ToastLevel::Info,
+            MessageLevel::Success => ToastLevel::Success,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct ToastMessage {
+    #[allow(unused)]
     text: String,
+    #[allow(unused)]
     level: ToastLevel,
     duration: Duration,
 }
@@ -32,12 +45,7 @@ impl From<CanvasMessage> for ToastMessage {
     fn from(message: CanvasMessage) -> Self {
         Self {
             text: message.message().into(),
-            level: match message.level() {
-                MessageLevel::Error => ToastLevel::Error,
-                MessageLevel::Warning => ToastLevel::Warning,
-                MessageLevel::Info => ToastLevel::Info,
-                MessageLevel::Success => ToastLevel::Success,
-            },
+            level: message.level().into(),
             duration: DEFAULT_TOAST_DURATION,
         }
     }
@@ -77,7 +85,7 @@ impl ToastMessage {
 #[derive(Debug, Clone)]
 struct ToastItem {
     text: String,
-    level: ToastLevel,
+    level: MessageLevel,
     expires_at: Instant,
 }
 
@@ -117,11 +125,11 @@ impl ToastPlugin {
         self.queue.retain(|item| item.expires_at > now);
     }
 
-    fn push(&mut self, msg: ToastMessage) {
+    fn push(&mut self, msg: &CanvasMessage) {
         self.gc_expired();
         self.queue.push_back(ToastItem {
-            text: msg.text,
-            level: msg.level,
+            text: msg.message().into(),
+            level: msg.level(),
             expires_at: Instant::now() + self.duration,
         });
         while self.queue.len() > self.max_toasts {
@@ -129,12 +137,12 @@ impl ToastPlugin {
         }
     }
 
-    fn bg_color(level: ToastLevel, theme: &FlowTheme) -> u32 {
+    fn bg_color(level: MessageLevel, theme: &FlowTheme) -> u32 {
         match level {
-            ToastLevel::Info => theme.info,
-            ToastLevel::Success => theme.success,
-            ToastLevel::Warning => theme.warning,
-            ToastLevel::Error => theme.error,
+            MessageLevel::Info => theme.info,
+            MessageLevel::Success => theme.success,
+            MessageLevel::Warning => theme.warning,
+            MessageLevel::Error => theme.error,
         }
     }
 }
@@ -152,7 +160,7 @@ impl Plugin for ToastPlugin {
         self.gc_expired();
         if let FlowEvent::Message(msg) = event {
             ctx.schedule_after(self.duration);
-            self.push(msg.clone().into());
+            self.push(msg);
             ctx.notify();
         }
         crate::plugin::EventResult::Continue
