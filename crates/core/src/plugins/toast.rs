@@ -7,7 +7,7 @@ use gpui::{Element as _, ParentElement as _, Styled as _, div, px, rgb};
 
 use crate::{
     FlowTheme,
-    plugin::{FlowEvent, Plugin, PluginContext, RenderContext},
+    plugin::{CanvasMessage, FlowEvent, MessageLevel, Plugin, PluginContext, RenderContext},
 };
 
 const DEFAULT_TOAST_DURATION: Duration = Duration::from_millis(3000);
@@ -26,6 +26,21 @@ pub struct ToastMessage {
     text: String,
     level: ToastLevel,
     duration: Duration,
+}
+
+impl From<CanvasMessage> for ToastMessage {
+    fn from(message: CanvasMessage) -> Self {
+        Self {
+            text: message.message().into(),
+            level: match message.level() {
+                MessageLevel::Error => ToastLevel::Error,
+                MessageLevel::Warning => ToastLevel::Warning,
+                MessageLevel::Info => ToastLevel::Info,
+                MessageLevel::Success => ToastLevel::Success,
+            },
+            duration: DEFAULT_TOAST_DURATION,
+        }
+    }
 }
 
 impl ToastMessage {
@@ -121,10 +136,9 @@ impl Plugin for ToastPlugin {
         ctx: &mut PluginContext,
     ) -> crate::plugin::EventResult {
         self.gc_expired();
-        if let Some(msg) = event.as_custom::<ToastMessage>() {
-            let duration = msg.duration;
-            self.push(msg.clone());
-            ctx.schedule_after(duration);
+        if let FlowEvent::Message(msg) = event {
+            ctx.schedule_after(DEFAULT_TOAST_DURATION);
+            self.push(msg.clone().into());
             ctx.notify();
         }
         crate::plugin::EventResult::Continue

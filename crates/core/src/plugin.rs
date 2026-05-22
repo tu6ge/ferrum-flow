@@ -776,6 +776,7 @@ pub enum FlowEvent {
     /// [`crate::Viewport::window_bounds`]. Handle this for layout-dependent setup (e.g. initial fit-all).
     /// Do not emit this from plugins; it is reserved for the canvas host after `on_children_prepainted`.
     DrawableBoundsReady,
+    Message(CanvasMessage),
     Custom(Box<dyn std::any::Any + Send>),
 }
 
@@ -802,6 +803,87 @@ pub enum InputEvent {
     Wheel(ScrollWheelEvent),
 
     Hover(bool),
+}
+
+#[derive(Debug)]
+pub struct CanvasMessage {
+    message: String,
+    level: MessageLevel,
+    source: Option<Box<dyn std::error::Error>>,
+}
+
+impl std::fmt::Display for CanvasMessage {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.message)
+    }
+}
+
+impl std::error::Error for CanvasMessage {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        self.source.as_ref().map(|s| s.as_ref())
+    }
+}
+
+impl Clone for CanvasMessage {
+    fn clone(&self) -> Self {
+        Self {
+            message: self.message.clone(),
+            level: self.level,
+            source: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MessageLevel {
+    Error,
+    Warning,
+    Info,
+    Success,
+}
+
+impl std::fmt::Display for MessageLevel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            MessageLevel::Error => write!(f, "error"),
+            MessageLevel::Warning => write!(f, "warning"),
+            MessageLevel::Info => write!(f, "info"),
+            MessageLevel::Success => write!(f, "success"),
+        }
+    }
+}
+
+impl CanvasMessage {
+    pub fn new(message: impl Into<String>, level: MessageLevel) -> Self {
+        Self {
+            message: message.into(),
+            level,
+            source: None,
+        }
+    }
+    pub fn error(message: impl Into<String>) -> Self {
+        Self::new(message, MessageLevel::Error)
+    }
+    pub fn warning(message: impl Into<String>) -> Self {
+        Self::new(message, MessageLevel::Warning)
+    }
+    pub fn info(message: impl Into<String>) -> Self {
+        Self::new(message, MessageLevel::Info)
+    }
+    pub fn success(message: impl Into<String>) -> Self {
+        Self::new(message, MessageLevel::Success)
+    }
+    pub fn with_source(mut self, source: impl std::error::Error + 'static) -> Self {
+        self.source = Some(Box::new(source));
+        self
+    }
+
+    pub fn message(&self) -> &str {
+        &self.message
+    }
+    pub fn level(&self) -> MessageLevel {
+        self.level
+    }
 }
 
 pub struct RenderContext<'a> {
