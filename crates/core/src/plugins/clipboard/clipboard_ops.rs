@@ -126,6 +126,8 @@ fn paste_subgraph_with_anchor(
         node.set_id(new_id);
         node.set_position(nx.into(), ny.into());
         node.clear_port_refs();
+        // TODO: handle parent node
+        // TODO: handle children nodes
 
         for pid in old.inputs() {
             node.push_input(port_map[pid]);
