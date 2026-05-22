@@ -790,6 +790,19 @@ impl FlowEvent {
             _ => None,
         }
     }
+
+    pub fn success(message: impl Into<String>) -> Self {
+        FlowEvent::Message(CanvasMessage::success(message))
+    }
+    pub fn warning(message: impl Into<String>) -> Self {
+        FlowEvent::Message(CanvasMessage::warning(message))
+    }
+    pub fn info(message: impl Into<String>) -> Self {
+        FlowEvent::Message(CanvasMessage::info(message))
+    }
+    pub fn error(message: impl Into<String>) -> Self {
+        FlowEvent::Message(CanvasMessage::error(message))
+    }
 }
 
 pub enum InputEvent {

@@ -11,7 +11,6 @@
 use std::sync::Arc;
 
 use crate::{
-    ToastMessage,
     plugin::{FlowEvent, Plugin, PluginContext, primary_platform_modifier},
     plugins::node::DragNodesCommand,
 };
@@ -83,10 +82,10 @@ impl Plugin for AutoLayoutPlugin {
                     }
                 }
                 Err(e) => {
-                    ctx.emit(FlowEvent::custom(ToastMessage::warning(format!(
+                    ctx.emit(FlowEvent::warning(format!(
                         "Layout ({}): {e}",
                         strategy.id()
-                    ))));
+                    )));
                 }
             }
             return crate::plugin::EventResult::Stop;

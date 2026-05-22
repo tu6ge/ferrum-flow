@@ -42,6 +42,8 @@ pub use port::{
 pub use select_all_viewport::SelectAllViewportPlugin;
 pub use selection::SelectionPlugin;
 pub use snap_guides::SnapGuidesPlugin;
-pub use toast::{ToastLevel, ToastMessage, ToastPlugin};
+pub use toast::ToastPlugin;
+#[deprecated(note = "Use `FlowEvent::Message` instead")]
+pub use toast::{ToastLevel, ToastMessage};
 pub use viewport::ViewportPlugin;
 pub use zoom_controls::ZoomControlsPlugin;

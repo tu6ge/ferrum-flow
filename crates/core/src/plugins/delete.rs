@@ -1,5 +1,5 @@
 use crate::{
-    Edge, EdgeId, Graph, GraphError, GraphOp, Node, ParentDeletePolicy, Port, ToastMessage,
+    Edge, EdgeId, Graph, GraphError, GraphOp, Node, ParentDeletePolicy, Port,
     canvas::Command,
     plugin::{FlowEvent, Plugin},
 };
@@ -26,7 +26,7 @@ pub(crate) fn delete_selection(ctx: &mut crate::plugin::PluginContext, policy: P
     match cmd {
         Ok(cmd) => ctx.execute_command(cmd),
         Err(e) => {
-            ctx.emit(FlowEvent::custom(ToastMessage::error(e.to_string())));
+            ctx.emit(FlowEvent::error(e.to_string()));
         }
     }
 }
@@ -48,7 +48,7 @@ impl Plugin for DeletePlugin {
             match cmd {
                 Ok(cmd) => ctx.execute_command(cmd),
                 Err(e) => {
-                    ctx.emit(FlowEvent::custom(ToastMessage::error(e.to_string())));
+                    ctx.emit(FlowEvent::error(e.to_string()));
                 }
             }
             return crate::plugin::EventResult::Stop;
