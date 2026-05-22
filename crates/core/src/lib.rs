@@ -4,7 +4,6 @@ mod canvas;
 pub mod command_interop;
 mod edge;
 mod graph;
-mod node;
 mod plugin;
 #[cfg(any(feature = "testing", test))]
 pub mod plugin_testing;
@@ -20,8 +19,8 @@ pub use canvas::{
     default_node_caption,
 };
 pub use edge::*;
+pub use graph::node::*;
 pub use graph::*;
-pub use node::*;
 pub use plugin::{
     EventResult, FlowEvent, InitPluginContext, InputEvent, NodeCardVariant, Plugin, PluginContext,
     RenderContext, RenderLayer, SyncPlugin, SyncPluginContext, primary_platform_modifier,

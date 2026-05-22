@@ -6,11 +6,12 @@ use gpui::{Bounds, Pixels, Point, Size, px};
 use serde::{Deserialize, Serialize};
 
 use crate::edge::{Edge, EdgeBuilderInGraph, EdgeId};
-use crate::node::{Node, NodeId, Port, PortId};
-use crate::{EdgeBuilder, NodeBuilder, NodeBuilderInGraph, PortKind, PortPosition, Viewport};
+use crate::{EdgeBuilder, Viewport};
 
+pub mod node;
 mod store;
 
+pub use node::*;
 pub use store::{ChangeSource, GraphChange, GraphChangeKind, GraphOp};
 
 /// Hierarchy and graph invariant violations when linking parent/child nodes.
