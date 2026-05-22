@@ -202,24 +202,24 @@ impl Node {
         &self.children
     }
 
-    pub(crate) fn set_parent(&mut self, parent: Option<NodeId>) {
+    pub(super) fn set_parent(&mut self, parent: Option<NodeId>) {
         self.parent = parent;
     }
 
-    pub(crate) fn push_child(&mut self, child: NodeId) {
+    pub(super) fn push_child(&mut self, child: NodeId) {
         if !self.children.contains(&child) {
             self.children.push(child);
         }
     }
 
-    pub(crate) fn remove_child_ref(&mut self, child: NodeId) {
+    pub(super) fn remove_child_ref(&mut self, child: NodeId) {
         self.children
             .iter()
             .position(|id| *id == child)
             .map(|index| self.children.remove(index));
     }
 
-    pub(crate) fn clear_children(&mut self) {
+    pub(super) fn clear_children(&mut self) {
         self.children.clear();
     }
 }
