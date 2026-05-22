@@ -1,3 +1,5 @@
+#![deny(clippy::unwrap_used)]
+
 pub mod builder_state;
 mod canvas;
 #[cfg(any(feature = "testing", test))]
