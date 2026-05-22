@@ -26,7 +26,7 @@ pub(crate) fn delete_selection(ctx: &mut crate::plugin::PluginContext, policy: P
     match cmd {
         Ok(cmd) => ctx.execute_command(cmd),
         Err(e) => {
-            ctx.emit(FlowEvent::error(e.to_string()));
+            ctx.emit(e.into());
         }
     }
 }
@@ -48,7 +48,7 @@ impl Plugin for DeletePlugin {
             match cmd {
                 Ok(cmd) => ctx.execute_command(cmd),
                 Err(e) => {
-                    ctx.emit(FlowEvent::error(e.to_string()));
+                    ctx.emit(e.into());
                 }
             }
             return crate::plugin::EventResult::Stop;

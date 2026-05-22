@@ -6,7 +6,8 @@ use gpui::{Bounds, Pixels, Point, Size, px};
 use serde::{Deserialize, Serialize};
 
 use crate::edge::{Edge, EdgeBuilderInGraph, EdgeId};
-use crate::{EdgeBuilder, Viewport};
+use crate::plugin::CanvasMessage;
+use crate::{EdgeBuilder, FlowEvent, Viewport};
 
 pub mod node;
 mod store;
@@ -44,6 +45,17 @@ impl std::fmt::Display for GraphError {
 
 impl std::error::Error for GraphError {}
 
+impl From<GraphError> for CanvasMessage {
+    fn from(error: GraphError) -> Self {
+        CanvasMessage::error(error.to_string()).with_source(error)
+    }
+}
+
+impl From<GraphError> for FlowEvent {
+    fn from(error: GraphError) -> Self {
+        FlowEvent::Message(error.into())
+    }
+}
 /// Walks from `node`'s parent upward (excludes `node` itself).
 struct AncestorsIter<'a> {
     graph: &'a Graph,
