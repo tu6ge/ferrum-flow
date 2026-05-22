@@ -426,9 +426,6 @@ pub struct NodeBuilder<'a, G = Unset> {
     inputs: Vec<PortSpec>,
     outputs: Vec<PortSpec>,
     data: serde_json::Value,
-
-    parent: Option<NodeId>,
-    children: Vec<NodeId>,
 }
 
 #[derive(Clone)]
@@ -553,8 +550,6 @@ impl<'a> NodeBuilder<'a, Unset> {
             inputs: vec![],
             outputs: vec![],
             data: json!({}),
-            parent: None,
-            children: vec![],
         }
     }
 
@@ -570,8 +565,6 @@ impl<'a> NodeBuilder<'a, Unset> {
             inputs: self.inputs,
             outputs: self.outputs,
             data: self.data,
-            parent: self.parent,
-            children: self.children,
         }
     }
 }
@@ -668,7 +661,7 @@ impl<'a, G> NodeBuilder<'a, G> {
             inputs: input_ids,
             outputs: output_ids,
             data: self.data,
-            parent: self.parent,
+            parent: None,
             children: vec![],
         }
     }
@@ -737,7 +730,7 @@ impl<'a, G> NodeBuilder<'a, G> {
                 inputs,
                 outputs,
                 data: self.data,
-                parent: self.parent,
+                parent: None,
                 children: vec![],
             },
             ports,
