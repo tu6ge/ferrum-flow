@@ -83,6 +83,7 @@ struct ToastItem {
 
 pub struct ToastPlugin {
     queue: VecDeque<ToastItem>,
+    duration: Duration,
 }
 
 impl Default for ToastPlugin {
@@ -95,7 +96,13 @@ impl ToastPlugin {
     pub fn new() -> Self {
         Self {
             queue: VecDeque::new(),
+            duration: DEFAULT_TOAST_DURATION,
         }
+    }
+
+    pub fn with_duration(mut self, duration: Duration) -> Self {
+        self.duration = duration;
+        self
     }
 
     fn gc_expired(&mut self) {
@@ -108,7 +115,7 @@ impl ToastPlugin {
         self.queue.push_back(ToastItem {
             text: msg.text,
             level: msg.level,
-            expires_at: Instant::now() + msg.duration,
+            expires_at: Instant::now() + self.duration,
         });
         while self.queue.len() > MAX_TOASTS {
             let _ = self.queue.pop_front();
@@ -137,7 +144,7 @@ impl Plugin for ToastPlugin {
     ) -> crate::plugin::EventResult {
         self.gc_expired();
         if let FlowEvent::Message(msg) = event {
-            ctx.schedule_after(DEFAULT_TOAST_DURATION);
+            ctx.schedule_after(self.duration);
             self.push(msg.clone().into());
             ctx.notify();
         }
