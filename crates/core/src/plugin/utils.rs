@@ -1,6 +1,8 @@
 use gpui::{Bounds, KeyDownEvent, Pixels, Point};
 
-use crate::{Edge, Graph, GraphChangeKind, NodeId, Viewport, canvas::PortLayoutCache};
+use crate::{
+    Edge, Graph, GraphChangeKind, NodeId, ParentDeletePolicy, Viewport, canvas::PortLayoutCache,
+};
 
 /// [`gpui::canvas`] paint callbacks use **window** space for [`gpui::Window::paint_path`], while
 /// graph helpers ([`crate::RenderContext::world_to_screen`], port centers, etc.) use **canvas-local**
@@ -21,8 +23,12 @@ pub fn invalidate_port_layout_cache_for_graph_change(
 ) {
     match kind {
         GraphChangeKind::NodeAdded(node) => cache.clear_node(&node.id()),
+        GraphChangeKind::NodeRemovedWithPolicy { id, policy } => match policy {
+            ParentDeletePolicy::Cascade => cache.clear_node_cascade(id, graph),
+            ParentDeletePolicy::Promote => cache.clear_node(id),
+        },
+        // delete default with promote policy
         GraphChangeKind::NodeRemoved { id }
-        | GraphChangeKind::NodeRemovedWithPolicy { id, .. }
         | GraphChangeKind::NodeParentChanged { id, .. }
         | GraphChangeKind::NodePushedChild { id, .. }
         | GraphChangeKind::NodePoppedChild { id, .. }

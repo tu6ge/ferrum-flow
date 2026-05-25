@@ -46,6 +46,13 @@ impl PortLayoutCache {
         self.map.remove(node_id);
     }
 
+    pub fn clear_node_cascade(&mut self, node_id: &NodeId, graph: &Graph) {
+        graph
+            .descendants(*node_id)
+            .for_each(|id| self.clear_node(&id));
+        self.clear_node(node_id);
+    }
+
     pub fn clear_all(&mut self) {
         self.map.clear();
     }
