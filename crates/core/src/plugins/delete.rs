@@ -112,7 +112,7 @@ impl DeleteCommand {
             }
         }
 
-        Self::validate_delete_nodes(&selected_node, &ctx.graph, policy)?;
+        Self::validate_delete_nodes(&selected_node, ctx.graph, policy)?;
 
         Ok(Self {
             selected_edge,

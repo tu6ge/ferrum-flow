@@ -47,22 +47,26 @@ fn apply_graph_op(graph: &mut Graph, op: GraphOp) {
         GraphOp::AddNode(node) => {
             graph.add_node_without_order(node);
         }
-        GraphOp::ChangeParentNode { id, parent } => graph.reparent(id, parent).expect(&format!(
-            "Failed to change parent of node {id} to {}",
-            parent
-                .map(|n| n.to_string())
-                .unwrap_or("[none]".to_string())
-        )),
+        GraphOp::ChangeParentNode { id, parent } => {
+            graph.reparent(id, parent).unwrap_or_else(|_| {
+                panic!(
+                    "Failed to change parent of node {id} to {}",
+                    parent
+                        .map(|n| n.to_string())
+                        .unwrap_or("[none]".to_string())
+                )
+            })
+        }
         GraphOp::PushChildNode { id, child_id } => graph
             .add_child(id, child_id)
-            .expect(&format!("Failed to push child {child_id} to node {id}")),
+            .unwrap_or_else(|_| panic!("Failed to push child {child_id} to node {id}")),
         GraphOp::PopChildNode { id, child_id } => graph.remove_child(id, child_id),
         GraphOp::RemoveNode { id } => graph
             .remove_node(&id, ParentDeletePolicy::Promote)
-            .expect(&format!("Failed to remove node {id}")),
+            .unwrap_or_else(|_| panic!("Failed to remove node {id}")),
         GraphOp::RemoveNodeWithPolicy { id, policy } => graph
             .remove_node(&id, policy)
-            .expect(&format!("Failed to remove node {id} with policy {policy}")),
+            .unwrap_or_else(|_| panic!("Failed to remove node {id} with policy {policy}")),
         GraphOp::MoveNode { id, x, y } => {
             if let Some(node) = graph.get_node_mut(&id) {
                 node.set_position(x.into(), y.into());

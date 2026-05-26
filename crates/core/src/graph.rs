@@ -375,7 +375,7 @@ impl Graph {
     }
 
     pub fn remove_node_cascade(&mut self, id: &NodeId) {
-        if let Err(_) = self.ensure_node(*id) {
+        if self.ensure_node(*id).is_err() {
             return;
         }
         let mut order = Vec::new();
