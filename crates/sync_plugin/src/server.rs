@@ -43,7 +43,7 @@ pub(crate) fn start_sync_thread(
     ws_config: WsSyncConfig,
 ) {
     thread::spawn(move || {
-        let rt = Runtime::new().unwrap();
+        let rt = Runtime::new().expect("failed to create runtime");
 
         rt.block_on(async move {
             run_ws(awareness, undo_origin, repaint_tx, ws_url, ws_config).await;

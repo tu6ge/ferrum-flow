@@ -242,11 +242,12 @@ impl YrsSyncPlugin {
     fn node_pop_child(&self, txn: &mut TransactionMut, id: &NodeId, child_id: &NodeId) {
         if let Some(yrs::Out::YMap(node_ref)) = self.nodes.get(txn, &id.to_string()) {
             let children_array = node_ref.get(txn, "children").unwrap_or_default();
-            if let yrs::Out::YArray(children_array) = children_array {
-                children_array
+            if let yrs::Out::YArray(children_array) = children_array
+                && let Some(index) = children_array
                     .iter(txn)
                     .position(|item| item == Out::Any(Any::String(child_id.to_string().into())))
-                    .map(|index| children_array.remove(txn, index as u32));
+            {
+                children_array.remove(txn, index as u32);
             }
         }
     }
