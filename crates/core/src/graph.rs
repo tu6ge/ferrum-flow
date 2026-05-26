@@ -82,15 +82,13 @@ impl Iterator for DescendantsIter<'_> {
     type Item = NodeId;
 
     fn next(&mut self) -> Option<Self::Item> {
-        while let Some(id) = self.stack.pop() {
-            if let Some(node) = self.graph.nodes.get(&id) {
-                for &child in node.children().iter().rev() {
-                    self.stack.push(child);
-                }
+        let id = self.stack.pop()?;
+        if let Some(node) = self.graph.nodes.get(&id) {
+            for &child in node.children().iter().rev() {
+                self.stack.push(child);
             }
-            return Some(id);
         }
-        None
+        Some(id)
     }
 }
 
