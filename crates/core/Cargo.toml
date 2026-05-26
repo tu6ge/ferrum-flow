@@ -24,3 +24,4 @@ serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 futures = { workspace = true, features = ["std"] }
 uuid = { workspace = true }
+log = { workspace = true }

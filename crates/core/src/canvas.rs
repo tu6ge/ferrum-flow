@@ -711,7 +711,9 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
                                 &this.graph,
                                 &change.kind,
                             );
-                            this.graph.apply(change.kind);
+                            if let Err(e) = this.graph.apply(change.kind) {
+                                log::error!("failed to apply graph change: {}", e);
+                            }
                             cx.notify();
                         });
                     }

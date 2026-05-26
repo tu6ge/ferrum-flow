@@ -170,14 +170,14 @@ impl Graph {
             && self.node_order.is_empty()
     }
 
-    pub fn apply(&mut self, op: GraphChangeKind) {
+    pub fn apply(&mut self, op: GraphChangeKind) -> Result<(), GraphError> {
         match op {
             GraphChangeKind::NodeAdded(node) => self.add_node(node),
             GraphChangeKind::NodeRemoved { id } => {
-                self.remove_node(&id, ParentDeletePolicy::Promote).unwrap();
+                self.remove_node(&id, ParentDeletePolicy::Promote)?
             }
             GraphChangeKind::NodeRemovedWithPolicy { id, policy } => {
-                self.remove_node(&id, policy).unwrap();
+                self.remove_node(&id, policy)?
             }
             GraphChangeKind::NodeMoved { id, x, y } => {
                 if let Some(node) = self.nodes.get_mut(&id) {
@@ -203,11 +203,9 @@ impl Graph {
                 self.node_order = vec;
             }
             GraphChangeKind::NodeParentChanged { id, parent } => {
-                self.reparent(id, parent).unwrap();
+                self.reparent(id, parent)?;
             }
-            GraphChangeKind::NodePushedChild { id, child_id } => {
-                self.add_child(id, child_id).unwrap()
-            }
+            GraphChangeKind::NodePushedChild { id, child_id } => self.add_child(id, child_id)?,
             GraphChangeKind::NodePoppedChild { id, child_id } => self.remove_child(id, child_id),
             GraphChangeKind::PortAdded(port) => self.add_port(port),
             GraphChangeKind::PortRemoved { id } => {
@@ -218,10 +216,12 @@ impl Graph {
             GraphChangeKind::RedrawRequested => {}
             GraphChangeKind::Batch(graph_change_kinds) => {
                 for change in graph_change_kinds {
-                    self.apply(change);
+                    self.apply(change)?;
                 }
             }
         }
+
+        Ok(())
     }
 
     pub fn create_node(&mut self, renderer_key: &str) -> NodeBuilderInGraph<'_> {
