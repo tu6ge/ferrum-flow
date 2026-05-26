@@ -673,8 +673,8 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
             .into_iter()
             .filter(|(_, count)| *count > 1)
         {
-            eprintln!(
-                "warning: plugin '{name}' is registered {count} times; this can cause duplicated event handling"
+            log::warn!(
+                "plugin '{name}' is registered {count} times; this can cause duplicated event handling"
             );
         }
 
