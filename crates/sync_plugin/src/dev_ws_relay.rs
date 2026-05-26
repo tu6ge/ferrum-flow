@@ -30,14 +30,14 @@ pub async fn run_dev_ws_relay() {
     let awareness = Arc::new(Awareness::new((*server_doc).clone()));
 
     let listener = TcpListener::bind("127.0.0.1:9001").await.unwrap();
-    eprintln!("[dev_ws_relay] listening on 127.0.0.1:9001");
+    log::info!("listening on 127.0.0.1:9001");
 
     while let Ok((stream, addr)) = listener.accept().await {
         let hub = hub.clone();
         let awareness = awareness.clone();
         let client_id = next_id.fetch_add(1, Ordering::Relaxed);
 
-        eprintln!("[dev_ws_relay] client {} connected: {}", client_id, addr);
+        log::info!("client {} connected: {}", client_id, addr);
 
         tokio::spawn(handle_client(stream, client_id, hub, awareness));
     }
@@ -52,10 +52,7 @@ async fn handle_client(
     let ws = match accept_async(stream).await {
         Ok(ws) => ws,
         Err(e) => {
-            eprintln!(
-                "[dev_ws_relay] ws handshake failed for {}: {}",
-                client_id, e
-            );
+            log::error!("ws handshake failed for {}: {}", client_id, e);
             return;
         }
     };
@@ -104,7 +101,7 @@ async fn handle_client(
             let replies = match DefaultProtocol.handle(&awareness_read, &data) {
                 Ok(r) => r,
                 Err(e) => {
-                    eprintln!("[dev_ws_relay] protocol error from {}: {:?}", client_id, e);
+                    log::error!("protocol error from {}: {:?}", client_id, e);
                     continue;
                 }
             };
@@ -168,7 +165,7 @@ async fn handle_client(
             }
         }
 
-        eprintln!("[dev_ws_relay] client {} disconnected", client_id);
+        log::info!("client {} disconnected", client_id);
         hub_read.lock().unwrap().retain(|(id, _)| *id != client_id);
     });
 

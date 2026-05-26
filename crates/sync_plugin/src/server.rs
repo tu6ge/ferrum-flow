@@ -63,10 +63,10 @@ async fn run_ws(
             Some(s) => s,
             None => {
                 if config.max_connect_retries == u32::MAX {
-                    eprintln!("[ferrum-flow-sync] connect loop exited unexpectedly");
+                    log::error!("connect loop exited unexpectedly");
                 } else {
-                    eprintln!(
-                        "[ferrum-flow-sync] giving up after {} failed connect attempt(s)",
+                    log::error!(
+                        "giving up after {} failed connect attempt(s)",
                         config.max_connect_retries
                     );
                 }
@@ -100,10 +100,7 @@ async fn connect_with_retries(
         match connect_async(url).await {
             Ok((ws, _)) => return Some(ws),
             Err(e) => {
-                eprintln!(
-                    "[ferrum-flow-sync] WebSocket connect failed (attempt {}): {}",
-                    attempt, e
-                );
+                log::error!("WebSocket connect failed (attempt {}): {}", attempt, e);
                 if !unlimited && attempt >= config.max_connect_retries {
                     return None;
                 }
@@ -162,9 +159,10 @@ async fn run_one_session(
             let after_sv_len = awareness_applier.doc().transact().state_vector().len();
 
             if after_sv_len != before_sv_len {
-                eprintln!(
-                    "[ferrum-flow-sync] yrs doc state_vector len changed: {} -> {}",
-                    before_sv_len, after_sv_len
+                log::error!(
+                    "yrs doc state_vector len changed: {} -> {}",
+                    before_sv_len,
+                    after_sv_len
                 );
             }
 
@@ -229,7 +227,7 @@ async fn run_one_session(
     }) {
         Ok(sub) => sub,
         Err(err) => {
-            eprintln!("[ferrum-flow-sync] observe_update_v1 failed: {}", err);
+            log::error!("observe_update_v1 failed: {}", err);
             drop(incoming_tx);
             reader_task.abort();
             applier_task.abort();
