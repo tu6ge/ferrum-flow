@@ -126,7 +126,10 @@ fn assign_layers(ordered: &[NodeId], edges: &[(NodeId, NodeId)]) -> (HashMap<Nod
     while let Some(u) = q.pop_front() {
         topo.push(u);
         for v in adj.get(&u).into_iter().flatten() {
-            let d = tmp.get_mut(v).expect("in_deg");
+            let Some(d) = tmp.get_mut(v) else {
+                log::error!("in_deg not found for node: {}", v);
+                continue;
+            };
             *d -= 1;
             if *d == 0 {
                 q.push_back(*v);

@@ -193,8 +193,9 @@ impl Command for DeleteCommand {
     }
     fn execute(&mut self, ctx: &mut crate::canvas::CommandContext) {
         ctx.remove_selected_edge();
-        ctx.remove_selected_node(self.policy)
-            .expect("Failed to remove selected node");
+        if let Err(e) = ctx.remove_selected_node(self.policy) {
+            log::error!("failed to remove selected node: {e}");
+        }
     }
     fn undo(&mut self, ctx: &mut crate::canvas::CommandContext) {
         for node in &self.selected_node {

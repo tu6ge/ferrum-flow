@@ -70,7 +70,10 @@ impl LayoutStrategy for ForceDirectedLayout {
 
         let mut pos: HashMap<NodeId, (f32, f32)> = HashMap::new();
         for id in &ids {
-            let n = graph.get_node(id).expect("node exists");
+            let Some(n) = graph.get_node(id) else {
+                log::error!("node not found: {}", id);
+                continue;
+            };
             let p = hint.and_then(|h| h.get(id)).unwrap_or_else(|| n.point());
             pos.insert(*id, (px_f32(p.x), px_f32(p.y)));
         }
