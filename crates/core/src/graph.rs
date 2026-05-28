@@ -621,11 +621,14 @@ impl Graph {
     }
 
     pub fn hit_node(&self, mouse: Point<Pixels>, viewport: &Viewport) -> Option<NodeId> {
-        self.nodes
-            .iter()
-            .filter(|(_, node)| viewport.is_node_visible(node))
-            .find(|(_, n)| n.bounds().contains(&mouse))
-            .map(|(id, _)| *id)
+        self.paint_order()
+            .into_iter()
+            .rev()
+            .find(|id| {
+                self.nodes.get(id).is_some_and(|n| {
+                    viewport.is_node_visible(n) && n.bounds().contains(&mouse)
+                })
+            })
     }
 
     fn vec_bring_to_end(vec: &mut Vec<NodeId>, id: NodeId) {

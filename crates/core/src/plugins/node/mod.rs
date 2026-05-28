@@ -49,8 +49,8 @@ use crate::viewport::ViewportVisibilityCacheKey;
 struct NodeStaticLayerCacheKey {
     viewport: ViewportVisibilityCacheKey,
     nodes_len: usize,
-    node_order_len: usize,
-    node_order_tail: Option<u128>,
+    paint_order_len: usize,
+    paint_order_tail: Option<u128>,
     /// `None` when not dragging; else [`Arc::as_ptr`] + len of the shared drag id list.
     drag_arc: Option<(usize, usize)>,
 }
@@ -58,13 +58,12 @@ struct NodeStaticLayerCacheKey {
 impl NodeStaticLayerCacheKey {
     fn from_render_ctx(ctx: &RenderContext) -> Self {
         let drag = ctx.get_shared_state::<ActiveNodeDrag>();
+        let paint_order = ctx.graph.paint_order();
         Self {
             viewport: ctx.viewport().visibility_cache_key(),
             nodes_len: ctx.graph.nodes().len(),
-            node_order_len: ctx.graph.node_order().len(),
-            node_order_tail: ctx
-                .graph
-                .node_order()
+            paint_order_len: paint_order.len(),
+            paint_order_tail: paint_order
                 .last()
                 .map(|id| id.as_uuid().as_u128()),
             drag_arc: drag.map(|d| {
@@ -114,7 +113,7 @@ impl Plugin for NodePlugin {
             let active = ctx.get_shared_state::<ActiveNodeDrag>();
             self.static_layer_node_ids = ctx
                 .graph
-                .node_order()
+                .paint_order()
                 .iter()
                 .filter(|node_id| ctx.is_node_visible(node_id))
                 .filter(|node_id| !active.is_some_and(|d| d.0.contains(node_id)))
