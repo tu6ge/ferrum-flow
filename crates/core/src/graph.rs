@@ -646,9 +646,10 @@ impl Graph {
 
     pub fn hit_node(&self, mouse: Point<Pixels>, viewport: &Viewport) -> Option<NodeId> {
         self.paint_order().into_iter().rev().find(|id| {
-            self.nodes
-                .get(id)
-                .is_some_and(|n| viewport.is_node_visible(n) && n.bounds().contains(&mouse))
+            let Some(bounds) = self.node_world_bounds(*id) else {
+                return false;
+            };
+            viewport.is_world_bounds_visible(&bounds) && bounds.contains(&mouse)
         })
     }
 

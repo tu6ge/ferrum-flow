@@ -330,7 +330,7 @@ impl<'a> CommandContext<'a> {
         is_node_visible(self.graph, self.viewport, node_id)
     }
     pub fn is_node_visible_node(&self, node: &Node) -> bool {
-        self.viewport.is_node_visible(node)
+        is_node_visible(self.graph, self.viewport, &node.id())
     }
 
     pub fn is_edge_visible(&self, edge: &Edge) -> bool {

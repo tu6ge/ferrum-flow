@@ -67,11 +67,11 @@ pub fn primary_platform_modifier(ev: &KeyDownEvent) -> bool {
 }
 
 pub fn is_node_visible(graph: &Graph, viewport: &Viewport, node_id: &NodeId) -> bool {
-    let Some(node) = graph.get_node(node_id) else {
+    let Some(bounds) = graph.node_world_bounds(*node_id) else {
         return false;
     };
 
-    viewport.is_node_visible(node)
+    viewport.is_world_bounds_visible(&bounds)
 }
 
 pub fn is_edge_visible(graph: &Graph, viewport: &Viewport, edge: &Edge) -> bool {
@@ -91,15 +91,8 @@ pub fn is_edge_visible(graph: &Graph, viewport: &Viewport, edge: &Edge) -> bool 
     };
     let n2 = port.node_id();
 
-    let node1_visible = graph
-        .get_node(&n1)
-        .map(|n| viewport.is_node_visible(n))
-        .unwrap_or(false);
-
-    let node2_visible = graph
-        .get_node(&n2)
-        .map(|n| viewport.is_node_visible(n))
-        .unwrap_or(false);
+    let node1_visible = is_node_visible(graph, viewport, &n1);
+    let node2_visible = is_node_visible(graph, viewport, &n2);
 
     node1_visible || node2_visible
 }

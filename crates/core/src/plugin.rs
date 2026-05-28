@@ -280,7 +280,7 @@ impl<'a, 'b> InitPluginContext<'a, 'b> {
         is_node_visible(self.graph, self.viewport, node_id)
     }
     pub fn is_node_visible_node(&self, node: &Node) -> bool {
-        self.viewport.is_node_visible(node)
+        is_node_visible(self.graph, self.viewport, &node.id())
     }
 
     pub fn is_edge_visible(&self, edge: &Edge) -> bool {
@@ -697,7 +697,7 @@ impl<'a> PluginContext<'a> {
         is_node_visible(self.graph, self.viewport, node_id)
     }
     pub fn is_node_visible_node(&self, node: &Node) -> bool {
-        self.viewport.is_node_visible(node)
+        is_node_visible(self.graph, self.viewport, &node.id())
     }
 
     pub fn is_edge_visible(&self, edge: &Edge) -> bool {
@@ -1034,7 +1034,11 @@ impl<'a> RenderContext<'a> {
         selected: bool,
         variant: NodeCardVariant,
     ) -> Stateful<Div> {
-        let screen = self.world_to_screen(node.point());
+        let world = self
+            .graph
+            .node_world_point(node.id())
+            .unwrap_or_else(|| node.point());
+        let screen = self.world_to_screen(world);
         let z = self.viewport.zoom();
         let base = div()
             .id(ElementId::Uuid(*node.id().as_uuid()))
@@ -1089,7 +1093,7 @@ impl<'a> RenderContext<'a> {
         is_node_visible(self.graph, self.viewport, node_id)
     }
     pub fn is_node_visible_node(&self, node: &Node) -> bool {
-        self.viewport.is_node_visible(node)
+        is_node_visible(self.graph, self.viewport, &node.id())
     }
 
     pub fn is_edge_visible(&self, edge: &Edge) -> bool {
