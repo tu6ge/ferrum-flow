@@ -628,12 +628,41 @@ impl Graph {
             .map(|(id, _)| *id)
     }
 
-    pub fn bring_node_to_front(&mut self, node_id: NodeId) {
-        if let Some(index) = self.node_order_mut().iter().position(|id| *id == node_id) {
-            self.node_order_mut().remove(index);
+    fn vec_bring_to_end(vec: &mut Vec<NodeId>, id: NodeId) {
+        if let Some(index) = vec.iter().position(|x| *x == id) {
+            let id = vec.remove(index);
+            vec.push(id);
         }
+    }
 
-        self.node_order_mut().push(node_id);
+    /// Move `node_id` to the end of its sibling list (top among peers under the same parent).
+    pub fn bring_sibling_to_front(&mut self, node_id: NodeId) {
+        let parent = self.nodes.get(&node_id).and_then(|n| n.parent());
+        match parent {
+            Some(parent) => {
+                if let Some(children) = self.children_index.get_mut(&parent) {
+                    Self::vec_bring_to_end(children, node_id);
+                }
+            }
+            None => {
+                if self.nodes.contains_key(&node_id) {
+                    Self::vec_bring_to_end(&mut self.roots, node_id);
+                }
+            }
+        }
+    }
+
+    /// Raise within siblings, then repeat for each ancestor so the subtree moves forward.
+    pub fn bring_node_to_front(&mut self, node_id: NodeId) {
+        if !self.nodes.contains_key(&node_id) {
+            return;
+        }
+        let mut current = Some(node_id);
+        while let Some(id) = current {
+            self.bring_sibling_to_front(id);
+            current = self.nodes.get(&id).and_then(|n| n.parent());
+        }
+        *self.node_order_mut() = self.paint_order();
     }
 
     pub fn ports_on_node_side(
@@ -892,6 +921,36 @@ mod hierarchy_tests {
             children.swap(0, 1);
         }
         assert_eq!(g.paint_order(), vec![a, c, b]);
+    }
+
+    #[test]
+    fn bring_sibling_to_front_reorders_roots() {
+        let (mut g, a, b, c) = graph_with_nodes();
+        g.bring_sibling_to_front(b);
+        assert_eq!(g.roots(), &[a, c, b]);
+        assert_eq!(g.node_order(), &g.paint_order());
+    }
+
+    #[test]
+    fn bring_sibling_to_front_reorders_children_index() {
+        let (mut g, a, b, c) = graph_with_nodes();
+        g.add_child(a, b).unwrap();
+        g.add_child(a, c).unwrap();
+        g.bring_sibling_to_front(b);
+        assert_eq!(g.children_of(a), &[c, b]);
+        let child_set: HashSet<_> = g.get_node(&a).unwrap().children().iter().copied().collect();
+        assert_eq!(child_set, HashSet::from([b, c]));
+    }
+
+    #[test]
+    fn bring_node_to_front_bubbles_ancestors() {
+        let (mut g, a, b, c) = graph_with_nodes();
+        g.add_child(a, b).unwrap();
+        g.add_child(a, c).unwrap();
+        g.bring_node_to_front(c);
+        assert_eq!(g.children_of(a), &[b, c]);
+        assert_eq!(g.roots(), &[a]);
+        assert_eq!(g.node_order(), &g.paint_order());
     }
 
     #[test]

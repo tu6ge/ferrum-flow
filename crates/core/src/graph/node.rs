@@ -56,6 +56,8 @@ pub struct Node {
     data: serde_json::Value,
 
     parent: Option<NodeId>,
+    /// Child ids for hierarchy membership only; **sibling z-order** lives on
+    /// [`Graph::children_index`](crate::graph::Graph::children_index).
     children: Vec<NodeId>,
 }
 
