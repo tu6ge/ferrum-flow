@@ -293,6 +293,40 @@ impl Graph {
             .unwrap_or(&[])
     }
 
+    /// Depth-first draw order from [`Self::roots`] and [`Self::children_index`].
+    ///
+    /// Each node appears before its descendants; among siblings, later entries in
+    /// `children_index` (or `roots` for top-level nodes) are painted later (on top).
+    /// Nodes not reachable from `roots` are appended at the end in arbitrary order.
+    pub fn paint_order(&self) -> Vec<NodeId> {
+        let mut out = Vec::with_capacity(self.nodes.len());
+        let mut seen = HashSet::new();
+        for &root in &self.roots {
+            self.collect_paint_preorder(root, &mut out, &mut seen);
+        }
+        for id in self.nodes.keys() {
+            if seen.insert(*id) {
+                out.push(*id);
+            }
+        }
+        out
+    }
+
+    fn collect_paint_preorder(
+        &self,
+        id: NodeId,
+        out: &mut Vec<NodeId>,
+        seen: &mut HashSet<NodeId>,
+    ) {
+        if !seen.insert(id) {
+            return;
+        }
+        out.push(id);
+        for &child in self.children_of(id) {
+            self.collect_paint_preorder(child, out, seen);
+        }
+    }
+
     pub fn node_order(&self) -> &Vec<NodeId> {
         &self.node_order
     }
@@ -837,6 +871,37 @@ mod hierarchy_tests {
         assert!(g.get_node(&c).is_some());
         assert_eq!(g.get_node(&c).unwrap().parent(), None);
         assert!(g.roots().contains(&c));
+    }
+
+    #[test]
+    fn paint_order_matches_node_order_for_flat_roots() {
+        let (g, a, b, c) = graph_with_nodes();
+        assert_eq!(g.paint_order(), vec![a, b, c]);
+        assert_eq!(g.paint_order(), g.node_order().clone());
+    }
+
+    #[test]
+    fn paint_order_depth_first_follows_children_index() {
+        let (mut g, a, b, c) = graph_with_nodes();
+        g.add_child(a, b).unwrap();
+        g.add_child(a, c).unwrap();
+
+        assert_eq!(g.paint_order(), vec![a, b, c]);
+
+        if let Some(children) = g.children_index.get_mut(&a) {
+            children.swap(0, 1);
+        }
+        assert_eq!(g.paint_order(), vec![a, c, b]);
+    }
+
+    #[test]
+    fn paint_order_nested_chain() {
+        let (mut g, a, b, c) = graph_with_nodes();
+        g.add_child(a, b).unwrap();
+        g.add_child(b, c).unwrap();
+
+        assert_eq!(g.paint_order(), vec![a, b, c]);
+        assert_eq!(g.paint_order().len(), g.nodes.len());
     }
 
     #[test]
