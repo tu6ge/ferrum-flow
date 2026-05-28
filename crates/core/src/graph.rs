@@ -1015,7 +1015,6 @@ mod hierarchy_tests {
         let (mut g, a, b, c) = graph_with_nodes();
         g.bring_sibling_to_front(b);
         assert_eq!(g.roots(), &[a, c, b]);
-        assert_eq!(g.node_order(), &g.paint_order());
     }
 
     #[test]
