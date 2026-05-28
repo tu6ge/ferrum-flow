@@ -63,9 +63,7 @@ impl NodeStaticLayerCacheKey {
             viewport: ctx.viewport().visibility_cache_key(),
             nodes_len: ctx.graph.nodes().len(),
             paint_order_len: paint_order.len(),
-            paint_order_tail: paint_order
-                .last()
-                .map(|id| id.as_uuid().as_u128()),
+            paint_order_tail: paint_order.last().map(|id| id.as_uuid().as_u128()),
             drag_arc: drag.map(|d| {
                 let p = Arc::as_ptr(&d.0);
                 (p.cast::<NodeId>() as usize, d.0.len())
