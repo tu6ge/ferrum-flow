@@ -110,6 +110,7 @@ impl Node {
         (self.x, self.y)
     }
 
+    #[deprecated(since = "0.1.0", note = "Use `point` instead")]
     pub fn position_point(&self) -> Point<Pixels> {
         Point::new(self.x, self.y)
     }

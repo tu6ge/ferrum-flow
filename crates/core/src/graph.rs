@@ -327,6 +327,23 @@ impl Graph {
         }
     }
 
+    /// World-space origin of `id`, composing local [`Node::position`] along the parent chain.
+    ///
+    /// Root nodes use their stored position as world coordinates. A child stores offsets
+    /// relative to its parent's origin, so `world(child) = world(parent) + local(child)`.
+    pub fn node_world_point(&self, id: NodeId) -> Option<Point<Pixels>> {
+        let node = self.nodes.get(&id)?;
+        let mut world = node.point();
+        let mut current = id;
+        while let Some(parent_id) = self.nodes.get(&current)?.parent() {
+            let parent_pos = self.nodes.get(&parent_id)?.point();
+            world.x += parent_pos.x;
+            world.y += parent_pos.y;
+            current = parent_id;
+        }
+        Some(world)
+    }
+
     pub fn node_order(&self) -> &Vec<NodeId> {
         &self.node_order
     }
@@ -621,14 +638,11 @@ impl Graph {
     }
 
     pub fn hit_node(&self, mouse: Point<Pixels>, viewport: &Viewport) -> Option<NodeId> {
-        self.paint_order()
-            .into_iter()
-            .rev()
-            .find(|id| {
-                self.nodes.get(id).is_some_and(|n| {
-                    viewport.is_node_visible(n) && n.bounds().contains(&mouse)
-                })
-            })
+        self.paint_order().into_iter().rev().find(|id| {
+            self.nodes
+                .get(id)
+                .is_some_and(|n| viewport.is_node_visible(n) && n.bounds().contains(&mouse))
+        })
     }
 
     fn vec_bring_to_end(vec: &mut Vec<NodeId>, id: NodeId) {
@@ -903,6 +917,37 @@ mod hierarchy_tests {
         assert!(g.get_node(&c).is_some());
         assert_eq!(g.get_node(&c).unwrap().parent(), None);
         assert!(g.roots().contains(&c));
+    }
+
+    #[test]
+    fn node_world_point_is_local_for_roots() {
+        let (g, a, b, _) = graph_with_nodes();
+        assert_eq!(g.node_world_point(a), Some(g.get_node(&a).unwrap().point()));
+        assert_eq!(g.node_world_point(b), Some(g.get_node(&b).unwrap().point()));
+    }
+
+    #[test]
+    fn node_world_point_accumulates_ancestor_positions() {
+        let mut g = Graph::new();
+        let a = g.create_node("default").position(100.0, 20.0).build();
+        let b = g.create_node("default").position(10.0, 5.0).build();
+        let c = g.create_node("default").position(3.0, 2.0).build();
+        g.add_child(a, b).unwrap();
+        g.add_child(b, c).unwrap();
+
+        let world_c = g.node_world_point(c).expect("c exists");
+        assert_eq!(world_c.x, px(113.0));
+        assert_eq!(world_c.y, px(27.0));
+
+        let world_b = g.node_world_point(b).expect("b exists");
+        assert_eq!(world_b.x, px(110.0));
+        assert_eq!(world_b.y, px(25.0));
+    }
+
+    #[test]
+    fn node_world_point_returns_none_for_missing_node() {
+        let g = Graph::new();
+        assert_eq!(g.node_world_point(NodeId::new()), None);
     }
 
     #[test]
