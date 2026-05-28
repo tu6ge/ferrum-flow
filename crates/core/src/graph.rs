@@ -344,6 +344,13 @@ impl Graph {
         Some(world)
     }
 
+    /// World-space axis-aligned bounds: [`Self::node_world_point`] origin with the node's size.
+    pub fn node_world_bounds(&self, id: NodeId) -> Option<Bounds<Pixels>> {
+        let node = self.nodes.get(&id)?;
+        let origin = self.node_world_point(id)?;
+        Some(Bounds::new(origin, *node.size_ref()))
+    }
+
     pub fn node_order(&self) -> &Vec<NodeId> {
         &self.node_order
     }
@@ -948,6 +955,37 @@ mod hierarchy_tests {
     fn node_world_point_returns_none_for_missing_node() {
         let g = Graph::new();
         assert_eq!(g.node_world_point(NodeId::new()), None);
+    }
+
+    #[test]
+    fn node_world_bounds_uses_world_origin_and_local_size() {
+        let mut g = Graph::new();
+        let a = g
+            .create_node("default")
+            .position(50.0, 10.0)
+            .size(200.0, 80.0)
+            .build();
+        let b = g
+            .create_node("default")
+            .position(20.0, 15.0)
+            .size(60.0, 40.0)
+            .build();
+        g.add_child(a, b).unwrap();
+
+        let bounds_b = g.node_world_bounds(b).expect("b exists");
+        assert_eq!(bounds_b.origin.x, px(70.0));
+        assert_eq!(bounds_b.origin.y, px(25.0));
+        assert_eq!(bounds_b.size.width, px(60.0));
+        assert_eq!(bounds_b.size.height, px(40.0));
+
+        let bounds_a = g.node_world_bounds(a).expect("a exists");
+        assert_eq!(bounds_a, g.get_node(&a).unwrap().bounds());
+    }
+
+    #[test]
+    fn node_world_bounds_returns_none_for_missing_node() {
+        let g = Graph::new();
+        assert_eq!(g.node_world_bounds(NodeId::new()), None);
     }
 
     #[test]
