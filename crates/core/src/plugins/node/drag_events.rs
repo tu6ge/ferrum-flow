@@ -11,8 +11,9 @@ use std::time::Duration;
 use crate::NodeId;
 
 /// Stored in [`crate::SharedState`] while [`super::interaction::NodeDragInteraction`] is active in
-/// the dragging phase: these node ids are rendered on the interaction layer only; [`super::NodePlugin`]
-/// skips them in the static nodes layer to cut work per frame.
+/// the dragging phase. [`super::NodePlugin`] and the interaction overlay use
+/// [`super::node_ids_for_drag_overlay`] so dragged roots **and their descendants** render on the
+/// interaction layer only (avoids the parent card covering children left on the static layer).
 #[derive(Clone, Debug)]
 pub struct ActiveNodeDrag(pub Arc<[NodeId]>);
 

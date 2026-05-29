@@ -2,6 +2,9 @@ mod command;
 mod drag_events;
 mod interaction;
 
+use std::collections::HashSet;
+
+use crate::Graph;
 pub use command::DragNodesCommand;
 pub use drag_events::{ActiveNodeDrag, NODE_DRAG_TICK_INTERVAL, NodeDragEvent};
 use gpui::{Element as _, ElementId, InteractiveElement as _, ParentElement, div};
@@ -35,6 +38,22 @@ pub(super) fn render_node_cards(
     });
 
     div().id(id).children(list).into_any()
+}
+
+/// Drag overlay + static-layer exclusion: dragged roots and all descendants, in [`Graph::paint_order`].
+pub(super) fn node_ids_for_drag_overlay(graph: &Graph, dragged: &[NodeId]) -> Vec<NodeId> {
+    let mut in_subtree = HashSet::new();
+    for &id in dragged {
+        in_subtree.insert(id);
+        for child in graph.descendants(id) {
+            in_subtree.insert(child);
+        }
+    }
+    graph
+        .paint_order()
+        .into_iter()
+        .filter(|id| in_subtree.contains(id))
+        .collect()
 }
 
 use std::sync::Arc;
@@ -74,8 +93,8 @@ impl NodeStaticLayerCacheKey {
 
 pub struct NodePlugin {
     static_layer_cache_key: Option<NodeStaticLayerCacheKey>,
-    /// Viewport-visible nodes for the static [`RenderLayer::Nodes`] layer, already excluding
-    /// [`ActiveNodeDrag`] ids (those render on the interaction overlay).
+    /// Viewport-visible nodes for the static [`RenderLayer::Nodes`] layer, excluding the active
+    /// drag subtree ([`node_ids_for_drag_overlay`]) rendered on the interaction overlay.
     static_layer_node_ids: Vec<NodeId>,
 }
 
@@ -109,12 +128,16 @@ impl Plugin for NodePlugin {
         if self.static_layer_cache_key != Some(key) {
             self.static_layer_cache_key = Some(key);
             let active = ctx.get_shared_state::<ActiveNodeDrag>();
+            let drag_overlay = active
+                .map(|d| node_ids_for_drag_overlay(ctx.graph, d.0.as_ref()))
+                .unwrap_or_default();
+            let drag_overlay: HashSet<NodeId> = drag_overlay.into_iter().collect();
             self.static_layer_node_ids = ctx
                 .graph
                 .paint_order()
                 .iter()
                 .filter(|node_id| ctx.is_node_visible(node_id))
-                .filter(|node_id| !active.is_some_and(|d| d.0.contains(node_id)))
+                .filter(|node_id| !drag_overlay.contains(node_id))
                 .copied()
                 .collect();
         }
@@ -124,5 +147,25 @@ impl Plugin for NodePlugin {
             &self.static_layer_node_ids,
             "static-layer-node-cards",
         ))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::node_ids_for_drag_overlay;
+    use crate::Graph;
+
+    #[test]
+    fn drag_overlay_includes_descendants_in_paint_order() {
+        let mut g = Graph::new();
+        let a = g.create_node("default").build();
+        let b = g.create_node("default").build();
+        let c = g.create_node("default").build();
+        g.add_child(a, b).unwrap();
+        g.add_child(b, c).unwrap();
+
+        assert_eq!(node_ids_for_drag_overlay(&g, &[a]), vec![a, b, c]);
+        assert_eq!(node_ids_for_drag_overlay(&g, &[b]), vec![b, c]);
+        assert_eq!(node_ids_for_drag_overlay(&g, &[c]), vec![c]);
     }
 }

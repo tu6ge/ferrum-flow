@@ -298,6 +298,8 @@ impl Graph {
     /// Each node appears before its descendants; among siblings, later entries in
     /// `children_index` (or `roots` for top-level nodes) are painted later (on top).
     /// Nodes not reachable from `roots` are appended at the end in arbitrary order.
+    ///
+    /// TODO change to iterator
     pub fn paint_order(&self) -> Vec<NodeId> {
         let mut out = Vec::with_capacity(self.nodes.len());
         let mut seen = HashSet::new();
@@ -352,7 +354,11 @@ impl Graph {
     }
 
     /// World-space port anchor: [`Self::node_world_point`] + `local_offset` from [`NodeRenderer::port_offset`].
-    pub fn port_world_point(&self, id: NodeId, local_offset: Point<Pixels>) -> Option<Point<Pixels>> {
+    pub fn port_world_point(
+        &self,
+        id: NodeId,
+        local_offset: Point<Pixels>,
+    ) -> Option<Point<Pixels>> {
         Some(self.node_world_point(id)? + local_offset)
     }
 
