@@ -21,8 +21,8 @@ pub trait NodeRenderer: Send + Sync {
         )
     }
 
-    /// computing the position of port relative to node
-    /// built-in Node Plugin is cached this.
+    /// Port position in the node's **local** coordinate system (origin = node top-left).
+    /// Cached by [`PortLayoutCache`]; world/screen layout adds [`Graph::node_world_point`].
     fn port_offset(&self, node: &Node, port: &Port, graph: &Graph) -> Point<Pixels> {
         let total = graph
             .ports_values()

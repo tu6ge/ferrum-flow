@@ -351,6 +351,11 @@ impl Graph {
         Some(Bounds::new(origin, *node.size_ref()))
     }
 
+    /// World-space port anchor: [`Self::node_world_point`] + `local_offset` from [`NodeRenderer::port_offset`].
+    pub fn port_world_point(&self, id: NodeId, local_offset: Point<Pixels>) -> Option<Point<Pixels>> {
+        Some(self.node_world_point(id)? + local_offset)
+    }
+
     pub fn node_order(&self) -> &Vec<NodeId> {
         &self.node_order
     }
@@ -987,6 +992,19 @@ mod hierarchy_tests {
     fn node_world_bounds_returns_none_for_missing_node() {
         let g = Graph::new();
         assert_eq!(g.node_world_bounds(NodeId::new()), None);
+    }
+
+    #[test]
+    fn port_world_point_offsets_from_node_world_origin() {
+        let mut g = Graph::new();
+        let a = g.create_node("default").position(100.0, 20.0).build();
+        let b = g.create_node("default").position(10.0, 5.0).build();
+        g.add_child(a, b).unwrap();
+
+        let local = Point::new(px(40.0), px(30.0));
+        let world = g.port_world_point(b, local).expect("b exists");
+        assert_eq!(world.x, px(150.0));
+        assert_eq!(world.y, px(55.0));
     }
 
     #[test]
