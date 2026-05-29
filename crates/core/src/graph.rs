@@ -335,8 +335,12 @@ impl Graph {
     /// relative to its parent's origin, so `world(child) = world(parent) + local(child)`.
     pub fn node_world_point(&self, id: NodeId) -> Option<Point<Pixels>> {
         let node = self.nodes.get(&id)?;
+        self.node_world_point_with_node(node)
+    }
+
+    pub fn node_world_point_with_node(&self, node: &Node) -> Option<Point<Pixels>> {
         let mut world = node.point();
-        let mut current = id;
+        let mut current = node.id();
         while let Some(parent_id) = self.nodes.get(&current)?.parent() {
             let parent_pos = self.nodes.get(&parent_id)?.point();
             world.x += parent_pos.x;
@@ -456,18 +460,47 @@ impl Graph {
     }
 
     pub fn remove_node_promote(&mut self, id: &NodeId) -> Result<(), GraphError> {
+        self.ensure_node(*id)?;
+        let grandparent = self.nodes.get(id).and_then(|n| n.parent());
         let children: Vec<NodeId> = self
             .nodes
             .get(id)
             .map(|n| n.children().to_vec())
             .unwrap_or_default();
+
         for child in children {
-            self.reparent(child, None)?;
-            // TODO When the child node is promoted, local coordinates → world coordinates
+            let world = self
+                .node_world_point(child)
+                .ok_or(GraphError::NodeNotFound(child))?;
+            self.reparent(child, grandparent)?;
+            let local = self.local_point_from_world(world, grandparent)?;
+            let child_node = self
+                .nodes
+                .get_mut(&child)
+                .ok_or(GraphError::NodeNotFound(child))?;
+            child_node.set_position_with_point(local);
         }
         self.remove_node_from_graph(id);
 
         Ok(())
+    }
+
+    /// Local origin under `parent` that places a node at `world` (same as [`Self::node_world_point`] inverse).
+    fn local_point_from_world(
+        &self,
+        world: Point<Pixels>,
+        parent: Option<NodeId>,
+    ) -> Result<Point<Pixels>, GraphError> {
+        let Some(parent) = parent else {
+            return Ok(world);
+        };
+        let parent_world = self
+            .node_world_point(parent)
+            .ok_or(GraphError::NodeNotFound(parent))?;
+        Ok(Point::new(
+            world.x - parent_world.x,
+            world.y - parent_world.y,
+        ))
     }
 
     /// Detach hierarchy links, drop ports/edges, and remove the node record (no child promotion).
@@ -926,7 +959,7 @@ mod hierarchy_tests {
     }
 
     #[test]
-    fn remove_node_promotes_children_to_roots() {
+    fn remove_node_promotes_children_to_grandparent() {
         let (mut g, a, b, c) = graph_with_nodes();
         g.add_child(a, b).unwrap();
         g.add_child(b, c).unwrap();
@@ -934,8 +967,42 @@ mod hierarchy_tests {
 
         assert!(g.get_node(&a).is_some());
         assert!(g.get_node(&c).is_some());
-        assert_eq!(g.get_node(&c).unwrap().parent(), None);
-        assert!(g.roots().contains(&c));
+        assert_eq!(g.get_node(&c).unwrap().parent(), Some(a));
+        assert!(!g.roots().contains(&c));
+        assert!(g.get_node(&a).unwrap().children().contains(&c));
+    }
+
+    #[test]
+    fn remove_node_promote_preserves_world_position() {
+        let mut g = Graph::new();
+        let a = g.create_node("default").position(100.0, 100.0).build();
+        let b = g.create_node("default").position(10.0, 10.0).build();
+        let c = g.create_node("default").position(5.0, 5.0).build();
+        g.add_child(a, b).unwrap();
+        g.add_child(b, c).unwrap();
+
+        let world_c = g.node_world_point(c).unwrap();
+        g.remove_node_promote(&b).unwrap();
+
+        assert_eq!(g.node_world_point(c), Some(world_c));
+        assert_eq!(
+            g.get_node(&c).unwrap().point(),
+            Point::new(px(15.0), px(15.0))
+        );
+    }
+
+    #[test]
+    fn remove_node_promote_root_children_become_roots_with_world_local() {
+        let (mut g, a, b, _) = graph_with_nodes();
+        g.add_child(a, b).unwrap();
+        let world_b = g.node_world_point(b).unwrap();
+
+        g.remove_node_promote(&a).unwrap();
+
+        assert_eq!(g.get_node(&b).unwrap().parent(), None);
+        assert!(g.roots().contains(&b));
+        assert_eq!(g.node_world_point(b), Some(world_b));
+        assert_eq!(g.get_node(&b).unwrap().point(), world_b);
     }
 
     #[test]
