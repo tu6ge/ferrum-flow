@@ -122,10 +122,32 @@ enum NodeDragState {
     },
     Draging {
         start_mouse: Point<Pixels>,
+        /// Local position at drag start (undo / [`DragNodesCommand`] baseline).
         start_positions: Vec<(NodeId, Point<Pixels>)>,
+        /// World origin at drag start; pointer delta is applied in world space then mapped to local.
+        start_world_positions: Vec<(NodeId, Point<Pixels>)>,
         /// Stable for this drag; cheap to [`Arc::clone`] into each [`NodeDragEvent::Tick`].
         dragged_ids: Arc<[NodeId]>,
     },
+}
+
+/// Apply screen-pointer delta as world motion, then write each node's **local** position.
+fn apply_drag_world_delta(
+    ctx: &mut PluginContext<'_>,
+    start_world_positions: &[(NodeId, Point<Pixels>)],
+    dx: Pixels,
+    dy: Pixels,
+) {
+    for (id, start_world) in start_world_positions {
+        let world = Point::new(start_world.x + dx, start_world.y + dy);
+        let parent = ctx.get_node(id).and_then(|n| n.parent());
+        let Ok(local) = ctx.graph.local_point_from_world(world, parent) else {
+            continue;
+        };
+        if let Some(node) = ctx.get_node_mut(id) {
+            node.set_position_with_point(local);
+        }
+    }
 }
 
 impl NodeDragInteraction {
@@ -164,22 +186,35 @@ impl Interaction for NodeDragInteraction {
             } => {
                 let delta = ctx.screen_to_world(ev.position) - *start_mouse;
                 if delta.x.abs() > DRAG_THRESHOLD || delta.y.abs() > DRAG_THRESHOLD {
-                    let mut nodes = vec![];
+                    let mut start_positions = Vec::new();
+                    let mut start_world_positions = Vec::new();
 
-                    if ctx.graph.selected_node().contains(node_id) {
-                        for id in ctx.graph.selected_node() {
-                            if let Some(node) = ctx.nodes().get(id) {
-                                nodes.push((*id, node.point()));
-                            }
-                        }
-                    } else if let Some(node) = ctx.nodes().get(node_id) {
-                        nodes.push((*node_id, node.point()));
+                    let ids: Vec<NodeId> = if ctx.graph.selected_node().contains(node_id) {
+                        ctx.graph.selected_node().iter().copied().collect()
+                    } else {
+                        vec![*node_id]
+                    };
+
+                    for id in ids {
+                        let Some(node) = ctx.nodes().get(&id) else {
+                            continue;
+                        };
+                        let Some(world) = ctx.graph.node_world_point_with_node(node) else {
+                            continue;
+                        };
+                        start_positions.push((id, node.point()));
+                        start_world_positions.push((id, world));
                     }
-                    let dragged_ids: Arc<[NodeId]> =
-                        nodes.iter().map(|(id, _)| *id).collect::<Vec<_>>().into();
+
+                    let dragged_ids: Arc<[NodeId]> = start_positions
+                        .iter()
+                        .map(|(id, _)| *id)
+                        .collect::<Vec<_>>()
+                        .into();
                     self.state = NodeDragState::Draging {
                         start_mouse: ev.position,
-                        start_positions: nodes,
+                        start_positions,
+                        start_world_positions,
                         dragged_ids: Arc::clone(&dragged_ids),
                     };
                     ctx.shared_state.insert(ActiveNodeDrag(dragged_ids));
@@ -190,15 +225,12 @@ impl Interaction for NodeDragInteraction {
             NodeDragState::Draging {
                 start_mouse,
                 start_positions,
+                start_world_positions,
                 dragged_ids,
             } => {
                 let dx = ctx.screen_length_to_world(ev.position.x - start_mouse.x);
                 let dy = ctx.screen_length_to_world(ev.position.y - start_mouse.y);
-                for (id, point) in start_positions.iter() {
-                    if let Some(node) = ctx.get_node_mut(id) {
-                        node.set_position(point.x + dx, point.y + dy);
-                    }
-                }
+                apply_drag_world_delta(ctx, start_world_positions, dx, dy);
 
                 let now = Instant::now();
 
