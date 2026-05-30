@@ -287,9 +287,10 @@ pub enum PortType {
 }
 
 //TODO: Implement this
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum PortScope {
     /// The port is only allowed to connect to ports within the same level of thenode.
+    #[default]
     Local,
     /// The port is allowed to connect to ports within any level of the node hierarchy.
     Boundary,
@@ -304,6 +305,7 @@ pub struct Port {
     position: PortPosition,
     size: Size<Pixels>,
     port_type: PortType,
+    scope: PortScope,
 }
 
 impl Port {
@@ -325,6 +327,7 @@ impl Port {
             position,
             size,
             port_type,
+            scope: PortScope::default(),
         }
     }
 
@@ -436,6 +439,7 @@ pub struct PortSpec {
     position: PortPosition,
     size: Size<Pixels>,
     port_type: PortType,
+    scope: PortScope,
 }
 
 impl PortSpec {
@@ -444,6 +448,7 @@ impl PortSpec {
             position,
             size: DEFAULT_PORT_SIZE,
             port_type: PortType::Any,
+            scope: PortScope::default(),
         }
     }
 
@@ -452,6 +457,7 @@ impl PortSpec {
             position,
             size: DEFAULT_PORT_SIZE,
             port_type: PortType::Any,
+            scope: PortScope::default(),
         }
     }
 
@@ -462,6 +468,11 @@ impl PortSpec {
 
     pub fn with_type(mut self, port_type: PortType) -> Self {
         self.port_type = port_type;
+        self
+    }
+
+    pub fn with_scope(mut self, scope: PortScope) -> Self {
+        self.scope = scope;
         self
     }
 }
@@ -694,6 +705,7 @@ impl<'a, G> NodeBuilder<'a, G> {
                 position: spec.position,
                 size: spec.size,
                 port_type: spec.port_type,
+                scope: spec.scope,
             });
 
             inputs.push(port_id);
@@ -717,6 +729,7 @@ impl<'a, G> NodeBuilder<'a, G> {
                 position: spec.position,
                 size: spec.size,
                 port_type: spec.port_type,
+                scope: spec.scope,
             });
 
             outputs.push(port_id);
