@@ -17,12 +17,10 @@ const DRAG_THRESHOLD: Pixels = px(2.0);
 const DRAG_COMMAND_INTERVAL: Duration = Duration::from_millis(50);
 
 /// How dragging a **child** node behaves relative to its parent's bounds.
-///
-/// Enforcement is applied in [`NodeDragInteraction`] once boundary helpers exist on [`crate::Graph`];
-/// until then, all variants behave like free local dragging.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum BoundaryDragPolicy {
-    /// Local position is clamped so the node stays inside the parent's size.
+    /// While dragging, clamp local position so the node stays inside the parent's [`Node::size`].
+    /// Skipped when the parent is also in the drag set (subtree moves together).
     #[default]
     Clamp,
     /// Dragging past the parent edge reparents the node to the parent's parent (or root), preserving world position.
@@ -137,13 +135,21 @@ fn apply_drag_world_delta(
     start_world_positions: &[(NodeId, Point<Pixels>)],
     dx: Pixels,
     dy: Pixels,
+    policy: BoundaryDragPolicy,
+    dragged: &[NodeId],
 ) {
     for (id, start_world) in start_world_positions {
         let world = Point::new(start_world.x + dx, start_world.y + dy);
         let parent = ctx.get_node(id).and_then(|n| n.parent());
-        let Ok(local) = ctx.graph.local_point_from_world(world, parent) else {
+        let Ok(mut local) = ctx.graph.local_point_from_world(world, parent) else {
             continue;
         };
+        if policy == BoundaryDragPolicy::Clamp
+            && ctx.graph.clamp_local_in_parent_applies(*id, dragged)
+            && let Some(clamped) = ctx.graph.clamp_local_in_parent(*id, local)
+        {
+            local = clamped;
+        }
         if let Some(node) = ctx.get_node_mut(id) {
             node.set_position_with_point(local);
         }
@@ -230,7 +236,15 @@ impl Interaction for NodeDragInteraction {
             } => {
                 let dx = ctx.screen_length_to_world(ev.position.x - start_mouse.x);
                 let dy = ctx.screen_length_to_world(ev.position.y - start_mouse.y);
-                apply_drag_world_delta(ctx, start_world_positions, dx, dy);
+                let policy = self.boundary_drag_policy;
+                apply_drag_world_delta(
+                    ctx,
+                    start_world_positions,
+                    dx,
+                    dy,
+                    policy,
+                    dragged_ids.as_ref(),
+                );
 
                 let now = Instant::now();
 
