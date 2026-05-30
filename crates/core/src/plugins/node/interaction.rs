@@ -16,15 +16,32 @@ use crate::{
 const DRAG_THRESHOLD: Pixels = px(2.0);
 const DRAG_COMMAND_INTERVAL: Duration = Duration::from_millis(50);
 
-/// Configures [`NodeDragInteraction`] sampling for [`NodeDragEvent::Tick`].
+/// How dragging a **child** node behaves relative to its parent's bounds.
+///
+/// Enforcement is applied in [`NodeDragInteraction`] once boundary helpers exist on [`crate::Graph`];
+/// until then, all variants behave like free local dragging.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum BoundaryDragPolicy {
+    /// Local position is clamped so the node stays inside the parent's size.
+    #[default]
+    Clamp,
+    /// Dragging past the parent edge reparents the node to the parent's parent (or root), preserving world position.
+    Promote,
+    /// On release, reparent under another node whose world bounds contain the drop point, or promote to root.
+    Reparent,
+}
+
+/// Configures [`NodeDragInteraction`] sampling for [`NodeDragEvent::Tick`] and child-in-parent drag rules.
 pub struct NodeInteractionPlugin {
     drag_tick_interval: Duration,
+    boundary_drag_policy: BoundaryDragPolicy,
 }
 
 impl NodeInteractionPlugin {
     pub fn new() -> Self {
         Self {
             drag_tick_interval: NODE_DRAG_TICK_INTERVAL,
+            boundary_drag_policy: BoundaryDragPolicy::default(),
         }
     }
 
@@ -32,7 +49,19 @@ impl NodeInteractionPlugin {
     pub fn with_drag_tick_interval(interval: Duration) -> Self {
         Self {
             drag_tick_interval: interval,
+            ..Self::new()
         }
+    }
+
+    pub fn with_boundary_drag_policy(policy: BoundaryDragPolicy) -> Self {
+        Self {
+            boundary_drag_policy: policy,
+            ..Self::new()
+        }
+    }
+
+    pub fn boundary_drag_policy(&self) -> BoundaryDragPolicy {
+        self.boundary_drag_policy
     }
 }
 
@@ -60,6 +89,7 @@ impl Plugin for NodeInteractionPlugin {
                     mouse_world,
                     ev.modifiers.shift,
                     self.drag_tick_interval,
+                    self.boundary_drag_policy,
                 ));
 
                 return EventResult::Stop;
@@ -79,6 +109,7 @@ impl Plugin for NodeInteractionPlugin {
 pub struct NodeDragInteraction {
     state: NodeDragState,
     drag_tick_interval: Duration,
+    boundary_drag_policy: BoundaryDragPolicy,
     last_drag_command_at: Option<Instant>,
     last_node_drag_tick_at: Option<Instant>,
 }
@@ -103,6 +134,7 @@ impl NodeDragInteraction {
         start_mouse: Point<Pixels>,
         shift: bool,
         drag_tick_interval: Duration,
+        boundary_drag_policy: BoundaryDragPolicy,
     ) -> Self {
         Self {
             state: NodeDragState::Pending {
@@ -111,6 +143,7 @@ impl NodeDragInteraction {
                 shift,
             },
             drag_tick_interval,
+            boundary_drag_policy,
             last_drag_command_at: None,
             last_node_drag_tick_at: None,
         }

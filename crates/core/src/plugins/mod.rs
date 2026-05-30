@@ -32,7 +32,8 @@ pub use history::HistoryPlugin;
 pub use layout::AutoLayoutPlugin;
 pub use minimap::MinimapPlugin;
 pub use node::{
-    ActiveNodeDrag, NODE_DRAG_TICK_INTERVAL, NodeDragEvent, NodeInteractionPlugin, NodePlugin,
+    ActiveNodeDrag, BoundaryDragPolicy, NODE_DRAG_TICK_INTERVAL, NodeDragEvent,
+    NodeInteractionPlugin, NodePlugin,
 };
 pub use port::{
     CreateEdge, CreateNode, CreatePort, DefaultEdgeValidator, EdgeValidationError,
