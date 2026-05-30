@@ -23,9 +23,13 @@ pub enum BoundaryDragPolicy {
     /// Skipped when the parent is also in the drag set (subtree moves together).
     #[default]
     Clamp,
+
     /// Dragging past the parent edge reparents the node to the parent's parent (or root), preserving world position.
+    /// TODO: implement this
     Promote,
+
     /// On release, reparent under another node whose world bounds contain the drop point, or promote to root.
+    /// TODO: implement this
     Reparent,
 }
 
