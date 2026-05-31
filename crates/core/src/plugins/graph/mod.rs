@@ -102,41 +102,41 @@ impl Plugin for GraphPlugin {
         let mut body_children: Vec<AnyElement> = Vec::new();
         let mut covered = HashSet::new();
 
-        for anchor in ctx.graph.top_level_group_anchors_in_paint_order() {
-            if !ctx.is_node_visible(&anchor) || drag_overlay.contains(&anchor) {
-                continue;
-            }
-            if let Some(el) = render_group_anchor(
-                ctx,
-                anchor,
-                &paint_order,
-                &drag_overlay,
-                &intra_by_parent,
-                &selected,
-                stroke,
-                stroke_sel,
-                &mut covered,
-            ) {
-                body_children.push(el);
-            }
-            covered.insert(anchor);
-            for d in ctx.graph.descendants(anchor) {
-                covered.insert(d);
-            }
-        }
-
-        for id in paint_order {
+        // DOM order follows `paint_order` (roots / siblings / click-to-front), not
+        // "all groups first, then root leaves".
+        for &id in &paint_order {
             if covered.contains(&id) || drag_overlay.contains(&id) {
                 continue;
             }
             if !ctx.is_node_visible(&id) {
                 continue;
             }
-            if !ctx.graph.children_of(id).is_empty() {
+
+            if ctx.graph.is_top_level_group_anchor(id) {
+                if let Some(el) = render_group_anchor(
+                    ctx,
+                    id,
+                    &paint_order,
+                    &drag_overlay,
+                    &intra_by_parent,
+                    &selected,
+                    stroke,
+                    stroke_sel,
+                    &mut covered,
+                ) {
+                    body_children.push(el);
+                }
+                covered.insert(id);
+                for d in ctx.graph.descendants(id) {
+                    covered.insert(d);
+                }
                 continue;
             }
-            body_children.push(render_node_cards(ctx, &[id], "graph-scope-leaf"));
-            covered.insert(id);
+
+            if ctx.graph.children_of(id).is_empty() {
+                body_children.push(render_node_cards(ctx, &[id], "graph-root-leaf"));
+                covered.insert(id);
+            }
         }
 
         let cross_layer = if cross_edges.is_empty() {

@@ -8,8 +8,8 @@ pub(super) trait GraphHierarchy {
     /// `true` when any node has a parent or children.
     fn has_node_hierarchy(&self) -> bool;
 
-    /// Top-level group anchor in [`Graph::paint_order`] (has children, not under another group).
-    fn top_level_group_anchors_in_paint_order(&self) -> Vec<NodeId>;
+    /// Root-level group: has children and no ancestor is also a group ([`Graph::paint_order`] subtree).
+    fn is_top_level_group_anchor(&self, id: NodeId) -> bool;
 }
 
 impl GraphHierarchy for Graph {
@@ -19,11 +19,8 @@ impl GraphHierarchy for Graph {
             .any(|n| n.parent().is_some() || !n.children().is_empty())
     }
 
-    fn top_level_group_anchors_in_paint_order(&self) -> Vec<NodeId> {
-        self.paint_order()
-            .into_iter()
-            .filter(|id| is_top_level_group_anchor(self, *id))
-            .collect()
+    fn is_top_level_group_anchor(&self, id: NodeId) -> bool {
+        is_top_level_group_anchor(self, id)
     }
 }
 
@@ -53,6 +50,7 @@ mod tests {
         let c = g.create_node("default").build();
         g.add_child(p, c).unwrap();
         assert!(g.has_node_hierarchy());
-        assert_eq!(g.top_level_group_anchors_in_paint_order(), vec![p]);
+        assert!(g.is_top_level_group_anchor(p));
+        assert!(!g.is_top_level_group_anchor(c));
     }
 }
