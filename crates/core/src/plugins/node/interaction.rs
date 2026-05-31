@@ -1,70 +1,36 @@
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
-use gpui::{MouseButton, Pixels, Point, px};
+use gpui::{MouseButton, Pixels, Point};
 
+use super::{DragSessionTimers, exceeds_drag_threshold, run_drag_side_effects};
 use crate::{
     NodeId,
     canvas::{Interaction, InteractionResult},
     plugin::{EventResult, FlowEvent, InputEvent, Plugin, PluginContext},
-    plugins::{
-        graph::render_hierarchy_drag_overlay,
-        node::{
-            ActiveNodeDrag, NODE_DRAG_TICK_INTERVAL, NodeDragEvent,
-            command::{DragNodesCommand, SelecteNodeCommand},
-        },
+    plugins::node::{
+        ActiveNodeDrag, NODE_DRAG_TICK_INTERVAL, NodeDragEvent, collect_drag_nodes,
+        command::{DragNodesCommand, SelecteNodeCommand},
+        dragged_ids_from_nodes, insert_active_drag,
     },
 };
 
-const DRAG_THRESHOLD: Pixels = px(2.0);
-const DRAG_COMMAND_INTERVAL: Duration = Duration::from_millis(50);
-
-/// How dragging a **child** node behaves relative to its parent's bounds.
-///
-/// Enforcement is applied in [`NodeDragInteraction`] once boundary helpers exist on [`crate::Graph`];
-/// until then, all variants behave like free local dragging.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum BoundaryDragPolicy {
-    /// Local position is clamped so the node stays inside the parent's size.
-    #[default]
-    Clamp,
-    /// Dragging past the parent edge reparents the node to the parent's parent (or root), preserving world position.
-    Promote,
-    /// On release, reparent under another node whose world bounds contain the drop point, or promote to root.
-    Reparent,
-}
-
-/// Configures [`NodeDragInteraction`] sampling for [`NodeDragEvent::Tick`] and child-in-parent drag rules.
+/// Flat canvas node drag. Nested graphs use [`crate::plugins::graph::NestedNodeDragPlugin`] instead.
 pub struct NodeInteractionPlugin {
     drag_tick_interval: Duration,
-    boundary_drag_policy: BoundaryDragPolicy,
 }
 
 impl NodeInteractionPlugin {
     pub fn new() -> Self {
         Self {
             drag_tick_interval: NODE_DRAG_TICK_INTERVAL,
-            boundary_drag_policy: BoundaryDragPolicy::default(),
         }
     }
 
-    /// Override the drag tick interval (e.g. lower for snappier alignment feedback, higher to reduce load).
     pub fn with_drag_tick_interval(interval: Duration) -> Self {
         Self {
             drag_tick_interval: interval,
-            ..Self::new()
         }
-    }
-
-    pub fn with_boundary_drag_policy(policy: BoundaryDragPolicy) -> Self {
-        Self {
-            boundary_drag_policy: policy,
-            ..Self::new()
-        }
-    }
-
-    pub fn boundary_drag_policy(&self) -> BoundaryDragPolicy {
-        self.boundary_drag_policy
     }
 }
 
@@ -85,22 +51,17 @@ impl Plugin for NodeInteractionPlugin {
                 return EventResult::Continue;
             }
             let mouse_world = ctx.screen_to_world(ev.position);
-
             if let Some(node_id) = ctx.hit_node(mouse_world) {
                 ctx.start_interaction(NodeDragInteraction::start(
                     node_id,
                     mouse_world,
                     ev.modifiers.shift,
                     self.drag_tick_interval,
-                    self.boundary_drag_policy,
                 ));
-
                 return EventResult::Stop;
-            } else {
-                ctx.clear_selected_node();
             }
+            ctx.clear_selected_node();
         }
-
         EventResult::Continue
     }
 
@@ -112,9 +73,7 @@ impl Plugin for NodeInteractionPlugin {
 pub struct NodeDragInteraction {
     state: NodeDragState,
     drag_tick_interval: Duration,
-    boundary_drag_policy: BoundaryDragPolicy,
-    last_drag_command_at: Option<Instant>,
-    last_node_drag_tick_at: Option<Instant>,
+    timers: DragSessionTimers,
 }
 
 enum NodeDragState {
@@ -126,7 +85,6 @@ enum NodeDragState {
     Draging {
         start_mouse: Point<Pixels>,
         start_positions: Vec<(NodeId, Point<Pixels>)>,
-        /// Stable for this drag; cheap to [`Arc::clone`] into each [`NodeDragEvent::Tick`].
         dragged_ids: Arc<[NodeId]>,
     },
 }
@@ -137,7 +95,6 @@ impl NodeDragInteraction {
         start_mouse: Point<Pixels>,
         shift: bool,
         drag_tick_interval: Duration,
-        boundary_drag_policy: BoundaryDragPolicy,
     ) -> Self {
         Self {
             state: NodeDragState::Pending {
@@ -146,9 +103,7 @@ impl NodeDragInteraction {
                 shift,
             },
             drag_tick_interval,
-            boundary_drag_policy,
-            last_drag_command_at: None,
-            last_node_drag_tick_at: None,
+            timers: DragSessionTimers::default(),
         }
     }
 }
@@ -158,34 +113,22 @@ impl Interaction for NodeDragInteraction {
         &mut self,
         ev: &gpui::MouseMoveEvent,
         ctx: &mut PluginContext,
-    ) -> crate::canvas::InteractionResult {
+    ) -> InteractionResult {
         match &self.state {
             NodeDragState::Pending {
                 node_id,
                 start_mouse,
                 ..
             } => {
-                let delta = ctx.screen_to_world(ev.position) - *start_mouse;
-                if delta.x.abs() > DRAG_THRESHOLD || delta.y.abs() > DRAG_THRESHOLD {
-                    let mut nodes = vec![];
-
-                    if ctx.graph.selected_node().contains(node_id) {
-                        for id in ctx.graph.selected_node() {
-                            if let Some(node) = ctx.nodes().get(id) {
-                                nodes.push((*id, node.point()));
-                            }
-                        }
-                    } else if let Some(node) = ctx.nodes().get(node_id) {
-                        nodes.push((*node_id, node.point()));
-                    }
-                    let dragged_ids: Arc<[NodeId]> =
-                        nodes.iter().map(|(id, _)| *id).collect::<Vec<_>>().into();
+                if exceeds_drag_threshold(ctx, *start_mouse, ev.position) {
+                    let nodes = collect_drag_nodes(ctx, *node_id);
+                    let dragged_ids: Arc<[NodeId]> = dragged_ids_from_nodes(&nodes);
+                    insert_active_drag(ctx, Arc::clone(&dragged_ids));
                     self.state = NodeDragState::Draging {
                         start_mouse: ev.position,
                         start_positions: nodes,
-                        dragged_ids: Arc::clone(&dragged_ids),
+                        dragged_ids,
                     };
-                    ctx.shared_state.insert(ActiveNodeDrag(dragged_ids));
 
                     ctx.notify();
                 }
@@ -203,40 +146,23 @@ impl Interaction for NodeDragInteraction {
                     }
                 }
 
-                let now = Instant::now();
-
-                if ctx.has_sync_plugin() {
-                    let should_command = self
-                        .last_drag_command_at
-                        .map(|t| now.duration_since(t) >= DRAG_COMMAND_INTERVAL)
-                        .unwrap_or(true);
-                    if should_command {
-                        ctx.execute_command(DragNodesCommand::new(start_positions, ctx));
-                        self.last_drag_command_at = Some(now);
-                    }
-                }
-
-                let should_tick = self
-                    .last_node_drag_tick_at
-                    .map(|t| now.duration_since(t) >= self.drag_tick_interval)
-                    .unwrap_or(true);
-                if should_tick {
-                    self.last_node_drag_tick_at = Some(now);
-                    ctx.emit(FlowEvent::custom(NodeDragEvent::Tick(Arc::clone(
-                        dragged_ids,
-                    ))));
-                } else {
-                    ctx.notify();
-                }
+                run_drag_side_effects(
+                    ctx,
+                    start_positions,
+                    dragged_ids,
+                    &mut self.timers,
+                    self.drag_tick_interval,
+                );
             }
         }
         InteractionResult::Continue
     }
+
     fn on_mouse_up(
         &mut self,
         _ev: &gpui::MouseUpEvent,
         ctx: &mut PluginContext,
-    ) -> crate::canvas::InteractionResult {
+    ) -> InteractionResult {
         ctx.shared_state.remove::<ActiveNodeDrag>();
         match &self.state {
             NodeDragState::Pending { node_id, shift, .. } => {
@@ -253,17 +179,16 @@ impl Interaction for NodeDragInteraction {
             }
         }
     }
+
     fn render(&self, ctx: &mut crate::plugin::RenderContext) -> Option<gpui::AnyElement> {
         match &self.state {
             NodeDragState::Draging { dragged_ids, .. } => {
                 let overlay_ids = super::node_ids_for_drag_overlay(ctx.graph, dragged_ids.as_ref());
-                render_hierarchy_drag_overlay(ctx, &overlay_ids).or_else(|| {
-                    Some(super::render_node_cards(
-                        ctx,
-                        &overlay_ids,
-                        "draging-node-cards",
-                    ))
-                })
+                Some(super::render_node_cards(
+                    ctx,
+                    &overlay_ids,
+                    "draging-node-cards",
+                ))
             }
             NodeDragState::Pending { .. } => None,
         }

@@ -486,7 +486,7 @@ impl Graph {
     }
 
     /// Local origin under `parent` that places a node at `world` (same as [`Self::node_world_point`] inverse).
-    fn local_point_from_world(
+    pub fn local_point_from_world(
         &self,
         world: Point<Pixels>,
         parent: Option<NodeId>,

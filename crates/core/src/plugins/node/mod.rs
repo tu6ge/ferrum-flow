@@ -1,14 +1,20 @@
 mod command;
 mod drag_events;
+mod drag_shared;
 mod interaction;
 
 use std::collections::HashSet;
 
 use crate::Graph;
-pub use command::DragNodesCommand;
+pub use command::{DragNodesCommand, SelecteNodeCommand};
 pub use drag_events::{ActiveNodeDrag, NODE_DRAG_TICK_INTERVAL, NodeDragEvent};
+pub use drag_shared::{
+    ApplyNodeDragDelta, DragSessionTimers, apply_drag_to_nodes, clear_active_drag,
+    collect_drag_nodes, dragged_ids_from_nodes, exceeds_drag_threshold, insert_active_drag,
+    run_drag_side_effects, screen_pointer_world_delta, start_world_positions,
+};
 use gpui::{Element as _, ElementId, InteractiveElement as _, ParentElement, Styled as _, div};
-pub use interaction::{BoundaryDragPolicy, NodeInteractionPlugin};
+pub use interaction::NodeInteractionPlugin;
 
 /// Renders the given nodes (and their ports) like [`NodePlugin`], for use on the interaction overlay.
 pub(super) fn render_node_cards(

@@ -33,7 +33,7 @@ fn main() {
                 FlowCanvas::builder(graph, ctx, window)
                     .plugin(BackgroundPlugin::new())
                     .plugin(SelectionPlugin::new())
-                    .plugin(NodeInteractionPlugin::new())
+                    .plugin(NestedNodeDragPlugin::new())
                     .plugin(ViewportPlugin::new())
                     .plugin(PortInteractionPlugin::new())
                     .plugin(GraphPlugin::new())

@@ -29,13 +29,12 @@ pub use delete::DeletePlugin;
 pub use edge::EdgePlugin;
 pub use fit_all::FitAllGraphPlugin;
 pub use focus_selection::FocusSelectionPlugin;
-pub use graph::GraphPlugin;
+pub use graph::{BoundaryDragPolicy, GraphPlugin, NestedNodeDragPlugin};
 pub use history::HistoryPlugin;
 pub use layout::AutoLayoutPlugin;
 pub use minimap::MinimapPlugin;
 pub use node::{
-    ActiveNodeDrag, BoundaryDragPolicy, NODE_DRAG_TICK_INTERVAL, NodeDragEvent,
-    NodeInteractionPlugin, NodePlugin,
+    ActiveNodeDrag, NODE_DRAG_TICK_INTERVAL, NodeDragEvent, NodeInteractionPlugin, NodePlugin,
 };
 pub use port::{
     CreateEdge, CreateNode, CreatePort, DefaultEdgeValidator, EdgeValidationError,

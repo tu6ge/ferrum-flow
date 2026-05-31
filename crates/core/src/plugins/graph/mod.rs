@@ -11,6 +11,7 @@
 //! 4. Parent ports
 //! Cross-parent edges are painted in a top overlay within this layer.
 
+mod drag;
 mod hierarchy;
 mod plan;
 
@@ -29,6 +30,7 @@ use crate::plugins::node::{
     render_node_shell,
 };
 
+pub use drag::{BoundaryDragPolicy, NestedNodeDragPlugin};
 use hierarchy::GraphHierarchy;
 pub use plan::{EdgePaintKind, classify_edge};
 
