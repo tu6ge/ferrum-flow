@@ -7,9 +7,12 @@ use crate::{
     NodeId,
     canvas::{Interaction, InteractionResult},
     plugin::{EventResult, FlowEvent, InputEvent, Plugin, PluginContext},
-    plugins::node::{
-        ActiveNodeDrag, NODE_DRAG_TICK_INTERVAL, NodeDragEvent,
-        command::{DragNodesCommand, SelecteNodeCommand},
+    plugins::{
+        graph::render_hierarchy_drag_overlay,
+        node::{
+            ActiveNodeDrag, NODE_DRAG_TICK_INTERVAL, NodeDragEvent,
+            command::{DragNodesCommand, SelecteNodeCommand},
+        },
     },
 };
 
@@ -221,11 +224,13 @@ impl Interaction for NodeDragInteraction {
         match &self.state {
             NodeDragState::Draging { dragged_ids, .. } => {
                 let overlay_ids = super::node_ids_for_drag_overlay(ctx.graph, dragged_ids.as_ref());
-                Some(super::render_node_cards(
-                    ctx,
-                    &overlay_ids,
-                    "draging-node-cards",
-                ))
+                render_hierarchy_drag_overlay(ctx, &overlay_ids).or_else(|| {
+                    Some(super::render_node_cards(
+                        ctx,
+                        &overlay_ids,
+                        "draging-node-cards",
+                    ))
+                })
             }
             NodeDragState::Pending { .. } => None,
         }

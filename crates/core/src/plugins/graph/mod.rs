@@ -76,27 +76,7 @@ impl Plugin for GraphPlugin {
         let stroke = ctx.theme.edge_stroke;
         let stroke_sel = ctx.theme.edge_stroke_selected;
         let selected = ctx.graph.selected_edge().clone();
-
-        let mut intra_by_parent: HashMap<crate::NodeId, Vec<(EdgeId, Option<EdgeGeometry>)>> =
-            HashMap::new();
-        let mut cross_edges: Vec<(EdgeId, Option<EdgeGeometry>)> = Vec::new();
-
-        for (_, edge) in ctx.graph.edges().iter() {
-            if !plan::edge_is_visible(ctx, edge) {
-                continue;
-            }
-            ctx.cache_port_offset_with_edge(&edge.id);
-            let geom = edge_geometry2(edge, ctx);
-            match classify_edge(ctx.graph, edge) {
-                EdgePaintKind::IntraParent { parent } => {
-                    intra_by_parent
-                        .entry(parent)
-                        .or_default()
-                        .push((edge.id, geom));
-                }
-                EdgePaintKind::Cross => cross_edges.push((edge.id, geom)),
-            }
-        }
+        let (intra_by_parent, cross_edges) = collect_hierarchy_edges(ctx);
 
         let paint_order = ctx.graph.paint_order();
         let mut body_children: Vec<AnyElement> = Vec::new();
@@ -118,6 +98,7 @@ impl Plugin for GraphPlugin {
                     id,
                     &paint_order,
                     &drag_overlay,
+                    GroupPaintPass::Static,
                     &intra_by_parent,
                     &selected,
                     stroke,
@@ -207,19 +188,165 @@ fn render_flat_graph(
     Some(layer.into_any())
 }
 
+/// Interaction-layer paint while dragging ([`crate::plugins::node::NodeDragInteraction`]): full group
+/// z-order including intra-parent edges, not flat [`render_node_cards`] only.
+pub(crate) fn render_hierarchy_drag_overlay(
+    ctx: &mut RenderContext,
+    overlay_ids: &[crate::NodeId],
+) -> Option<AnyElement> {
+    if overlay_ids.is_empty() || !ctx.graph.has_node_hierarchy() {
+        return None;
+    }
+
+    let drag_overlay: HashSet<_> = overlay_ids.iter().copied().collect();
+    let stroke = ctx.theme.edge_stroke;
+    let stroke_sel = ctx.theme.edge_stroke_selected;
+    let selected = ctx.graph.selected_edge().clone();
+    let (intra_by_parent, cross_edges) = collect_hierarchy_edges(ctx);
+
+    let paint_order = ctx.graph.paint_order();
+    let mut body_children: Vec<AnyElement> = Vec::new();
+    let mut covered = HashSet::new();
+
+    for &id in &paint_order {
+        if !drag_overlay.contains(&id) || covered.contains(&id) {
+            continue;
+        }
+        if !ctx.is_node_visible(&id) {
+            continue;
+        }
+
+        if ctx.graph.is_top_level_group_anchor(id) {
+            if let Some(el) = render_group_anchor(
+                ctx,
+                id,
+                &paint_order,
+                &drag_overlay,
+                GroupPaintPass::DragOverlay,
+                &intra_by_parent,
+                &selected,
+                stroke,
+                stroke_sel,
+                &mut covered,
+            ) {
+                body_children.push(el);
+            }
+            covered.insert(id);
+            for d in ctx.graph.descendants(id) {
+                covered.insert(d);
+            }
+            continue;
+        }
+
+        if ctx.graph.children_of(id).is_empty() {
+            body_children.push(render_node_cards(ctx, &[id], "graph-drag-leaf"));
+            covered.insert(id);
+        }
+    }
+
+    let cross_in_drag: Vec<_> = cross_edges
+        .into_iter()
+        .filter(|(edge_id, _)| {
+            ctx.graph
+                .get_edge(edge_id)
+                .is_some_and(|e| edge_endpoints_in_set(ctx, e, &drag_overlay))
+        })
+        .collect();
+
+    if body_children.is_empty() && cross_in_drag.is_empty() {
+        return None;
+    }
+
+    let cross_layer = if cross_in_drag.is_empty() {
+        None
+    } else {
+        Some(div().absolute().size_full().child(edges_canvas_element(
+            cross_in_drag,
+            selected.clone(),
+            stroke,
+            stroke_sel,
+        )))
+    };
+
+    Some(
+        div()
+            .id("graph-drag-overlay")
+            .absolute()
+            .size_full()
+            .child(div().absolute().size_full().children(body_children))
+            .children(cross_layer)
+            .into_any(),
+    )
+}
+
+fn collect_hierarchy_edges(
+    ctx: &mut RenderContext,
+) -> (
+    HashMap<crate::NodeId, Vec<(EdgeId, Option<EdgeGeometry>)>>,
+    Vec<(EdgeId, Option<EdgeGeometry>)>,
+) {
+    let mut intra_by_parent: HashMap<crate::NodeId, Vec<(EdgeId, Option<EdgeGeometry>)>> =
+        HashMap::new();
+    let mut cross_edges: Vec<(EdgeId, Option<EdgeGeometry>)> = Vec::new();
+
+    for (_, edge) in ctx.graph.edges().iter() {
+        if !plan::edge_is_visible(ctx, edge) {
+            continue;
+        }
+        ctx.cache_port_offset_with_edge(&edge.id);
+        let geom = edge_geometry2(edge, ctx);
+        match classify_edge(ctx.graph, edge) {
+            EdgePaintKind::IntraParent { parent } => {
+                intra_by_parent
+                    .entry(parent)
+                    .or_default()
+                    .push((edge.id, geom));
+            }
+            EdgePaintKind::Cross => cross_edges.push((edge.id, geom)),
+        }
+    }
+
+    (intra_by_parent, cross_edges)
+}
+
+fn edge_endpoints_in_set(
+    ctx: &RenderContext,
+    edge: &crate::Edge,
+    nodes: &HashSet<crate::NodeId>,
+) -> bool {
+    let Some(sp) = ctx.graph.get_port(&edge.source_port) else {
+        return false;
+    };
+    let Some(tp) = ctx.graph.get_port(&edge.target_port) else {
+        return false;
+    };
+    nodes.contains(&sp.node_id()) && nodes.contains(&tp.node_id())
+}
+
+#[derive(Clone, Copy)]
+enum GroupPaintPass {
+    /// Main graph layer: omit nodes in [`ActiveNodeDrag`].
+    Static,
+    /// Interaction overlay: only nodes in the drag set.
+    DragOverlay,
+}
+
 fn render_group_anchor(
     ctx: &mut RenderContext,
     anchor: crate::NodeId,
     paint_order: &[crate::NodeId],
     drag_overlay: &HashSet<crate::NodeId>,
+    pass: GroupPaintPass,
     intra_by_parent: &HashMap<crate::NodeId, Vec<(EdgeId, Option<EdgeGeometry>)>>,
     selected: &HashSet<EdgeId>,
     stroke: u32,
     stroke_sel: u32,
     covered: &mut HashSet<crate::NodeId>,
 ) -> Option<AnyElement> {
-    if drag_overlay.contains(&anchor) {
-        return None;
+    match pass {
+        GroupPaintPass::Static if drag_overlay.contains(&anchor) => return None,
+        GroupPaintPass::DragOverlay if !drag_overlay.contains(&anchor) => return None,
+        _ => {}
     }
 
     let mut group = div().id(ElementId::Uuid(*anchor.as_uuid()));
@@ -254,7 +381,7 @@ fn render_group_anchor(
                 .is_some_and(|p| p == anchor)
         })
         .copied()
-        .filter(|id| !drag_overlay.contains(id))
+        .filter(|id| child_in_pass(*id, pass, drag_overlay))
         .filter(|id| ctx.is_node_visible(id))
         .collect();
 
@@ -266,6 +393,7 @@ fn render_group_anchor(
                 child,
                 paint_order,
                 drag_overlay,
+                pass,
                 intra_by_parent,
                 selected,
                 stroke,
@@ -284,4 +412,15 @@ fn render_group_anchor(
     }
 
     Some(group.into_any())
+}
+
+fn child_in_pass(
+    id: crate::NodeId,
+    pass: GroupPaintPass,
+    drag_overlay: &HashSet<crate::NodeId>,
+) -> bool {
+    match pass {
+        GroupPaintPass::Static => !drag_overlay.contains(&id),
+        GroupPaintPass::DragOverlay => drag_overlay.contains(&id),
+    }
 }
