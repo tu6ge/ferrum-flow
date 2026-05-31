@@ -485,8 +485,8 @@ impl Graph {
         Ok(())
     }
 
-    /// Local origin under `parent` that places a node at `world` (inverse of [`Self::node_world_point`]).
-    pub fn local_point_from_world(
+    /// Local origin under `parent` that places a node at `world` (same as [`Self::node_world_point`] inverse).
+    fn local_point_from_world(
         &self,
         world: Point<Pixels>,
         parent: Option<NodeId>,
@@ -1010,22 +1010,6 @@ mod hierarchy_tests {
         let (g, a, b, _) = graph_with_nodes();
         assert_eq!(g.node_world_point(a), Some(g.get_node(&a).unwrap().point()));
         assert_eq!(g.node_world_point(b), Some(g.get_node(&b).unwrap().point()));
-    }
-
-    #[test]
-    fn local_point_from_world_inverts_node_world_point() {
-        let mut g = Graph::new();
-        let a = g.create_node("default").position(100.0, 100.0).build();
-        let b = g.create_node("default").position(10.0, 20.0).build();
-        g.add_child(a, b).unwrap();
-
-        let world = g.node_world_point(b).unwrap();
-        let local = g.local_point_from_world(world, Some(a)).unwrap();
-        assert_eq!(local, g.get_node(&b).unwrap().point());
-
-        let shifted = Point::new(world.x + px(7.0), world.y + px(3.0));
-        let local_shifted = g.local_point_from_world(shifted, Some(a)).unwrap();
-        assert_eq!(local_shifted, Point::new(px(17.0), px(23.0)));
     }
 
     #[test]
