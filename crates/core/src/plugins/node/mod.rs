@@ -7,7 +7,7 @@ use std::collections::HashSet;
 use crate::Graph;
 pub use command::DragNodesCommand;
 pub use drag_events::{ActiveNodeDrag, NODE_DRAG_TICK_INTERVAL, NodeDragEvent};
-use gpui::{Element as _, ElementId, InteractiveElement as _, ParentElement, div};
+use gpui::{Element as _, ElementId, InteractiveElement as _, ParentElement, Styled as _, div};
 pub use interaction::NodeInteractionPlugin;
 
 /// Renders the given nodes (and their ports) like [`NodePlugin`], for use on the interaction overlay.
@@ -38,6 +38,44 @@ pub(super) fn render_node_cards(
     });
 
     div().id(id).children(list).into_any()
+}
+
+/// Parent group background only (ports rendered separately for z-order).
+pub(super) fn render_node_shell(
+    ctx: &mut RenderContext,
+    node_id: &crate::NodeId,
+) -> Option<gpui::AnyElement> {
+    let node = ctx.graph.nodes().get(node_id)?;
+    let render = ctx.renderers.get(node.renderer_key());
+    ctx.cache_port_offset_with_nodes(&[*node_id]);
+    Some(
+        div()
+            .id(ElementId::Uuid(*node_id.as_uuid()))
+            .child(render.render(node, ctx))
+            .into_any(),
+    )
+}
+
+/// Ports for a node after its shell and children exist (intra-parent edges stay underneath).
+pub(super) fn render_node_ports(
+    ctx: &mut RenderContext,
+    node_id: &crate::NodeId,
+) -> Option<gpui::AnyElement> {
+    let node = ctx.graph.nodes().get(node_id)?;
+    let render = ctx.renderers.get(node.renderer_key());
+    let port_ids: Vec<crate::PortId> = ctx.cached_port_ids_for_node(node_id).collect();
+    let ports = port_ids.iter().filter_map(|port_id| {
+        let port = ctx.graph.get_port(port_id)?;
+        render.port_render(node, port, ctx)
+    });
+    Some(
+        div()
+            .id(ElementId::Uuid(uuid::Uuid::new_v4()))
+            .absolute()
+            .size_full()
+            .children(ports)
+            .into_any(),
+    )
 }
 
 /// Drag overlay + static-layer exclusion: dragged roots and all descendants, in [`Graph::paint_order`].
@@ -140,6 +178,10 @@ impl Plugin for NodePlugin {
                 .filter(|node_id| !drag_overlay.contains(node_id))
                 .copied()
                 .collect();
+        }
+
+        if self.static_layer_node_ids.is_empty() {
+            return None;
         }
 
         Some(render_node_cards(

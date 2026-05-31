@@ -85,6 +85,10 @@ impl Plugin for EdgePlugin {
             })
             .collect();
 
+        if visible_edges.is_empty() {
+            return None;
+        }
+
         for (_, edge) in &visible_edges {
             ctx.cache_port_offset_with_edge(&edge.id);
         }
@@ -94,39 +98,49 @@ impl Plugin for EdgePlugin {
             .map(|(id, edge)| (*id, edge_geometry2(edge, ctx)))
             .collect();
 
-        let selected_edges = ctx.graph.selected_edge().clone();
-        let stroke = ctx.theme.edge_stroke;
-        let stroke_sel = ctx.theme.edge_stroke_selected;
-
-        Some(
-            canvas(
-                move |_, _, _| (edges, selected_edges, stroke, stroke_sel),
-                move |bounds, (edges, selected_edges, stroke, stroke_sel), win, _| {
-                    for (id, geometry) in edges.iter() {
-                        let Some(EdgeGeometry { start, c1, c2, end }) = geometry.as_ref() else {
-                            continue;
-                        };
-                        let start = canvas_paint_point(bounds, *start);
-                        let c1 = canvas_paint_point(bounds, *c1);
-                        let c2 = canvas_paint_point(bounds, *c2);
-                        let end = canvas_paint_point(bounds, *end);
-                        let mut line = PathBuilder::stroke(px(1.0));
-                        line.move_to(start);
-                        line.cubic_bezier_to(end, c1, c2);
-
-                        let selected = selected_edges.iter().any(|i| *i == *id);
-
-                        if let Ok(line) = line.build() {
-                            win.paint_path(line, rgb(if selected { stroke_sel } else { stroke }));
-                        }
-                    }
-                },
-            )
-            .into_any(),
-        )
+        Some(edges_canvas_element(
+            edges,
+            ctx.graph.selected_edge().clone(),
+            ctx.theme.edge_stroke,
+            ctx.theme.edge_stroke_selected,
+        ))
     }
 }
 
+/// Shared edge canvas used by [`EdgePlugin`] and [`crate::plugins::GraphPlugin`].
+pub(crate) fn edges_canvas_element(
+    edges: Vec<(EdgeId, Option<EdgeGeometry>)>,
+    selected_edges: HashSet<EdgeId>,
+    stroke: u32,
+    stroke_sel: u32,
+) -> gpui::AnyElement {
+    canvas(
+        move |_, _, _| (edges, selected_edges, stroke, stroke_sel),
+        move |bounds, (edges, selected_edges, stroke, stroke_sel), win, _| {
+            for (id, geometry) in edges.iter() {
+                let Some(EdgeGeometry { start, c1, c2, end }) = geometry.as_ref() else {
+                    continue;
+                };
+                let start = canvas_paint_point(bounds, *start);
+                let c1 = canvas_paint_point(bounds, *c1);
+                let c2 = canvas_paint_point(bounds, *c2);
+                let end = canvas_paint_point(bounds, *end);
+                let mut line = PathBuilder::stroke(px(1.0));
+                line.move_to(start);
+                line.cubic_bezier_to(end, c1, c2);
+
+                let selected = selected_edges.contains(id);
+
+                if let Ok(line) = line.build() {
+                    win.paint_path(line, rgb(if selected { stroke_sel } else { stroke }));
+                }
+            }
+        },
+    )
+    .into_any()
+}
+
+#[derive(Debug, Clone)]
 pub struct EdgeGeometry {
     pub start: Point<Pixels>,
     pub c1: Point<Pixels>,
@@ -153,7 +167,7 @@ fn edge_geometry(edge: &Edge, ctx: &PluginContext) -> Option<EdgeGeometry> {
     Some(EdgeGeometry { start, c1, c2, end })
 }
 
-fn edge_geometry2(edge: &Edge, ctx: &RenderContext) -> Option<EdgeGeometry> {
+pub(crate) fn edge_geometry2(edge: &Edge, ctx: &RenderContext) -> Option<EdgeGeometry> {
     let Edge {
         source_port: source_id,
         target_port: target_id,

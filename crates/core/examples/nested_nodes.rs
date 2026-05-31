@@ -31,7 +31,14 @@ fn main() {
         cx.open_window(window_opts, |window, cx| {
             cx.new(|ctx| {
                 FlowCanvas::builder(graph, ctx, window)
-                    .default_plugins()
+                    .plugin(BackgroundPlugin::new())
+                    .plugin(SelectionPlugin::new())
+                    .plugin(NodeInteractionPlugin::new())
+                    .plugin(ViewportPlugin::new())
+                    .plugin(PortInteractionPlugin::new())
+                    .plugin(GraphPlugin::new())
+                    .plugin(DeletePlugin::default())
+                    .plugin(HistoryPlugin::new())
                     .plugin(FitAllGraphPlugin::new())
                     .plugin(NestedNodesDemoPlugin::new())
                     .plugin(ToastPlugin::new())
