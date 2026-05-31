@@ -123,11 +123,12 @@ impl Plugin for GraphPlugin {
             }
         }
 
-        let cross_layer = if cross_edges.is_empty() {
+        let cross_static = cross_edges_for_static_layer(&cross_edges, &drag_overlay, ctx);
+        let cross_layer = if cross_static.is_empty() {
             None
         } else {
             Some(div().absolute().size_full().child(edges_canvas_element(
-                cross_edges,
+                cross_static,
                 selected.clone(),
                 stroke,
                 stroke_sel,
@@ -247,14 +248,7 @@ pub(crate) fn render_hierarchy_drag_overlay(
         }
     }
 
-    let cross_in_drag: Vec<_> = cross_edges
-        .into_iter()
-        .filter(|(edge_id, _)| {
-            ctx.graph
-                .get_edge(edge_id)
-                .is_some_and(|e| edge_endpoints_in_set(ctx, e, &drag_overlay))
-        })
-        .collect();
+    let cross_in_drag = cross_edges_for_drag_overlay(&cross_edges, &drag_overlay, ctx);
 
     if body_children.is_empty() && cross_in_drag.is_empty() {
         return None;
@@ -312,18 +306,59 @@ fn collect_hierarchy_edges(ctx: &mut RenderContext) -> HierarchyEdges {
     (intra_by_parent, cross_edges)
 }
 
-fn edge_endpoints_in_set(
+fn edge_endpoint_node_ids(
+    ctx: &RenderContext,
+    edge: &crate::Edge,
+) -> Option<(crate::NodeId, crate::NodeId)> {
+    let sp = ctx.graph.get_port(&edge.source_port)?;
+    let tp = ctx.graph.get_port(&edge.target_port)?;
+    Some((sp.node_id(), tp.node_id()))
+}
+
+fn edge_any_endpoint_in_set(
     ctx: &RenderContext,
     edge: &crate::Edge,
     nodes: &HashSet<crate::NodeId>,
 ) -> bool {
-    let Some(sp) = ctx.graph.get_port(&edge.source_port) else {
+    let Some((s, t)) = edge_endpoint_node_ids(ctx, edge) else {
         return false;
     };
-    let Some(tp) = ctx.graph.get_port(&edge.target_port) else {
-        return false;
-    };
-    nodes.contains(&sp.node_id()) && nodes.contains(&tp.node_id())
+    nodes.contains(&s) || nodes.contains(&t)
+}
+
+fn cross_edges_for_static_layer(
+    cross_edges: &[(EdgeId, Option<EdgeGeometry>)],
+    drag_overlay: &HashSet<crate::NodeId>,
+    ctx: &RenderContext,
+) -> Vec<(EdgeId, Option<EdgeGeometry>)> {
+    if drag_overlay.is_empty() {
+        return cross_edges.to_vec();
+    }
+    cross_edges
+        .iter()
+        .filter(|(id, _)| {
+            ctx.graph
+                .get_edge(id)
+                .is_some_and(|e| !edge_any_endpoint_in_set(ctx, e, drag_overlay))
+        })
+        .map(|(id, geom)| (*id, geom.clone()))
+        .collect()
+}
+
+fn cross_edges_for_drag_overlay(
+    cross_edges: &[(EdgeId, Option<EdgeGeometry>)],
+    drag_overlay: &HashSet<crate::NodeId>,
+    ctx: &RenderContext,
+) -> Vec<(EdgeId, Option<EdgeGeometry>)> {
+    cross_edges
+        .iter()
+        .filter(|(id, _)| {
+            ctx.graph
+                .get_edge(id)
+                .is_some_and(|e| edge_any_endpoint_in_set(ctx, e, drag_overlay))
+        })
+        .map(|(id, geom)| (*id, geom.clone()))
+        .collect()
 }
 
 #[derive(Clone, Copy)]
