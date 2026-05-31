@@ -2,7 +2,8 @@
 //!
 //! - **Parent** at world (200, 120) with two **overlapping** children (local coords).
 //! - **Root peer** overlaps the parent on the canvas to exercise root-level z-order.
-//! - Edge from Child A output → Child B input (ports use world positions).
+//! - Intra-parent edge: Child A output → Child B input (under Parent).
+//! - Cross-layer edge: Child B output → Root peer input (drawn on top via [`GraphPlugin`]).
 //!
 //! Try:
 //! - Click the overlapping children — the selected child should come to the front (siblings + ancestors).
@@ -66,7 +67,7 @@ fn build_nested_demo_graph() -> Graph {
             .data(json!({ "label": "Child A (back)" }))
             .build_with_ports();
 
-        let (child_b, ins_b, _) = g
+        let (child_b, ins_b, outs_b) = g
             .create_node("default")
             .position(120.0, 72.0)
             .size(180.0, 88.0)
@@ -81,10 +82,18 @@ fn build_nested_demo_graph() -> Graph {
         g.create_edge().source(outs_a[0]).target(ins_b[0]).build();
 
         // Root sibling drawn after parent → on top where they overlap.
-        g.create_node("default")
+        let (_root_peer, ins_peer, _) = g
+            .create_node("default")
             .position(160.0, 140.0)
             .size(200.0, 72.0)
+            .input()
             .data(json!({ "label": "Root peer" }))
+            .build_with_ports();
+
+        // Cross-parent: group child → root leaf (top overlay, not inside Parent group).
+        g.create_edge()
+            .source(outs_b[0])
+            .target(ins_peer[0])
             .build();
     })
 }
@@ -162,6 +171,11 @@ impl Plugin for NestedNodesDemoPlugin {
                     div()
                         .text_sm()
                         .child("Click overlapping Child A / B — selection brings to front"),
+                )
+                .child(
+                    div()
+                        .text_sm()
+                        .child("Cross edge: Child B → Root peer (above group z-order)"),
                 )
                 .child(div().text_sm().child("Press I: toast paint_order"))
                 .child(div().text_sm().child("Press H: hide this panel"))
