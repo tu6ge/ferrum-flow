@@ -8,7 +8,7 @@ use crate::Graph;
 pub use command::DragNodesCommand;
 pub use drag_events::{ActiveNodeDrag, NODE_DRAG_TICK_INTERVAL, NodeDragEvent};
 use gpui::{Element as _, ElementId, InteractiveElement as _, ParentElement, div};
-pub use interaction::{BoundaryDragPolicy, NodeInteractionPlugin};
+pub use interaction::NodeInteractionPlugin;
 
 /// Renders the given nodes (and their ports) like [`NodePlugin`], for use on the interaction overlay.
 pub(super) fn render_node_cards(
