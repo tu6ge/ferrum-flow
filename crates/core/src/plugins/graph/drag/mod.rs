@@ -14,6 +14,8 @@ use crate::{
     plugins::node::NODE_DRAG_TICK_INTERVAL,
 };
 
+use super::pointer::graph_edge_hit_at;
+
 pub use interaction::NestedNodeDragInteraction;
 pub use policy::BoundaryDragPolicy;
 
@@ -63,6 +65,11 @@ impl Plugin for NestedNodeDragPlugin {
     fn on_event(&mut self, event: &FlowEvent, ctx: &mut PluginContext) -> EventResult {
         if let FlowEvent::Input(InputEvent::MouseDown(ev)) = event {
             if ev.button != MouseButton::Left {
+                return EventResult::Continue;
+            }
+
+            // Edges (incl. cross-parent portal layer) win over parent group bounds / child cards.
+            if graph_edge_hit_at(ev.position, ctx).is_some() {
                 return EventResult::Continue;
             }
 

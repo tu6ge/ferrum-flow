@@ -11,25 +11,32 @@
 //! 4. Parent ports
 //!
 //! Cross-parent edges are painted in a top overlay within this layer.
+//!
+//! Pointer: edge hit-test via [`pointer::graph_handle_edge_mouse_down`] (pre-caches ports; see
+//! [`pointer`] module). Register **either** `EdgePlugin` or `GraphPlugin`, not both.
 
 mod drag;
 mod hierarchy;
 mod plan;
+mod pointer;
 
 use std::collections::{HashMap, HashSet};
 
 use gpui::{
-    AnyElement, Element as _, ElementId, InteractiveElement as _, ParentElement as _, Styled as _,
-    div,
+    AnyElement, Element as _, ElementId, InteractiveElement as _, MouseButton, ParentElement as _,
+    Styled as _, div,
 };
 
 use crate::EdgeId;
-use crate::plugin::{Plugin, RenderContext, RenderLayer};
+use crate::plugin::{
+    EventResult, FlowEvent, InputEvent, Plugin, PluginContext, RenderContext, RenderLayer,
+};
 use crate::plugins::edge::{EdgeGeometry, edge_geometry2, edges_canvas_element};
 use crate::plugins::node::{
     ActiveNodeDrag, node_ids_for_drag_overlay, render_node_cards, render_node_ports,
     render_node_shell,
 };
+use pointer::graph_handle_edge_mouse_down;
 
 pub use drag::{BoundaryDragPolicy, NestedNodeDragPlugin};
 use hierarchy::GraphHierarchy;
@@ -54,8 +61,19 @@ impl Plugin for GraphPlugin {
         "graph"
     }
 
+    fn on_event(&mut self, event: &FlowEvent, ctx: &mut PluginContext) -> EventResult {
+        if let FlowEvent::Input(InputEvent::MouseDown(ev)) = event {
+            if ev.button != MouseButton::Left {
+                return EventResult::Continue;
+            }
+            return graph_handle_edge_mouse_down(ev.position, ev.modifiers.shift, ctx);
+        }
+        EventResult::Continue
+    }
+
+    /// Same as [`crate::plugins::EdgePlugin`] for pointer dispatch (before [`crate::plugins::SelectionPlugin`] at 100).
     fn priority(&self) -> i32 {
-        55
+        120
     }
 
     fn render_layer(&self) -> RenderLayer {
