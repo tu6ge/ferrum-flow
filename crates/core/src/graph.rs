@@ -469,7 +469,16 @@ impl Graph {
             .unwrap_or_default();
 
         for child in children {
-            self.reparent_preserving_world(child, grandparent)?;
+            let world = self
+                .node_world_point(child)
+                .ok_or(GraphError::NodeNotFound(child))?;
+            self.reparent(child, grandparent)?;
+            let local = self.local_point_from_world(world, grandparent)?;
+            let child_node = self
+                .nodes
+                .get_mut(&child)
+                .ok_or(GraphError::NodeNotFound(child))?;
+            child_node.set_position_with_point(local);
         }
         self.remove_node_from_graph(id);
 
@@ -492,54 +501,6 @@ impl Graph {
             world.x - parent_world.x,
             world.y - parent_world.y,
         ))
-    }
-
-    /// Whether [`Self::clamp_local_in_parent`] should run during drag (parent exists and is not moving).
-    pub fn clamp_local_in_parent_applies(&self, child: NodeId, dragged: &[NodeId]) -> bool {
-        let Some(parent) = self.nodes.get(&child).and_then(|n| n.parent()) else {
-            return false;
-        };
-        self.nodes.contains_key(&parent) && !dragged.contains(&parent)
-    }
-
-    /// Clamp a child's local origin so its axis-aligned bounds stay inside the parent's [`Node::size`].
-    pub fn clamp_local_in_parent(&self, child: NodeId, local: Point<Pixels>) -> Option<Point<Pixels>> {
-        let child_node = self.nodes.get(&child)?;
-        let parent_id = child_node.parent()?;
-        let parent = self.nodes.get(&parent_id)?;
-        let child_size = *child_node.size_ref();
-        let parent_size = *parent.size_ref();
-        Some(Point::new(
-            clamp_pixels(
-                local.x,
-                px(0.0),
-                (parent_size.width - child_size.width).max(px(0.0)),
-            ),
-            clamp_pixels(
-                local.y,
-                px(0.0),
-                (parent_size.height - child_size.height).max(px(0.0)),
-            ),
-        ))
-    }
-
-    /// Reparent `child` and set local position so [`Self::node_world_point`] is unchanged.
-    pub fn reparent_preserving_world(
-        &mut self,
-        child: NodeId,
-        new_parent: Option<NodeId>,
-    ) -> Result<(), GraphError> {
-        let world = self
-            .node_world_point(child)
-            .ok_or(GraphError::NodeNotFound(child))?;
-        self.reparent(child, new_parent)?;
-        let local = self.local_point_from_world(world, new_parent)?;
-        let node = self
-            .nodes
-            .get_mut(&child)
-            .ok_or(GraphError::NodeNotFound(child))?;
-        node.set_position_with_point(local);
-        Ok(())
     }
 
     /// Detach hierarchy links, drop ports/edges, and remove the node record (no child promotion).
@@ -873,19 +834,7 @@ impl Graph {
         };
         self.unlink_child_from_parent(old_parent, child);
     }
-}
 
-fn clamp_pixels(value: Pixels, min: Pixels, max: Pixels) -> Pixels {
-    if value < min {
-        min
-    } else if value > max {
-        max
-    } else {
-        value
-    }
-}
-
-impl Graph {
     fn unlink_child_from_parent(&mut self, parent: NodeId, child: NodeId) {
         if let Some(p) = self.nodes.get_mut(&parent) {
             p.remove_child_ref(child);
@@ -1061,30 +1010,6 @@ mod hierarchy_tests {
         let (g, a, b, _) = graph_with_nodes();
         assert_eq!(g.node_world_point(a), Some(g.get_node(&a).unwrap().point()));
         assert_eq!(g.node_world_point(b), Some(g.get_node(&b).unwrap().point()));
-    }
-
-    #[test]
-    fn clamp_local_in_parent_keeps_child_inside_parent_size() {
-        let mut g = Graph::new();
-        let parent = g
-            .create_node("default")
-            .position(0.0, 0.0)
-            .size(200.0, 100.0)
-            .build();
-        let child = g
-            .create_node("default")
-            .position(150.0, 80.0)
-            .size(80.0, 40.0)
-            .build();
-        g.add_child(parent, child).unwrap();
-
-        assert!(g.clamp_local_in_parent_applies(child, &[child]));
-        assert!(!g.clamp_local_in_parent_applies(child, &[parent, child]));
-
-        let clamped = g
-            .clamp_local_in_parent(child, Point::new(px(150.0), px(80.0)))
-            .unwrap();
-        assert_eq!(clamped, Point::new(px(120.0), px(60.0)));
     }
 
     #[test]
