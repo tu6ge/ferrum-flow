@@ -25,11 +25,10 @@ impl ApplyNodeDragDelta for HierarchyDragDelta {
         };
 
         if self.policy == BoundaryDragPolicy::Clamp
-            && boundary::clamp_local_in_parent_applies(&ctx.graph, id, dragged)
+            && boundary::clamp_local_in_parent_applies(ctx.graph, id, dragged)
+            && let Some(clamped) = boundary::clamp_local_in_parent(ctx.graph, id, local)
         {
-            if let Some(clamped) = boundary::clamp_local_in_parent(&ctx.graph, id, local) {
-                local = clamped;
-            }
+            local = clamped;
         }
 
         if let Some(node) = ctx.get_node_mut(&id) {

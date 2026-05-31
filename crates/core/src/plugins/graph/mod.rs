@@ -9,6 +9,7 @@
 //! 2. Intra-parent edges (same direct parent; below children)
 //! 3. Children (nested group or leaf cards)
 //! 4. Parent ports
+//!
 //! Cross-parent edges are painted in a top overlay within this layer.
 
 mod drag;
@@ -281,12 +282,12 @@ pub(crate) fn render_hierarchy_drag_overlay(
     )
 }
 
-fn collect_hierarchy_edges(
-    ctx: &mut RenderContext,
-) -> (
+type HierarchyEdges = (
     HashMap<crate::NodeId, Vec<(EdgeId, Option<EdgeGeometry>)>>,
     Vec<(EdgeId, Option<EdgeGeometry>)>,
-) {
+);
+
+fn collect_hierarchy_edges(ctx: &mut RenderContext) -> HierarchyEdges {
     let mut intra_by_parent: HashMap<crate::NodeId, Vec<(EdgeId, Option<EdgeGeometry>)>> =
         HashMap::new();
     let mut cross_edges: Vec<(EdgeId, Option<EdgeGeometry>)> = Vec::new();
@@ -333,6 +334,7 @@ enum GroupPaintPass {
     DragOverlay,
 }
 
+#[allow(clippy::too_many_arguments)]
 fn render_group_anchor(
     ctx: &mut RenderContext,
     anchor: crate::NodeId,
@@ -357,21 +359,21 @@ fn render_group_anchor(
         group = group.child(shell);
     }
 
-    if let Some(edges) = intra_by_parent.get(&anchor) {
-        if !edges.is_empty() {
-            group = group.child(
-                div()
-                    .id(ElementId::Uuid(*anchor.as_uuid()))
-                    .absolute()
-                    .size_full()
-                    .child(edges_canvas_element(
-                        edges.clone(),
-                        selected.clone(),
-                        stroke,
-                        stroke_sel,
-                    )),
-            );
-        }
+    if let Some(edges) = intra_by_parent.get(&anchor)
+        && !edges.is_empty()
+    {
+        group = group.child(
+            div()
+                .id(ElementId::Uuid(*anchor.as_uuid()))
+                .absolute()
+                .size_full()
+                .child(edges_canvas_element(
+                    edges.clone(),
+                    selected.clone(),
+                    stroke,
+                    stroke_sel,
+                )),
+        );
     }
 
     let child_ids: Vec<_> = paint_order
