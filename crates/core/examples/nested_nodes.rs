@@ -1,9 +1,11 @@
 //! Nested parent/child nodes: local positions, [`Graph::paint_order`], click-to-front, port wiring.
 //!
-//! - **Parent** at world (200, 120) with two **overlapping** children (local coords).
-//! - **Root peer** overlaps the parent on the canvas to exercise root-level z-order.
-//! - Intra-parent edge: Child A output → Child B input (under Parent).
-//! - Cross-layer edge: Child B output → Root peer input ([`PortScope::Boundary`] on both ports).
+//! - **L1 Parent** at world (200, 120) with overlapping **L2** children and a nested **L2 Sub group**.
+//! - **L3 Grandchild** inside Sub group (three-level hierarchy).
+//! - **Root peer** overlaps the parent to exercise root-level z-order.
+//! - Intra-parent (L2): Child A output → Child B input.
+//! - Cross (L2→L3 subtree): Child B output → Grandchild input.
+//! - Cross (L2→root): Child B output → Root peer input ([`PortScope::Boundary`]).
 //!
 //! Try:
 //! - Click the overlapping children — the selected child should come to the front (siblings + ancestors).
@@ -55,8 +57,8 @@ fn build_nested_demo_graph() -> Graph {
         let parent = g
             .create_node("default")
             .position(200.0, 120.0)
-            .size(420.0, 280.0)
-            .data(json!({ "label": "Parent (group)" }))
+            .size(420.0, 320.0)
+            .data(json!({ "label": "Parent (L1)" }))
             .build();
 
         let (child_a, _, outs_a) = g
@@ -76,10 +78,35 @@ fn build_nested_demo_graph() -> Graph {
             .data(json!({ "label": "Child B (front)" }))
             .build_with_ports();
 
+        let sub_group = g
+            .create_node("default")
+            .position(24.0, 168.0)
+            .size(280.0, 120.0)
+            .data(json!({ "label": "Sub group (L2)" }))
+            .build();
+
+        let (grandchild, ins_gc, _) = g
+            .create_node("default")
+            .position(20.0, 40.0)
+            .size(150.0, 56.0)
+            .input_port(PortSpec::input(PortPosition::Left).with_scope(PortScope::Boundary))
+            .output()
+            .data(json!({ "label": "Grandchild (L3)" }))
+            .build_with_ports();
+
         g.add_child(parent, child_a).expect("link child A");
         g.add_child(parent, child_b).expect("link child B");
+        g.add_child(parent, sub_group).expect("link sub group");
+        g.add_child(sub_group, grandchild).expect("link grandchild");
 
+        // Intra L2 (same parent): Child A → Child B.
         g.create_edge().source(outs_a[0]).target(ins_b[0]).build();
+
+        // Cross L2 subtrees (Child B under Parent, Grandchild under Sub group).
+        g.create_edge()
+            .source(outs_b[0])
+            .target(ins_gc[0])
+            .build();
 
         // Root sibling drawn after parent → on top where they overlap.
         let (_root_peer, ins_peer, _) = g
@@ -175,7 +202,12 @@ impl Plugin for NestedNodesDemoPlugin {
                 .child(
                     div()
                         .text_sm()
-                        .child("Cross edge: Child B → Root peer (above group z-order)"),
+                        .child("L3: Parent → Sub group → Grandchild"),
+                )
+                .child(
+                    div()
+                        .text_sm()
+                        .child("Cross: Child B → Grandchild; Child B → Root peer"),
                 )
                 .child(div().text_sm().child("Press I: toast paint_order"))
                 .child(div().text_sm().child("Press H: hide this panel"))
