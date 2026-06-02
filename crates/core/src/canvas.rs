@@ -110,20 +110,6 @@ pub struct FlowCanvas {
     outbound: Option<FlowCanvasOutbound>,
 }
 
-// // TODO
-// impl Clone for FlowCanvas {
-//     fn clone(&self) -> Self {
-//         Self {
-//             graph: self.graph.clone(),
-//             viewport: self.viewport.clone(),
-//             plugins_registry: PluginRegistry::new(),
-//             focus_handle: self.focus_handle.clone(),
-//             interaction: InteractionState::new(),
-//             event_queue: vec![],
-//         }
-//     }
-// }
-
 impl FlowCanvas {
     fn init_delayed_notify_channel(&mut self, cx: &mut Context<Self>) {
         let (tx, mut rx) = mpsc::unbounded::<()>();
