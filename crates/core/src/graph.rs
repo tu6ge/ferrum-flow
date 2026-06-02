@@ -56,6 +56,33 @@ impl From<GraphError> for FlowEvent {
         FlowEvent::Message(error.into())
     }
 }
+
+/// Source for [`crate::canvas::FlowCanvas::builder`]: an owned [`Graph`] or `Result<Graph, GraphError>`.
+pub trait IntoFlowGraph: private::Sealed {
+    fn into_flow_graph(self) -> Result<Graph, GraphError>;
+}
+
+mod private {
+    use super::*;
+
+    pub trait Sealed {}
+
+    impl Sealed for Graph {}
+    impl Sealed for Result<Graph, GraphError> {}
+}
+
+impl IntoFlowGraph for Graph {
+    fn into_flow_graph(self) -> Result<Graph, GraphError> {
+        Ok(self)
+    }
+}
+
+impl IntoFlowGraph for Result<Graph, GraphError> {
+    fn into_flow_graph(self) -> Result<Graph, GraphError> {
+        self
+    }
+}
+
 /// Walks from `node`'s parent upward (excludes `node` itself).
 struct AncestorsIter<'a> {
     graph: &'a Graph,

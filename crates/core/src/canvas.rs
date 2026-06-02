@@ -4,9 +4,9 @@ use std::collections::BTreeMap;
 use std::time::Duration;
 
 use crate::{
-    BackgroundPlugin, DeletePlugin, FlowTheme, GraphChange, GraphPlugin, HistoryPlugin,
-    NestedNodeDragPlugin, PortInteractionPlugin, SelectionPlugin, SharedState, SyncPlugin,
-    SyncPluginContext, ToastPlugin, ViewportPlugin,
+    BackgroundPlugin, DeletePlugin, FlowTheme, GraphChange, GraphError, GraphPlugin, HistoryPlugin,
+    IntoFlowGraph, NestedNodeDragPlugin, PortInteractionPlugin, SelectionPlugin, SharedState,
+    SyncPlugin, SyncPluginContext, ToastPlugin, ViewportPlugin,
     graph::Graph,
     plugin::{
         EventResult, FlowEvent, InitPluginContext, InputEvent, Plugin, PluginContext,
@@ -139,12 +139,18 @@ impl FlowCanvas {
     }
 
     pub fn builder<'a, 'b>(
-        graph: Graph,
+        graph: impl IntoFlowGraph,
         ctx: &'a mut Context<'b, Self>,
         _: &'a Window,
     ) -> FlowCanvasBuilder<'a, 'b> {
+        let (graph, graph_error) = match graph.into_flow_graph() {
+            Ok(graph) => (graph, None),
+            Err(e) => (Graph::new(), Some(e)),
+        };
+
         FlowCanvasBuilder {
             graph,
+            graph_error,
             ctx,
             plugins: PluginRegistry::new(),
             sync_plugin: None,
@@ -453,6 +459,11 @@ impl FlowCanvas {
         self.handle_event(FlowEvent::Input(InputEvent::Hover(*hovered)), cx);
         self.process_event_queue(cx);
     }
+
+    fn handle_process_event_queue(&mut self, event: FlowEvent, cx: &mut Context<Self>) {
+        self.handle_event(event, cx);
+        self.process_event_queue(cx);
+    }
 }
 
 impl Render for FlowCanvas {
@@ -573,6 +584,8 @@ impl Render for FlowCanvas {
 
 pub struct FlowCanvasBuilder<'a, 'b> {
     graph: Graph,
+    graph_error: Option<GraphError>,
+
     ctx: &'a mut Context<'b, FlowCanvas>,
 
     plugins: PluginRegistry,
@@ -738,6 +751,10 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
             for plugin in canvas.plugins_registry.iter_mut() {
                 plugin.setup(&mut ctx);
             }
+        }
+
+        if let Some(graph_error) = self.graph_error {
+            canvas.handle_process_event_queue(FlowEvent::error(graph_error.to_string()), self.ctx);
         }
 
         canvas
