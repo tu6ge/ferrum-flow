@@ -103,10 +103,7 @@ fn build_nested_demo_graph() -> Graph {
         g.create_edge().source(outs_a[0]).target(ins_b[0]).build();
 
         // Cross L2 subtrees (Child B under Parent, Grandchild under Sub group).
-        g.create_edge()
-            .source(outs_b[0])
-            .target(ins_gc[0])
-            .build();
+        g.create_edge().source(outs_b[0]).target(ins_gc[0]).build();
 
         // Root sibling drawn after parent → on top where they overlap.
         let (_root_peer, ins_peer, _) = g
@@ -199,11 +196,7 @@ impl Plugin for NestedNodesDemoPlugin {
                         .text_sm()
                         .child("Click overlapping Child A / B — selection brings to front"),
                 )
-                .child(
-                    div()
-                        .text_sm()
-                        .child("L3: Parent → Sub group → Grandchild"),
-                )
+                .child(div().text_sm().child("L3: Parent → Sub group → Grandchild"))
                 .child(
                     div()
                         .text_sm()
