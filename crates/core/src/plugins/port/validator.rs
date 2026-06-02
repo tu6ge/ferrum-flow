@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use crate::{PluginContext, Port, PortKind};
+use crate::{Graph, NodeId, PluginContext, Port, PortKind, PortScope};
 
 /// Validates whether an edge may be created between two ports.
 pub trait EdgeValidator: Send + Sync {
@@ -24,6 +24,8 @@ pub enum EdgeValidationErrorCode {
     KindMismatch,
     /// Both ports belong to the same node.
     SameNode,
+    /// A [`PortScope::Local`] port would connect across hierarchy levels.
+    ScopeMismatch,
     /// Port types are incompatible (reserved for stricter validators).
     TypeMismatch,
     /// Target input already has a connection (reserved for stricter validators).
@@ -43,6 +45,10 @@ impl EdgeValidationError {
 
     pub fn same_node(message: String) -> Self {
         Self::new(EdgeValidationErrorCode::SameNode, message)
+    }
+
+    pub fn scope_mismatch(message: String) -> Self {
+        Self::new(EdgeValidationErrorCode::ScopeMismatch, message)
     }
 
     pub fn type_mismatch(message: String) -> Self {
@@ -71,6 +77,7 @@ impl Display for EdgeValidationErrorCode {
         match self {
             EdgeValidationErrorCode::KindMismatch => write!(f, "KindMismatch"),
             EdgeValidationErrorCode::SameNode => write!(f, "SameNode"),
+            EdgeValidationErrorCode::ScopeMismatch => write!(f, "ScopeMismatch"),
             EdgeValidationErrorCode::TypeMismatch => write!(f, "TypeMismatch"),
             EdgeValidationErrorCode::AlreadyConnected => write!(f, "AlreadyConnected"),
             EdgeValidationErrorCode::Custom(ty) => write!(f, "Custom({})", ty),
@@ -78,8 +85,8 @@ impl Display for EdgeValidationErrorCode {
     }
 }
 
-/// Permissive default: requires one output and one input on different nodes; ignores
-/// `port_type` and does not check for duplicate edges.
+/// Permissive default: requires one output and one input on different nodes; enforces
+/// [`PortScope::Local`] (same direct parent only). Ignores `port_type` and duplicate edges.
 #[derive(Debug, Default, Clone, Copy)]
 pub struct DefaultEdgeValidator;
 
@@ -88,7 +95,7 @@ impl EdgeValidator for DefaultEdgeValidator {
         &self,
         from: &Port,
         to: &Port,
-        _ctx: &PluginContext,
+        ctx: &PluginContext,
     ) -> Result<(), EdgeValidationError> {
         if from.node_id() == to.node_id() {
             return Err(EdgeValidationError::same_node(
@@ -106,6 +113,44 @@ impl EdgeValidator for DefaultEdgeValidator {
             ));
         }
 
+        if from.scope() == PortScope::Local || to.scope() == PortScope::Local {
+            let graph = &ctx.graph;
+            if !nodes_share_direct_parent(graph, from.node_id(), to.node_id()) {
+                return Err(EdgeValidationError::scope_mismatch(
+                    "Local ports may only connect to nodes with the same parent.".into(),
+                ));
+            }
+        }
+
         Ok(())
+    }
+}
+
+/// Same hierarchy level: identical direct parent (including both root-level).
+fn nodes_share_direct_parent(graph: &Graph, a: NodeId, b: NodeId) -> bool {
+    let parent_a = graph.get_node(&a).and_then(|n| n.parent());
+    let parent_b = graph.get_node(&b).and_then(|n| n.parent());
+    parent_a == parent_b
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::Graph;
+
+    #[test]
+    fn nodes_share_direct_parent_siblings_and_roots() {
+        let mut g = Graph::new();
+        let parent = g.create_node("default").build();
+        let (a, _, _) = g.create_node("default").build_with_ports();
+        let (b, _, _) = g.create_node("default").build_with_ports();
+        g.add_child(parent, a).unwrap();
+        g.add_child(parent, b).unwrap();
+        assert!(nodes_share_direct_parent(&g, a, b));
+
+        let r1 = g.create_node("default").build();
+        let r2 = g.create_node("default").build();
+        assert!(nodes_share_direct_parent(&g, r1, r2));
+        assert!(!nodes_share_direct_parent(&g, a, r1));
     }
 }

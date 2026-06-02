@@ -289,7 +289,7 @@ pub enum PortType {
 //TODO: Implement this
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum PortScope {
-    /// The port is only allowed to connect to ports within the same level of thenode.
+    /// The port is only allowed to connect to ports on nodes with the same direct parent (siblings).
     #[default]
     Local,
     /// The port is allowed to connect to ports within any level of the node hierarchy.
@@ -357,6 +357,10 @@ impl Port {
 
     pub fn port_type_ref(&self) -> &PortType {
         &self.port_type
+    }
+
+    pub fn scope(&self) -> PortScope {
+        self.scope
     }
 
     pub fn port_type_mut(&mut self) -> &mut PortType {
