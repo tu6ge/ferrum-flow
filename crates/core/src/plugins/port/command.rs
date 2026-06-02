@@ -119,8 +119,11 @@ impl Command for AttachChildCommand {
         "attach_child"
     }
     fn execute(&mut self, ctx: &mut crate::canvas::CommandContext) {
-        // Invariants checked in `new`; graph unchanged between `CreateNode` and this command.
-        let _ = ctx.graph.add_child(self.parent, self.child);
+        ctx.graph
+            .add_child(self.parent, self.child)
+            .unwrap_or_else(|e| {
+                log::error!("Failed to attach child: {}", e);
+            });
         ctx.port_offset_cache.clear_node(&self.child);
     }
     fn undo(&mut self, ctx: &mut crate::canvas::CommandContext) {
