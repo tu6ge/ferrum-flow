@@ -286,7 +286,6 @@ pub enum PortType {
     Union(Vec<PortType>),
 }
 
-//TODO: Implement this
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum PortScope {
     /// The port is only allowed to connect to ports on nodes with the same direct parent (siblings).
