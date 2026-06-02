@@ -111,6 +111,7 @@ Current mapping snapshot (as of this README update):
 
 - [ ] Nested parent–child nodes
 - [ ] Combine [petgraph](https://crates.io/crates/petgraph)
+- [ ] Graph Data Model and Graph Trait Abstraction
 
 ### Beyond React Flow (FerrumFlow-specific strengths)
 
