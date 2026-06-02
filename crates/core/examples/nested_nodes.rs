@@ -3,7 +3,7 @@
 //! - **Parent** at world (200, 120) with two **overlapping** children (local coords).
 //! - **Root peer** overlaps the parent on the canvas to exercise root-level z-order.
 //! - Intra-parent edge: Child A output → Child B input (under Parent).
-//! - Cross-layer edge: Child B output → Root peer input (drawn on top via [`GraphPlugin`]).
+//! - Cross-layer edge: Child B output → Root peer input ([`PortScope::Boundary`] on both ports).
 //!
 //! Try:
 //! - Click the overlapping children — the selected child should come to the front (siblings + ancestors).
@@ -72,7 +72,7 @@ fn build_nested_demo_graph() -> Graph {
             .position(120.0, 72.0)
             .size(180.0, 88.0)
             .input()
-            .output()
+            .output_port(PortSpec::output(PortPosition::Right).with_scope(PortScope::Boundary))
             .data(json!({ "label": "Child B (front)" }))
             .build_with_ports();
 
@@ -86,7 +86,7 @@ fn build_nested_demo_graph() -> Graph {
             .create_node("default")
             .position(160.0, 140.0)
             .size(200.0, 72.0)
-            .input()
+            .input_port(PortSpec::input(PortPosition::Left).with_scope(PortScope::Boundary))
             .data(json!({ "label": "Root peer" }))
             .build_with_ports();
 
