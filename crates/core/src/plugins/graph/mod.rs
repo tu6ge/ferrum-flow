@@ -210,14 +210,46 @@ fn render_flat_graph(
     Some(layer.into_any())
 }
 
-/// Interaction-layer paint while dragging ([`crate::plugins::node::NodeDragInteraction`]): full group
-/// z-order including intra-parent edges, not flat [`render_node_cards`] only.
+/// Flat graph: dragged nodes excluded from [`render_flat_graph`] static layer, redrawn here.
+fn render_flat_drag_overlay(
+    ctx: &mut RenderContext,
+    overlay_ids: &[crate::NodeId],
+) -> Option<AnyElement> {
+    let drag_overlay: HashSet<_> = overlay_ids.iter().copied().collect();
+    let node_ids: Vec<_> = ctx
+        .graph
+        .paint_order()
+        .iter()
+        .filter(|id| drag_overlay.contains(id))
+        .filter(|id| ctx.is_node_visible(id))
+        .copied()
+        .collect();
+
+    if node_ids.is_empty() {
+        return None;
+    }
+
+    Some(
+        div()
+            .id("graph-drag-overlay")
+            .absolute()
+            .size_full()
+            .child(render_node_cards(ctx, &node_ids, "graph-drag-flat"))
+            .into_any(),
+    )
+}
+
+/// Interaction-layer paint while dragging ([`crate::plugins::graph::NestedNodeDragPlugin`]).
 pub(crate) fn render_hierarchy_drag_overlay(
     ctx: &mut RenderContext,
     overlay_ids: &[crate::NodeId],
 ) -> Option<AnyElement> {
-    if overlay_ids.is_empty() || !ctx.graph.has_node_hierarchy() {
+    if overlay_ids.is_empty() {
         return None;
+    }
+
+    if !ctx.graph.has_node_hierarchy() {
+        return render_flat_drag_overlay(ctx, overlay_ids);
     }
 
     let drag_overlay: HashSet<_> = overlay_ids.iter().copied().collect();
