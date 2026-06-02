@@ -3,8 +3,8 @@ use std::{collections::HashSet, sync::Arc};
 use gpui::{Bounds, Element, MouseButton, Pixels, Point, canvas, px, rgb};
 
 use crate::{
-    DefaultEdgeValidator, EdgeValidator, Graph, NodeId, Port, PortId, PortKind, PortPosition,
-    PortScope,
+    CompositeCommand, DefaultEdgeValidator, EdgeValidator, Graph, NodeId, Port, PortId, PortKind,
+    PortPosition, PortScope,
     canvas::Interaction,
     plugin::{
         FlowEvent, InputEvent, Plugin, PluginContext, RenderContext, utils::canvas_paint_point,
@@ -12,7 +12,9 @@ use crate::{
     plugins::port::{edge_bezier, filled_disc_path, port_screen_big_bounds, port_screen_bounds},
 };
 
-use super::command::{AttachChildCommand, CreateEdge};
+use super::command::{
+    AttachChildCommand, CreateEdge, CreateNode, CreatePort, validate_attach_child,
+};
 
 /// Dangling link from a port to a world-space endpoint (shown with a dot until the user clicks it).
 #[derive(Clone, Copy)]
@@ -137,18 +139,25 @@ impl PortInteractionPlugin {
         };
 
         let new_id = new_node.id();
-        ctx.execute_command(super::command::CreateNode::new(new_node));
+        let mut composite = CompositeCommand::new();
+        composite.push(CreateNode::new(new_node));
         for port in new_ports {
-            ctx.execute_command(super::command::CreatePort::new(port));
+            composite.push(CreatePort::new(port));
         }
         if let Some(parent) = attach_parent {
-            match AttachChildCommand::new(ctx.graph, parent, new_id) {
-                Ok(cmd) => ctx.execute_command(cmd),
-                Err(err) => ctx.emit(FlowEvent::error(err.to_string())),
+            if let Some(pnode) = ctx.graph.get_node(&parent).cloned() {
+                scratch.add_node(pnode);
+            }
+            match validate_attach_child(&scratch, parent, new_id) {
+                Ok(()) => composite.push(AttachChildCommand::link(parent, new_id)),
+                Err(err) => {
+                    ctx.emit(FlowEvent::error(err.to_string()));
+                    return;
+                }
             }
         }
-
-        ctx.execute_command(CreateEdge::new(edge));
+        composite.push(CreateEdge::new(edge));
+        ctx.execute_command(composite);
     }
 
     /// Where to place a node created from a dangling wire endpoint.
