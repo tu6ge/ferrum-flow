@@ -110,7 +110,13 @@ impl AttachChildCommand {
     /// handling [`GraphError`] (call right after the child node exists in `graph`).
     pub fn new(graph: &Graph, parent: NodeId, child: NodeId) -> Result<Self, GraphError> {
         validate_attach_child(graph, parent, child)?;
-        Ok(Self { parent, child })
+        Ok(Self::link(parent, child))
+    }
+
+    /// Parent and child must already exist when this command runs (e.g. earlier steps in a
+    /// [`CompositeCommand`](crate::CompositeCommand)).
+    pub fn link(parent: NodeId, child: NodeId) -> Self {
+        Self { parent, child }
     }
 }
 

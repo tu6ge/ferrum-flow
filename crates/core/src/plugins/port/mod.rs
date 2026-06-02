@@ -6,7 +6,7 @@ pub use interaction::PortInteractionPlugin;
 mod command;
 mod validator;
 
-pub use command::{CreateEdge, CreateNode, CreatePort};
+pub use command::{AttachChildCommand, CreateEdge, CreateNode, CreatePort};
 pub use validator::{
     DefaultEdgeValidator, EdgeValidationError, EdgeValidationErrorCode, EdgeValidator,
 };

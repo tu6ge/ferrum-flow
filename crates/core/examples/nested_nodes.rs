@@ -37,6 +37,7 @@ fn main() {
                     .default_plugins()
                     .plugin(FitAllGraphPlugin::new())
                     .plugin(NestedNodesDemoPlugin::new())
+                    .plugin(ClipboardPlugin::new())
                     .build()
             })
         })

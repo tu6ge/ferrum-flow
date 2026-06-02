@@ -2,10 +2,10 @@ use std::collections::{HashMap, HashSet};
 
 use gpui::{Pixels, Point, px};
 
-use crate::{CompositeCommand, Edge, Graph, plugin::PluginContext};
+use crate::{CompositeCommand, Edge, Graph, Node, NodeId, plugin::PluginContext};
 
 use super::copied_subgraph::CopiedSubgraph;
-use crate::plugins::{CreateEdge, CreateNode, CreatePort};
+use crate::plugins::{AttachChildCommand, CreateEdge, CreateNode, CreatePort};
 
 #[derive(Clone)]
 pub(crate) struct ClipboardShared(pub CopiedSubgraph);
@@ -24,20 +24,30 @@ pub(crate) fn has_clipboard_subgraph(ctx: &PluginContext) -> bool {
     ctx.shared_state.contains::<ClipboardShared>()
 }
 
+/// Selected nodes plus every descendant (nested copy includes the whole subtree).
+fn copy_node_closure(graph: &Graph) -> HashSet<NodeId> {
+    let mut closure = HashSet::new();
+    for &id in graph.selected_node() {
+        closure.insert(id);
+        closure.extend(graph.descendants(id));
+    }
+    closure
+}
+
 pub(crate) fn extract_subgraph(graph: &Graph) -> Option<CopiedSubgraph> {
     if graph.selected_node_is_empty() {
         return None;
     }
-    let node_ids = graph.selected_node();
-    if node_ids.is_empty() {
+    let closure = copy_node_closure(graph);
+    if closure.is_empty() {
         return None;
     }
 
     let mut port_ids = HashSet::new();
-    let mut nodes = Vec::with_capacity(node_ids.len());
     let mut ports = Vec::new();
-    for nid in node_ids {
-        let n = graph.get_node(nid)?;
+    let mut nodes = Vec::with_capacity(closure.len());
+    for id in graph.paint_order().into_iter().filter(|id| closure.contains(id)) {
+        let n = graph.get_node(&id)?;
         for pid in n.inputs().iter().chain(n.outputs().iter()) {
             port_ids.insert(*pid);
             if let Some(p) = graph.get_port(pid) {
@@ -60,13 +70,54 @@ pub(crate) fn extract_subgraph(graph: &Graph) -> Option<CopiedSubgraph> {
     })
 }
 
+fn copied_node_ids(sub: &CopiedSubgraph) -> HashSet<NodeId> {
+    sub.nodes.iter().map(|n| n.id()).collect()
+}
+
+/// True when `node` has no parent in the copied set (paste anchor applies in world space).
+fn is_copy_subgraph_root(node: &Node, in_copy: &HashSet<NodeId>) -> bool {
+    node.parent().is_none_or(|p| !in_copy.contains(&p))
+}
+
+/// World origins for nodes in a copied subgraph, using the same parent-chain rule as [`Graph::node_world_point`].
+fn world_positions_in_sub(sub: &CopiedSubgraph) -> HashMap<NodeId, Point<Pixels>> {
+    let in_copy = copied_node_ids(sub);
+    let by_id: HashMap<_, _> = sub.nodes.iter().map(|n| (n.id(), n)).collect();
+    let mut world = HashMap::with_capacity(sub.nodes.len());
+
+    fn world_of(
+        id: NodeId,
+        by_id: &HashMap<NodeId, &Node>,
+        in_copy: &HashSet<NodeId>,
+        world: &mut HashMap<NodeId, Point<Pixels>>,
+    ) -> Point<Pixels> {
+        if let Some(&p) = world.get(&id) {
+            return p;
+        }
+        let node = by_id[&id];
+        let mut origin = node.point();
+        if let Some(parent) = node.parent().filter(|p| in_copy.contains(p)) {
+            let parent_world = world_of(parent, by_id, in_copy, world);
+            origin.x += parent_world.x;
+            origin.y += parent_world.y;
+        }
+        world.insert(id, origin);
+        origin
+    }
+
+    for &id in in_copy.iter() {
+        world_of(id, &by_id, &in_copy, &mut world);
+    }
+    world
+}
+
 /// Top-left of the axis-aligned bounding box of copied node positions (world space).
 fn subgraph_bounds_top_left(sub: &CopiedSubgraph) -> Point<Pixels> {
+    let worlds = world_positions_in_sub(sub);
     let (mut min_x, mut min_y) = (f32::INFINITY, f32::INFINITY);
-    for n in &sub.nodes {
-        let (x, y) = n.position();
-        min_x = min_x.min(x.into());
-        min_y = min_y.min(y.into());
+    for p in worlds.values() {
+        min_x = min_x.min(p.x.into());
+        min_y = min_y.min(p.y.into());
     }
     Point::new(px(min_x), px(min_y))
 }
@@ -97,7 +148,9 @@ fn paste_subgraph_with_anchor(
         return;
     }
 
+    let in_copy = copied_node_ids(sub);
     let origin = subgraph_bounds_top_left(sub);
+    let worlds = world_positions_in_sub(sub);
     let ox: f32 = origin.x.into();
     let oy: f32 = origin.y.into();
     let ax: f32 = anchor_world.x.into();
@@ -118,16 +171,20 @@ fn paste_subgraph_with_anchor(
 
     for old in &sub.nodes {
         let new_id = node_map[&old.id()];
-        let (x, y) = old.position();
-        let nx = ax + f32::from(x) - ox;
-        let ny = ay + f32::from(y) - oy;
+        let (nx, ny) = if is_copy_subgraph_root(old, &in_copy) {
+            let world = worlds[&old.id()];
+            let wx: f32 = world.x.into();
+            let wy: f32 = world.y.into();
+            (ax + wx - ox, ay + wy - oy)
+        } else {
+            let (x, y) = old.position();
+            (f32::from(x), f32::from(y))
+        };
         // Clone-then-patch avoids missing newly added fields on Node.
         let mut node = old.clone();
         node.set_id(new_id);
         node.set_position(nx.into(), ny.into());
         node.clear_port_refs();
-        // TODO: handle parent node
-        // TODO: handle children nodes
 
         for pid in old.inputs() {
             node.push_input(port_map[pid]);
@@ -137,6 +194,14 @@ fn paste_subgraph_with_anchor(
         }
         new_node_ids.push(new_id);
         composite.push(CreateNode::new(node));
+    }
+
+    for old in &sub.nodes {
+        if let Some(old_parent) = old.parent().filter(|p| in_copy.contains(p)) {
+            let parent = node_map[&old_parent];
+            let child = node_map[&old.id()];
+            composite.push(AttachChildCommand::link(parent, child));
+        }
     }
 
     for old in &sub.ports {
@@ -353,6 +418,73 @@ mod tests {
             node_for_compare(serde_json::to_value(old_b).expect("serialize old node-b")),
             node_for_compare(serde_json::to_value(&pasted_b).expect("serialize pasted node-b")),
             "node-b fields should remain consistent after copy/paste"
+        );
+    }
+
+    #[test]
+    fn copy_parent_includes_children_and_paste_restores_hierarchy() {
+        let mut harness = PluginTestHarness::default();
+
+        let parent = harness
+            .graph
+            .create_node("default")
+            .position(100.0, 100.0)
+            .data(json!({"role":"parent"}))
+            .build();
+        let child = harness
+            .graph
+            .create_node("default")
+            .position(10.0, 10.0)
+            .data(json!({"role":"child"}))
+            .build();
+        harness.graph.add_child(parent, child).unwrap();
+
+        harness.graph.add_selected_node(parent, false);
+
+        let copied = extract_subgraph(&harness.graph).expect("copy should include subtree");
+        assert_eq!(copied.nodes.len(), 2, "copy should include parent and descendant");
+
+        let world_child_before = harness
+            .graph
+            .node_world_point(child)
+            .expect("child world position");
+        let anchor = Point::new(px(300.0), px(300.0));
+
+        harness.with_plugin_context(|ctx| {
+            paste_subgraph_at_world(ctx, &copied, anchor);
+        });
+
+        let pasted_parent = harness
+            .graph
+            .selected_node()
+            .iter()
+            .find_map(|id| {
+                let node = harness.graph.get_node(id)?;
+                (node.data_ref().get("role")? == "parent").then_some(*id)
+            })
+            .expect("pasted parent should be selected");
+        let pasted_child = harness
+            .graph
+            .descendants(pasted_parent)
+            .next()
+            .expect("pasted parent should have the copied child");
+        assert_eq!(
+            harness.graph.get_node(&pasted_child).unwrap().parent(),
+            Some(pasted_parent),
+            "paste should restore parent/child link"
+        );
+        assert_eq!(
+            harness.graph.get_node(&pasted_child).unwrap().point(),
+            harness.graph.get_node(&child).unwrap().point(),
+            "child local offset should be preserved under the new parent"
+        );
+        assert_eq!(
+            harness.graph.node_world_point(pasted_child),
+            Some(Point::new(
+                world_child_before.x + px(200.0),
+                world_child_before.y + px(200.0)
+            )),
+            "paste should move the subtree by the anchor offset in world space"
         );
     }
 }
