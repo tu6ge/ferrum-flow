@@ -238,7 +238,9 @@ pub(crate) fn render_hierarchy_drag_overlay(
             continue;
         }
 
-        if ctx.graph.is_top_level_group_anchor(id) {
+        // Any in-overlay group (L2+), not only top-level L1 — nested sub-groups are skipped by
+        // `is_top_level_group_anchor` but must still paint when dragged without their parent.
+        if !ctx.graph.children_of(id).is_empty() {
             if let Some(el) = render_group_anchor(
                 ctx,
                 id,
@@ -260,10 +262,8 @@ pub(crate) fn render_hierarchy_drag_overlay(
             continue;
         }
 
-        if ctx.graph.children_of(id).is_empty() {
-            body_children.push(render_node_cards(ctx, &[id], "graph-drag-leaf"));
-            covered.insert(id);
-        }
+        body_children.push(render_node_cards(ctx, &[id], "graph-drag-leaf"));
+        covered.insert(id);
     }
 
     let cross_in_drag = cross_edges_for_drag_overlay(&cross_edges, &drag_overlay, ctx);
