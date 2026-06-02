@@ -4,9 +4,9 @@ use std::collections::BTreeMap;
 use std::time::Duration;
 
 use crate::{
-    BackgroundPlugin, DeletePlugin, EdgePlugin, FlowTheme, GraphChange, HistoryPlugin,
-    NodeInteractionPlugin, NodePlugin, PortInteractionPlugin, SelectionPlugin, SharedState,
-    SyncPlugin, SyncPluginContext, ViewportPlugin,
+    BackgroundPlugin, DeletePlugin, FlowTheme, GraphChange, GraphPlugin, HistoryPlugin,
+    NestedNodeDragPlugin, PortInteractionPlugin, SelectionPlugin, SharedState, SyncPlugin,
+    SyncPluginContext, ViewportPlugin,
     graph::Graph,
     plugin::{
         EventResult, FlowEvent, InitPluginContext, InputEvent, Plugin, PluginContext,
@@ -614,11 +614,10 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
             .plugins
             .add(BackgroundPlugin::new())
             .add(SelectionPlugin::new())
-            .add(NodeInteractionPlugin::new())
+            .add(NestedNodeDragPlugin::new())
             .add(ViewportPlugin::new())
-            .add(NodePlugin::new())
+            .add(GraphPlugin::new())
             .add(PortInteractionPlugin::new())
-            .add(EdgePlugin::new())
             .add(DeletePlugin::default())
             .add(HistoryPlugin::new());
         self
