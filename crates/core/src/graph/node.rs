@@ -363,6 +363,10 @@ impl Port {
         self.scope
     }
 
+    pub fn set_scope(&mut self, scope: PortScope) {
+        self.scope = scope;
+    }
+
     pub fn port_type_mut(&mut self) -> &mut PortType {
         &mut self.port_type
     }
