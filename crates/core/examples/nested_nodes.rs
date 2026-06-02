@@ -44,8 +44,8 @@ fn main() {
     });
 }
 
-fn build_nested_demo_graph() -> Graph {
-    Graph::build(|g| {
+fn build_nested_demo_graph() -> Result<Graph, GraphError> {
+    Graph::try_build(|g| {
         let parent = g
             .create_node("default")
             .position(200.0, 120.0)
@@ -86,10 +86,10 @@ fn build_nested_demo_graph() -> Graph {
             .data(json!({ "label": "Grandchild (L3)" }))
             .build_with_ports();
 
-        g.add_child(parent, child_a).expect("link child A");
-        g.add_child(parent, child_b).expect("link child B");
-        g.add_child(parent, sub_group).expect("link sub group");
-        g.add_child(sub_group, grandchild).expect("link grandchild");
+        g.add_child(parent, child_a)?;
+        g.add_child(parent, child_b)?;
+        g.add_child(parent, sub_group)?;
+        g.add_child(sub_group, grandchild)?;
 
         // Intra L2 (same parent): Child A → Child B.
         g.create_edge().source(outs_a[0]).target(ins_b[0]).build();
@@ -111,6 +111,8 @@ fn build_nested_demo_graph() -> Graph {
             .source(outs_b[0])
             .target(ins_peer[0])
             .build();
+
+        Ok(())
     })
 }
 

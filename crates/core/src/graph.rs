@@ -180,6 +180,14 @@ impl Graph {
         g
     }
 
+    pub fn try_build(
+        f: impl FnOnce(&mut Self) -> Result<(), GraphError>,
+    ) -> Result<Self, GraphError> {
+        let mut g = Self::new();
+        f(&mut g)?;
+        Ok(g)
+    }
+
     pub fn from_json(json: &str) -> serde_json::Result<Self> {
         serde_json::from_str(json)
     }
