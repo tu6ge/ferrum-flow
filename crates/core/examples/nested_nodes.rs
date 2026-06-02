@@ -34,17 +34,9 @@ fn main() {
         cx.open_window(window_opts, |window, cx| {
             cx.new(|ctx| {
                 FlowCanvas::builder(graph, ctx, window)
-                    .plugin(BackgroundPlugin::new())
-                    .plugin(SelectionPlugin::new())
-                    .plugin(NestedNodeDragPlugin::new())
-                    .plugin(ViewportPlugin::new())
-                    .plugin(PortInteractionPlugin::new())
-                    .plugin(GraphPlugin::new())
-                    .plugin(DeletePlugin::default())
-                    .plugin(HistoryPlugin::new())
+                    .default_plugins()
                     .plugin(FitAllGraphPlugin::new())
                     .plugin(NestedNodesDemoPlugin::new())
-                    .plugin(ToastPlugin::new())
                     .build()
             })
         })
