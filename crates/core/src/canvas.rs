@@ -6,7 +6,7 @@ use std::time::Duration;
 use crate::{
     BackgroundPlugin, DeletePlugin, FlowTheme, GraphChange, GraphPlugin, HistoryPlugin,
     NestedNodeDragPlugin, PortInteractionPlugin, SelectionPlugin, SharedState, SyncPlugin,
-    SyncPluginContext, ViewportPlugin,
+    SyncPluginContext, ToastPlugin, ViewportPlugin,
     graph::Graph,
     plugin::{
         EventResult, FlowEvent, InitPluginContext, InputEvent, Plugin, PluginContext,
@@ -619,7 +619,8 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
             .add(GraphPlugin::new())
             .add(PortInteractionPlugin::new())
             .add(DeletePlugin::default())
-            .add(HistoryPlugin::new());
+            .add(HistoryPlugin::new())
+            .add(ToastPlugin::new());
         self
     }
 
