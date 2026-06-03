@@ -19,6 +19,7 @@ mod drag;
 mod hierarchy;
 mod plan;
 mod pointer;
+mod render_lod;
 
 use std::collections::{HashMap, HashSet};
 
@@ -28,6 +29,7 @@ use gpui::{
 };
 
 use crate::EdgeId;
+use crate::NodeId;
 use crate::plugin::{
     EventResult, FlowEvent, InputEvent, Plugin, PluginContext, RenderContext, RenderLayer,
 };
@@ -41,12 +43,47 @@ use pointer::graph_handle_edge_mouse_down;
 pub use drag::{BoundaryDragPolicy, NestedNodeDragPlugin};
 use hierarchy::GraphHierarchy;
 pub use plan::{EdgePaintKind, classify_edge};
+pub(crate) use render_lod::{NodeRenderLod, NodeRenderLodConfig, resolve_node_render_lod};
 
-pub struct GraphPlugin;
+pub struct GraphPlugin {
+    lod_config: NodeRenderLodConfig,
+}
 
 impl GraphPlugin {
     pub fn new() -> Self {
-        Self
+        Self {
+            lod_config: NodeRenderLodConfig::default(),
+        }
+    }
+
+    pub fn with_lod_config(lod_config: NodeRenderLodConfig) -> Self {
+        Self { lod_config }
+    }
+
+    pub fn lod_config(&self) -> &NodeRenderLodConfig {
+        &self.lod_config
+    }
+
+    pub fn set_lod_config(&mut self, lod_config: NodeRenderLodConfig) {
+        self.lod_config = lod_config;
+    }
+
+    /// Per-node LOD for the graph paint path (shell-only vs full card).
+    #[allow(dead_code)] // consumed when shell-only rendering is wired in `render_node_cards`.
+    fn node_render_lod(
+        &self,
+        ctx: &RenderContext,
+        node_id: &NodeId,
+        drag_overlay: &HashSet<NodeId>,
+    ) -> NodeRenderLod {
+        resolve_node_render_lod(
+            ctx.graph,
+            &self.lod_config,
+            ctx.zoom(),
+            node_id,
+            ctx.graph.selected_node(),
+            drag_overlay,
+        )
     }
 }
 
