@@ -13,7 +13,7 @@ pub enum NodeRenderLod {
     ShellOnly,
 }
 
-/// Tunable thresholds for [`NodeRenderLod`]. Owned by [`GraphPlugin`](crate::GraphPlugin).
+/// Tunable thresholds for [`NodeRenderLod`]. Owned by [`GraphPlugin`](crate::plugins::GraphPlugin).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct NodeRenderLodConfig {
     /// Master switch; when false, every node uses [`NodeRenderLod::Full`].
@@ -35,6 +35,12 @@ impl Default for NodeRenderLodConfig {
             min_screen_node_size: 12.0,
         }
     }
+}
+
+/// Optional LOD for [`super::render_node_cards`]; omit for full detail ([`NodePlugin`]).
+pub(crate) struct NodeCardsLod<'a> {
+    pub config: &'a NodeRenderLodConfig,
+    pub drag_overlay: &'a HashSet<NodeId>,
 }
 
 /// Resolves LOD for one node given viewport zoom and interaction state.

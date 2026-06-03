@@ -2,10 +2,12 @@ mod command;
 mod drag_events;
 mod drag_shared;
 mod interaction;
+pub(crate) mod render_lod;
 
 use std::collections::HashSet;
 
 use crate::Graph;
+use crate::node::Node;
 pub use command::{DragNodesCommand, SelecteNodeCommand};
 pub use drag_events::{ActiveNodeDrag, NODE_DRAG_TICK_INTERVAL, NodeDragEvent};
 pub use drag_shared::{
@@ -13,34 +15,82 @@ pub use drag_shared::{
     collect_drag_nodes, dragged_ids_from_nodes, exceeds_drag_threshold, insert_active_drag,
     run_drag_side_effects, screen_pointer_world_delta, start_world_positions,
 };
-use gpui::{Element as _, ElementId, InteractiveElement as _, ParentElement, Styled as _, div};
+use gpui::{Element as _, ElementId, InteractiveElement as _, ParentElement, Styled as _, div, px};
 pub use interaction::NodeInteractionPlugin;
+pub use render_lod::{NodeRenderLod, NodeRenderLodConfig, resolve_node_render_lod};
+
+use crate::plugin::{NodeCardVariant, Plugin, RenderContext};
+use render_lod::NodeCardsLod;
+
+fn node_render_lod(
+    ctx: &RenderContext,
+    node_id: &crate::NodeId,
+    lod: Option<&NodeCardsLod<'_>>,
+) -> NodeRenderLod {
+    let Some(lod) = lod else {
+        return NodeRenderLod::Full;
+    };
+    resolve_node_render_lod(
+        ctx.graph,
+        lod.config,
+        ctx.zoom(),
+        node_id,
+        ctx.graph.selected_node(),
+        lod.drag_overlay,
+    )
+}
+
+fn render_degraded_node_shell(ctx: &RenderContext, node: &Node) -> gpui::AnyElement {
+    let selected = ctx.graph.selected_node().contains(&node.id());
+    ctx.node_card_shell(node, selected, NodeCardVariant::Default)
+        .border(px(1.5))
+        .into_any()
+}
 
 /// Renders the given nodes (and their ports) like [`NodePlugin`], for use on the interaction overlay.
+///
+/// Pass `lod` from [`GraphPlugin`](crate::plugins::GraphPlugin); omit for full detail ([`NodePlugin`]).
 pub(super) fn render_node_cards(
     ctx: &mut RenderContext,
     node_ids: &[crate::NodeId],
     id: &'static str,
+    lod: Option<&NodeCardsLod<'_>>,
 ) -> gpui::AnyElement {
-    ctx.cache_port_offset_with_nodes(node_ids);
+    let full_detail_ids: Vec<_> = node_ids
+        .iter()
+        .filter(|node_id| node_render_lod(ctx, node_id, lod) == NodeRenderLod::Full)
+        .copied()
+        .collect();
+    if !full_detail_ids.is_empty() {
+        ctx.cache_port_offset_with_nodes(&full_detail_ids);
+    }
+
     let list = node_ids.iter().filter_map(|node_id| {
         let node = ctx.graph.nodes().get(node_id)?;
-        let render = ctx.renderers.get(node.renderer_key());
+        match node_render_lod(ctx, node_id, lod) {
+            NodeRenderLod::ShellOnly => Some(
+                div()
+                    .id(ElementId::Uuid(*node_id.as_uuid()))
+                    .child(render_degraded_node_shell(ctx, node)),
+            ),
+            NodeRenderLod::Full => {
+                let render = ctx.renderers.get(node.renderer_key());
+                let node_render = render.render(node, ctx);
 
-        let node_render = render.render(node, ctx);
+                let port_ids: Vec<crate::PortId> = ctx.cached_port_ids_for_node(node_id).collect();
+                let ports = port_ids.iter().filter_map(|port_id| {
+                    let port = ctx.graph.get_port(port_id)?;
+                    render.port_render(node, port, ctx)
+                });
 
-        let port_ids: Vec<crate::PortId> = ctx.cached_port_ids_for_node(node_id).collect();
-        let ports = port_ids.iter().filter_map(|port_id| {
-            let port = ctx.graph.get_port(port_id)?;
-            render.port_render(node, port, ctx)
-        });
-
-        Some(
-            div()
-                .id(ElementId::Uuid(*node_id.as_uuid()))
-                .child(node_render)
-                .children(ports),
-        )
+                Some(
+                    div()
+                        .id(ElementId::Uuid(*node_id.as_uuid()))
+                        .child(node_render)
+                        .children(ports),
+                )
+            }
+        }
     });
 
     div().id(id).children(list).into_any()
@@ -85,7 +135,7 @@ pub(super) fn render_node_ports(
 }
 
 /// Drag overlay + static-layer exclusion: dragged roots and all descendants, in [`Graph::paint_order`].
-pub(super) fn node_ids_for_drag_overlay(graph: &Graph, dragged: &[NodeId]) -> Vec<NodeId> {
+pub(crate) fn node_ids_for_drag_overlay(graph: &Graph, dragged: &[NodeId]) -> Vec<NodeId> {
     let mut in_subtree = HashSet::new();
     for &id in dragged {
         in_subtree.insert(id);
@@ -103,7 +153,6 @@ pub(super) fn node_ids_for_drag_overlay(graph: &Graph, dragged: &[NodeId]) -> Ve
 use std::sync::Arc;
 
 use crate::NodeId;
-use crate::plugin::{Plugin, RenderContext};
 use crate::viewport::ViewportVisibilityCacheKey;
 
 /// Invalidates [`NodePlugin::static_layer_node_ids`] when the viewport changes **or** the active
@@ -194,6 +243,7 @@ impl Plugin for NodePlugin {
             ctx,
             &self.static_layer_node_ids,
             "static-layer-node-cards",
+            None,
         ))
     }
 }

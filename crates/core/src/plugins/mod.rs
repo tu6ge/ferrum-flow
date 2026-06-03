@@ -29,7 +29,9 @@ pub use delete::DeletePlugin;
 pub use edge::EdgePlugin;
 pub use fit_all::FitAllGraphPlugin;
 pub use focus_selection::FocusSelectionPlugin;
-pub use graph::{BoundaryDragPolicy, GraphPlugin, NestedNodeDragPlugin};
+pub use graph::{
+    BoundaryDragPolicy, GraphPlugin, NestedNodeDragPlugin, NodeRenderLod, NodeRenderLodConfig,
+};
 pub use history::HistoryPlugin;
 pub use layout::AutoLayoutPlugin;
 pub use minimap::MinimapPlugin;

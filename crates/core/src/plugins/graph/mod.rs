@@ -19,7 +19,6 @@ mod drag;
 mod hierarchy;
 mod plan;
 mod pointer;
-mod render_lod;
 
 use std::collections::{HashMap, HashSet};
 
@@ -29,21 +28,20 @@ use gpui::{
 };
 
 use crate::EdgeId;
-use crate::NodeId;
 use crate::plugin::{
     EventResult, FlowEvent, InputEvent, Plugin, PluginContext, RenderContext, RenderLayer,
 };
 use crate::plugins::edge::{EdgeGeometry, edge_geometry2, edges_canvas_element};
 use crate::plugins::node::{
-    ActiveNodeDrag, node_ids_for_drag_overlay, render_node_cards, render_node_ports,
-    render_node_shell,
+    ActiveNodeDrag, node_ids_for_drag_overlay, render_lod::NodeCardsLod, render_node_cards,
+    render_node_ports, render_node_shell,
 };
 use pointer::graph_handle_edge_mouse_down;
 
+pub use crate::plugins::node::{NodeRenderLod, NodeRenderLodConfig};
 pub use drag::{BoundaryDragPolicy, NestedNodeDragPlugin};
 use hierarchy::GraphHierarchy;
 pub use plan::{EdgePaintKind, classify_edge};
-pub(crate) use render_lod::{NodeRenderLod, NodeRenderLodConfig, resolve_node_render_lod};
 
 pub struct GraphPlugin {
     lod_config: NodeRenderLodConfig,
@@ -66,24 +64,6 @@ impl GraphPlugin {
 
     pub fn set_lod_config(&mut self, lod_config: NodeRenderLodConfig) {
         self.lod_config = lod_config;
-    }
-
-    /// Per-node LOD for the graph paint path (shell-only vs full card).
-    #[allow(dead_code)] // consumed when shell-only rendering is wired in `render_node_cards`.
-    fn node_render_lod(
-        &self,
-        ctx: &RenderContext,
-        node_id: &NodeId,
-        drag_overlay: &HashSet<NodeId>,
-    ) -> NodeRenderLod {
-        resolve_node_render_lod(
-            ctx.graph,
-            &self.lod_config,
-            ctx.zoom(),
-            node_id,
-            ctx.graph.selected_node(),
-            drag_overlay,
-        )
     }
 }
 
@@ -127,8 +107,14 @@ impl Plugin for GraphPlugin {
             })
             .unwrap_or_default();
 
+        let lod_ctx = NodeCardsLod {
+            config: &self.lod_config,
+            drag_overlay: &drag_overlay,
+        };
+        let lod = Some(&lod_ctx);
+
         if !ctx.graph.has_node_hierarchy() {
-            return render_flat_graph(ctx, &drag_overlay);
+            return render_flat_graph(ctx, &drag_overlay, lod);
         }
 
         let stroke = ctx.theme.edge_stroke;
@@ -162,6 +148,7 @@ impl Plugin for GraphPlugin {
                     stroke,
                     stroke_sel,
                     &mut covered,
+                    lod,
                 ) {
                     body_children.push(el);
                 }
@@ -173,7 +160,7 @@ impl Plugin for GraphPlugin {
             }
 
             if ctx.graph.children_of(id).is_empty() {
-                body_children.push(render_node_cards(ctx, &[id], "graph-root-leaf"));
+                body_children.push(render_node_cards(ctx, &[id], "graph-root-leaf", lod));
                 covered.insert(id);
             }
         }
@@ -206,6 +193,7 @@ impl Plugin for GraphPlugin {
 fn render_flat_graph(
     ctx: &mut RenderContext,
     drag_overlay: &HashSet<crate::NodeId>,
+    lod: Option<&NodeCardsLod<'_>>,
 ) -> Option<AnyElement> {
     let paint_order = ctx.graph.paint_order();
     let node_ids: Vec<_> = paint_order
@@ -234,7 +222,7 @@ fn render_flat_graph(
 
     let mut layer = div().id("graph-layer").absolute().size_full();
     if !node_ids.is_empty() {
-        layer = layer.child(render_node_cards(ctx, &node_ids, "graph-flat-nodes"));
+        layer = layer.child(render_node_cards(ctx, &node_ids, "graph-flat-nodes", lod));
     }
     if !edges.is_empty() {
         layer = layer.child(
@@ -271,7 +259,7 @@ fn render_flat_drag_overlay(
             .id("graph-drag-overlay")
             .absolute()
             .size_full()
-            .child(render_node_cards(ctx, &node_ids, "graph-drag-flat"))
+            .child(render_node_cards(ctx, &node_ids, "graph-drag-flat", None))
             .into_any(),
     )
 }
@@ -321,6 +309,7 @@ pub(crate) fn render_hierarchy_drag_overlay(
                 stroke,
                 stroke_sel,
                 &mut covered,
+                None,
             ) {
                 body_children.push(el);
             }
@@ -331,7 +320,7 @@ pub(crate) fn render_hierarchy_drag_overlay(
             continue;
         }
 
-        body_children.push(render_node_cards(ctx, &[id], "graph-drag-leaf"));
+        body_children.push(render_node_cards(ctx, &[id], "graph-drag-leaf", None));
         covered.insert(id);
     }
 
@@ -468,6 +457,7 @@ fn render_group_anchor(
     stroke: u32,
     stroke_sel: u32,
     covered: &mut HashSet<crate::NodeId>,
+    lod: Option<&NodeCardsLod<'_>>,
 ) -> Option<AnyElement> {
     match pass {
         GroupPaintPass::Static if drag_overlay.contains(&anchor) => return None,
@@ -525,11 +515,12 @@ fn render_group_anchor(
                 stroke,
                 stroke_sel,
                 covered,
+                lod,
             ) {
                 group = group.child(nested);
             }
         } else {
-            group = group.child(render_node_cards(ctx, &[child], "graph-child"));
+            group = group.child(render_node_cards(ctx, &[child], "graph-child", lod));
         }
     }
 

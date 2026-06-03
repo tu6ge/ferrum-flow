@@ -188,6 +188,7 @@ impl Interaction for NodeDragInteraction {
                     ctx,
                     &overlay_ids,
                     "draging-node-cards",
+                    None,
                 ))
             }
             NodeDragState::Pending { .. } => None,
