@@ -26,21 +26,19 @@ fn main() {
 
         let node_ids = graph.nodes().keys().copied().collect::<Vec<_>>();
 
-        generate_chain_edges(&mut graph, node_ids);
+        //generate_chain_edges(&mut graph, node_ids);
 
         cx.open_window(WindowOptions::default(), |window, cx| {
             cx.new(|ctx| {
                 FlowCanvas::builder(graph, ctx, window)
                     .plugin(BackgroundPlugin::new())
                     .plugin(SelectionPlugin::new())
-                    .plugin(NodeInteractionPlugin::new())
                     .plugin(ViewportPlugin::new())
-                    .plugin(NodePlugin::new())
-                    .plugin(PortInteractionPlugin::new())
-                    .plugin(EdgePlugin::new())
+                    .plugin(GraphPlugin::new())
+                    .plugin(NestedNodeDragPlugin::new())
                     .plugin(DeletePlugin::default())
                     .plugin(HistoryPlugin::new())
-                    .plugin(MinimapPlugin::new())
+                    //.plugin(MinimapPlugin::new())
                     .plugin(ClipboardPlugin::new())
                     .plugin(ContextMenuPlugin::new())
                     .plugin(SelectAllViewportPlugin::new())
