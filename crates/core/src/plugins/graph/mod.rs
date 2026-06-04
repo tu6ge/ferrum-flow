@@ -195,12 +195,11 @@ fn render_flat_graph(
     drag_overlay: &HashSet<crate::NodeId>,
     lod: Option<&NodeCardsLod<'_>>,
 ) -> Option<AnyElement> {
-    let paint_order = ctx.graph.paint_order();
-    let node_ids: Vec<_> = paint_order
-        .iter()
+    let node_ids: Vec<_> = ctx
+        .graph
+        .paint_order_iter()
         .filter(|id| ctx.is_node_visible(id))
         .filter(|id| !drag_overlay.contains(id))
-        .copied()
         .collect();
 
     let stroke = ctx.theme.edge_stroke;
