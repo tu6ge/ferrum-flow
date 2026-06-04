@@ -119,6 +119,61 @@ impl Iterator for DescendantsIter<'_> {
     }
 }
 
+/// Pre-order walk of one subtree from `root` (includes `root`); sibling order follows
+/// [`Graph::children_index`].
+pub struct PaintPreorderIter<'a> {
+    graph: &'a Graph,
+    stack: Vec<NodeId>,
+}
+
+impl<'a> PaintPreorderIter<'a> {
+    fn new(graph: &'a Graph, root: NodeId) -> Self {
+        Self {
+            graph,
+            stack: vec![root],
+        }
+    }
+}
+
+impl Iterator for PaintPreorderIter<'_> {
+    type Item = NodeId;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let id = self.stack.pop()?;
+        for &child in self.graph.children_of(id).iter().rev() {
+            self.stack.push(child);
+        }
+        Some(id)
+    }
+}
+
+/// Depth-first draw order from [`Graph::roots`] and [`Graph::children_index`].
+///
+/// Same sequence as [`Graph::paint_order`]: each node before its descendants; sibling order
+/// follows `children_index`.
+pub struct PaintOrderIter<'a> {
+    graph: &'a Graph,
+    roots: std::slice::Iter<'a, NodeId>,
+    subtree: Option<PaintPreorderIter<'a>>,
+}
+
+impl Iterator for PaintOrderIter<'_> {
+    type Item = NodeId;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            if self.subtree.is_none() {
+                let root = self.roots.next()?;
+                self.subtree = Some(PaintPreorderIter::new(self.graph, *root));
+            }
+            if let Some(id) = self.subtree.as_mut()?.next() {
+                return Some(id);
+            }
+            self.subtree = None;
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ParentDeletePolicy {
     /// Delete the parent node and all its children.
@@ -332,35 +387,16 @@ impl Graph {
     ///
     /// Each node appears before its descendants; among siblings, later entries in
     /// `children_index` (or `roots` for top-level nodes) are painted later (on top).
-    /// Nodes not reachable from `roots` are appended at the end in arbitrary order.
-    ///
-    /// TODO change to iterator
     pub fn paint_order(&self) -> Vec<NodeId> {
-        let mut out = Vec::with_capacity(self.nodes.len());
-        let mut seen = HashSet::new();
-        for &root in &self.roots {
-            self.collect_paint_preorder(root, &mut out, &mut seen);
-        }
-        for id in self.nodes.keys() {
-            if seen.insert(*id) {
-                out.push(*id);
-            }
-        }
-        out
+        self.paint_order_iter().collect()
     }
 
-    fn collect_paint_preorder(
-        &self,
-        id: NodeId,
-        out: &mut Vec<NodeId>,
-        seen: &mut HashSet<NodeId>,
-    ) {
-        if !seen.insert(id) {
-            return;
-        }
-        out.push(id);
-        for &child in self.children_of(id) {
-            self.collect_paint_preorder(child, out, seen);
+    /// Lazy version of [`Self::paint_order`].
+    pub fn paint_order_iter(&self) -> PaintOrderIter<'_> {
+        PaintOrderIter {
+            graph: self,
+            roots: self.roots.iter(),
+            subtree: None,
         }
     }
 
@@ -1173,6 +1209,106 @@ mod hierarchy_tests {
 
         assert_eq!(g.paint_order(), vec![a, b, c]);
         assert_eq!(g.paint_order().len(), g.nodes.len());
+    }
+
+    #[test]
+    fn paint_preorder_iter_single_node() {
+        let (g, a, _, _) = graph_with_nodes();
+        assert_eq!(PaintPreorderIter::new(&g, a).collect::<Vec<_>>(), vec![a]);
+    }
+
+    #[test]
+    fn paint_preorder_iter_nested_chain() {
+        let (mut g, a, b, c) = graph_with_nodes();
+        g.add_child(a, b).unwrap();
+        g.add_child(b, c).unwrap();
+
+        assert_eq!(
+            PaintPreorderIter::new(&g, a).collect::<Vec<_>>(),
+            vec![a, b, c]
+        );
+    }
+
+    #[test]
+    fn paint_preorder_iter_from_interior_node() {
+        let (mut g, a, b, c) = graph_with_nodes();
+        g.add_child(a, b).unwrap();
+        g.add_child(b, c).unwrap();
+
+        assert_eq!(PaintPreorderIter::new(&g, b).collect::<Vec<_>>(), vec![b, c]);
+        assert_eq!(PaintPreorderIter::new(&g, c).collect::<Vec<_>>(), vec![c]);
+    }
+
+    #[test]
+    fn paint_preorder_iter_respects_children_index() {
+        let (mut g, a, b, c) = graph_with_nodes();
+        g.add_child(a, b).unwrap();
+        g.add_child(a, c).unwrap();
+
+        assert_eq!(
+            PaintPreorderIter::new(&g, a).collect::<Vec<_>>(),
+            vec![a, b, c]
+        );
+
+        if let Some(children) = g.children_index.get_mut(&a) {
+            children.swap(0, 1);
+        }
+        assert_eq!(
+            PaintPreorderIter::new(&g, a).collect::<Vec<_>>(),
+            vec![a, c, b]
+        );
+    }
+
+    #[test]
+    fn paint_preorder_iter_stops_at_subtree_boundary() {
+        let (mut g, a, b, c) = graph_with_nodes();
+        g.add_child(a, b).unwrap();
+
+        let order: Vec<_> = PaintPreorderIter::new(&g, a).collect();
+        assert_eq!(order, vec![a, b]);
+        assert!(!order.contains(&c));
+    }
+
+    #[test]
+    fn paint_order_iter_matches_paint_order() {
+        let (mut g, a, b, c) = graph_with_nodes();
+        g.add_child(a, b).unwrap();
+        g.add_child(b, c).unwrap();
+
+        assert_eq!(g.paint_order_iter().collect::<Vec<_>>(), g.paint_order());
+        assert_eq!(g.paint_order_iter().collect::<Vec<_>>(), vec![a, b, c]);
+    }
+
+    #[test]
+    fn paint_order_iter_lazy_next() {
+        let (g, a, b, c) = graph_with_nodes();
+        let mut iter = g.paint_order_iter();
+        assert_eq!(iter.next(), Some(a));
+        assert_eq!(iter.next(), Some(b));
+        assert_eq!(iter.next(), Some(c));
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn paint_order_iter_walks_root_forests_in_roots_order() {
+        let (mut g, a, b, c) = graph_with_nodes();
+        g.add_child(a, b).unwrap();
+        g.bring_sibling_to_front(a);
+
+        assert_eq!(g.roots(), &[c, a]);
+        assert_eq!(
+            g.paint_order_iter().collect::<Vec<_>>(),
+            vec![c, a, b]
+        );
+    }
+
+    #[test]
+    fn paint_order_iter_visits_every_node_in_hierarchy() {
+        let (mut g, a, b, c) = graph_with_nodes();
+        g.add_child(a, b).unwrap();
+        g.add_child(b, c).unwrap();
+
+        assert_eq!(g.paint_order_iter().count(), g.nodes.len());
     }
 
     #[test]
