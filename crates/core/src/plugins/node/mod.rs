@@ -56,28 +56,33 @@ pub(super) fn render_node_cards(
     id: &'static str,
     lod: Option<&NodeCardsLod<'_>>,
 ) -> gpui::AnyElement {
-    let full_detail_ids: Vec<_> = node_ids
-        .iter()
-        .filter(|node_id| node_render_lod(ctx, node_id, lod) == NodeRenderLod::Full)
-        .copied()
-        .collect();
-    if !full_detail_ids.is_empty() {
-        ctx.cache_port_offset_with_nodes(&full_detail_ids);
-    }
+    render_node_cards_iter(ctx, node_ids.iter().copied(), id, lod)
+}
 
-    let list = node_ids.iter().filter_map(|node_id| {
-        let node = ctx.graph.nodes().get(node_id)?;
-        match node_render_lod(ctx, node_id, lod) {
+/// Lazy-input version of [`render_node_cards`].
+pub(super) fn render_node_cards_iter<I>(
+    ctx: &mut RenderContext,
+    node_ids: I,
+    id: &'static str,
+    lod: Option<&NodeCardsLod<'_>>,
+) -> gpui::AnyElement
+where
+    I: IntoIterator<Item = crate::NodeId>,
+{
+    let list = node_ids.into_iter().filter_map(|node_id| {
+        let node = ctx.graph.nodes().get(&node_id)?;
+        match node_render_lod(ctx, &node_id, lod) {
             NodeRenderLod::ShellOnly => Some(
                 div()
                     .id(ElementId::Uuid(*node_id.as_uuid()))
                     .child(render_degraded_node_shell(ctx, node)),
             ),
             NodeRenderLod::Full => {
+                ctx.cache_port_offset_with_nodes(&[node_id]);
                 let render = ctx.renderers.get(node.renderer_key());
                 let node_render = render.render(node, ctx);
 
-                let port_ids: Vec<crate::PortId> = ctx.cached_port_ids_for_node(node_id).collect();
+                let port_ids: Vec<crate::PortId> = ctx.cached_port_ids_for_node(&node_id).collect();
                 let ports = port_ids.iter().filter_map(|port_id| {
                     let port = ctx.graph.get_port(port_id)?;
                     render.port_render(node, port, ctx)
