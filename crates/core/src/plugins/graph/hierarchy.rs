@@ -14,9 +14,7 @@ pub(super) trait GraphHierarchy {
 
 impl GraphHierarchy for Graph {
     fn has_node_hierarchy(&self) -> bool {
-        self.nodes()
-            .values()
-            .any(|n| n.parent().is_some() || !n.children().is_empty())
+        self.roots().len() != self.nodes().len()
     }
 
     fn is_top_level_group_anchor(&self, id: NodeId) -> bool {
