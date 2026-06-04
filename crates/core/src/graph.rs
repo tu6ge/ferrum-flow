@@ -99,26 +99,6 @@ impl Iterator for AncestorsIter<'_> {
     }
 }
 
-/// Depth-first walk of all descendants (excludes the start node).
-struct DescendantsIter<'a> {
-    graph: &'a Graph,
-    stack: Vec<NodeId>,
-}
-
-impl Iterator for DescendantsIter<'_> {
-    type Item = NodeId;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let id = self.stack.pop()?;
-        if let Some(node) = self.graph.nodes.get(&id) {
-            for &child in node.children().iter().rev() {
-                self.stack.push(child);
-            }
-        }
-        Some(id)
-    }
-}
-
 /// Pre-order walk of one subtree from `root` (includes `root`); sibling order follows
 /// [`Graph::children_index`].
 pub struct PaintPreorderIter<'a> {
@@ -876,13 +856,10 @@ impl Graph {
     }
 
     pub fn descendants(&self, node: NodeId) -> impl Iterator<Item = NodeId> + '_ {
-        let mut stack = Vec::new();
-        if let Some(n) = self.nodes.get(&node) {
-            for &child in n.children().iter().rev() {
-                stack.push(child);
-            }
-        }
-        DescendantsIter { graph: self, stack }
+        (self.nodes.contains_key(&node))
+            .then(|| PaintPreorderIter::new(self, node))
+            .into_iter()
+            .flat_map(|it| it.skip(1))
     }
 
     pub fn is_ancestor(&self, ancestor: NodeId, target: NodeId) -> bool {
