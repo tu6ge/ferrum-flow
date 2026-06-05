@@ -109,7 +109,7 @@ Current mapping snapshot (as of this README update):
 
 ### Roadmap
 
-- [ ] Nested parent–child nodes
+- [x] Nested parent–child nodes
 - [ ] Combine [petgraph](https://crates.io/crates/petgraph)
 - [ ] Graph Data Model and Graph Trait Abstraction
 
