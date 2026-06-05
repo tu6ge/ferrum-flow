@@ -1,7 +1,8 @@
 use gpui::{Bounds, KeyDownEvent, Pixels, Point};
 
 use crate::{
-    Edge, Graph, GraphChangeKind, NodeId, ParentDeletePolicy, Viewport, canvas::PortLayoutCache,
+    Edge, Graph, GraphChangeKind, Node, NodeId, ParentDeletePolicy, Viewport,
+    canvas::PortLayoutCache,
 };
 
 /// [`gpui::canvas`] paint callbacks use **window** space for [`gpui::Window::paint_path`], while
@@ -68,6 +69,14 @@ pub fn primary_platform_modifier(ev: &KeyDownEvent) -> bool {
 
 pub fn is_node_visible(graph: &Graph, viewport: &Viewport, node_id: &NodeId) -> bool {
     let Some(bounds) = graph.node_world_bounds(*node_id) else {
+        return false;
+    };
+
+    viewport.is_world_bounds_visible(&bounds)
+}
+
+pub fn is_node_visible_with_node(graph: &Graph, viewport: &Viewport, node: &Node) -> bool {
+    let Some(bounds) = graph.node_world_bounds_with_node(node) else {
         return false;
     };
 

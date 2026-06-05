@@ -13,6 +13,7 @@ use crate::{
     canvas::{
         Command, CommandContext, HistoryProvider, Interaction, InteractionState, PortLayoutCache,
     },
+    plugin::utils::is_node_visible_with_node,
     port_screen::PortScreenFrame,
 };
 
@@ -1093,7 +1094,7 @@ impl<'a> RenderContext<'a> {
         is_node_visible(self.graph, self.viewport, node_id)
     }
     pub fn is_node_visible_node(&self, node: &Node) -> bool {
-        is_node_visible(self.graph, self.viewport, &node.id())
+        is_node_visible_with_node(self.graph, self.viewport, node)
     }
 
     pub fn is_edge_visible(&self, edge: &Edge) -> bool {

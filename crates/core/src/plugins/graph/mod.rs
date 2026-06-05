@@ -202,10 +202,10 @@ fn render_flat_graph(
 
     let mut layer = div().id("graph-layer").absolute().size_full().child({
         let list = ctx.graph.paint_order_iter().filter_map(|node_id| {
-            if !ctx.is_node_visible(&node_id) || drag_overlay.contains(&node_id) {
+            let node = ctx.graph.nodes().get(&node_id)?;
+            if !ctx.is_node_visible_node(node) || drag_overlay.contains(&node_id) {
                 return None;
             }
-            let node = ctx.graph.nodes().get(&node_id)?;
             Some(render_node_card(ctx, node_id, node, lod))
         });
         div().children(list).into_any()

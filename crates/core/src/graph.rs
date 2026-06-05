@@ -408,6 +408,11 @@ impl Graph {
         Some(Bounds::new(origin, *node.size_ref()))
     }
 
+    pub fn node_world_bounds_with_node(&self, node: &Node) -> Option<Bounds<Pixels>> {
+        let origin = self.node_world_point_with_node(node)?;
+        Some(Bounds::new(origin, *node.size_ref()))
+    }
+
     /// World-space port anchor: [`Self::node_world_point`] + `local_offset` from [`NodeRenderer::port_offset`].
     pub fn port_world_point(
         &self,
@@ -1212,7 +1217,10 @@ mod hierarchy_tests {
         g.add_child(a, b).unwrap();
         g.add_child(b, c).unwrap();
 
-        assert_eq!(PaintPreorderIter::new(&g, b).collect::<Vec<_>>(), vec![b, c]);
+        assert_eq!(
+            PaintPreorderIter::new(&g, b).collect::<Vec<_>>(),
+            vec![b, c]
+        );
         assert_eq!(PaintPreorderIter::new(&g, c).collect::<Vec<_>>(), vec![c]);
     }
 
@@ -1273,10 +1281,7 @@ mod hierarchy_tests {
         g.bring_sibling_to_front(a);
 
         assert_eq!(g.roots(), &[c, a]);
-        assert_eq!(
-            g.paint_order_iter().collect::<Vec<_>>(),
-            vec![c, a, b]
-        );
+        assert_eq!(g.paint_order_iter().collect::<Vec<_>>(), vec![c, a, b]);
     }
 
     #[test]
