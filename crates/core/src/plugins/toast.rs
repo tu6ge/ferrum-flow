@@ -7,7 +7,7 @@ use gpui::{Element as _, ParentElement as _, Styled as _, div, px, rgb};
 
 use crate::{
     FlowTheme,
-    plugin::{FlowEvent, Plugin, PluginContext, RenderContext},
+    plugin::{CanvasMessage, FlowEvent, MessageLevel, Plugin, PluginContext, RenderContext},
 };
 
 const DEFAULT_TOAST_DURATION: Duration = Duration::from_millis(3000);
@@ -21,11 +21,34 @@ pub enum ToastLevel {
     Error,
 }
 
+impl From<MessageLevel> for ToastLevel {
+    fn from(level: MessageLevel) -> Self {
+        match level {
+            MessageLevel::Error => ToastLevel::Error,
+            MessageLevel::Warning => ToastLevel::Warning,
+            MessageLevel::Info => ToastLevel::Info,
+            MessageLevel::Success => ToastLevel::Success,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct ToastMessage {
+    #[allow(unused)]
     text: String,
+    #[allow(unused)]
     level: ToastLevel,
     duration: Duration,
+}
+
+impl From<CanvasMessage> for ToastMessage {
+    fn from(message: CanvasMessage) -> Self {
+        Self {
+            text: message.message().into(),
+            level: message.level().into(),
+            duration: DEFAULT_TOAST_DURATION,
+        }
+    }
 }
 
 impl ToastMessage {
@@ -62,12 +85,14 @@ impl ToastMessage {
 #[derive(Debug, Clone)]
 struct ToastItem {
     text: String,
-    level: ToastLevel,
+    level: MessageLevel,
     expires_at: Instant,
 }
 
 pub struct ToastPlugin {
     queue: VecDeque<ToastItem>,
+    duration: Duration,
+    max_toasts: usize,
 }
 
 impl Default for ToastPlugin {
@@ -80,7 +105,19 @@ impl ToastPlugin {
     pub fn new() -> Self {
         Self {
             queue: VecDeque::new(),
+            duration: DEFAULT_TOAST_DURATION,
+            max_toasts: MAX_TOASTS,
         }
+    }
+
+    pub fn with_duration(mut self, duration: Duration) -> Self {
+        self.duration = duration;
+        self
+    }
+
+    pub fn with_max(mut self, max_toasts: usize) -> Self {
+        self.max_toasts = max_toasts;
+        self
     }
 
     fn gc_expired(&mut self) {
@@ -88,24 +125,24 @@ impl ToastPlugin {
         self.queue.retain(|item| item.expires_at > now);
     }
 
-    fn push(&mut self, msg: ToastMessage) {
+    fn push(&mut self, msg: &CanvasMessage) {
         self.gc_expired();
         self.queue.push_back(ToastItem {
-            text: msg.text,
-            level: msg.level,
-            expires_at: Instant::now() + msg.duration,
+            text: msg.message().into(),
+            level: msg.level(),
+            expires_at: Instant::now() + self.duration,
         });
-        while self.queue.len() > MAX_TOASTS {
+        while self.queue.len() > self.max_toasts {
             let _ = self.queue.pop_front();
         }
     }
 
-    fn bg_color(level: ToastLevel, theme: &FlowTheme) -> u32 {
+    fn bg_color(level: MessageLevel, theme: &FlowTheme) -> u32 {
         match level {
-            ToastLevel::Info => theme.info,
-            ToastLevel::Success => theme.success,
-            ToastLevel::Warning => theme.warning,
-            ToastLevel::Error => theme.error,
+            MessageLevel::Info => theme.info,
+            MessageLevel::Success => theme.success,
+            MessageLevel::Warning => theme.warning,
+            MessageLevel::Error => theme.error,
         }
     }
 }
@@ -121,10 +158,9 @@ impl Plugin for ToastPlugin {
         ctx: &mut PluginContext,
     ) -> crate::plugin::EventResult {
         self.gc_expired();
-        if let Some(msg) = event.as_custom::<ToastMessage>() {
-            let duration = msg.duration;
-            self.push(msg.clone());
-            ctx.schedule_after(duration);
+        if let FlowEvent::Message(msg) = event {
+            ctx.schedule_after(self.duration);
+            self.push(msg);
             ctx.notify();
         }
         crate::plugin::EventResult::Continue

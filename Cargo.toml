@@ -24,3 +24,4 @@ serde = { version = "1" }
 image = { version = "0.25.1", default-features = false, features = [] }
 # used by background plugin in core crate
 smallvec = "1.15"
+log = "0.4"

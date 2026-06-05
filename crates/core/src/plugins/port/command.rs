@@ -1,4 +1,4 @@
-use crate::{Edge, GraphOp, Node, Port, canvas::Command};
+use crate::{Edge, Graph, GraphError, GraphOp, Node, NodeId, Port, canvas::Command};
 
 pub struct CreateEdge {
     edge: Edge,
@@ -50,7 +50,7 @@ impl Command for CreateNode {
         ]
     }
     fn undo(&mut self, ctx: &mut crate::canvas::CommandContext) {
-        ctx.remove_node(&self.node.id());
+        ctx.remove_node_cascade(&self.node.id());
     }
 }
 
@@ -79,6 +79,68 @@ impl Command for CreatePort {
         let node_id = self.port.node_id();
         ctx.remove_port(&self.port.id());
         ctx.port_offset_cache.clear_node(&node_id);
+    }
+}
+
+/// Link an existing node under `parent` (after [`CreateNode`]).
+pub struct AttachChildCommand {
+    parent: NodeId,
+    child: NodeId,
+}
+
+/// Same preconditions as [`Graph::add_child`] (excluding the no-op “already linked” case).
+pub fn validate_attach_child(
+    graph: &Graph,
+    parent: NodeId,
+    child: NodeId,
+) -> Result<(), GraphError> {
+    graph.ensure_node(parent)?;
+    graph.ensure_node(child)?;
+    if parent == child {
+        return Err(GraphError::SelfReference { node: parent });
+    }
+    if graph.is_ancestor(child, parent) {
+        return Err(GraphError::WouldCreateCycle { parent, child });
+    }
+    Ok(())
+}
+
+impl AttachChildCommand {
+    /// Validates against `graph` so [`Command::execute`] can call [`Graph::add_child`] without
+    /// handling [`GraphError`] (call right after the child node exists in `graph`).
+    pub fn new(graph: &Graph, parent: NodeId, child: NodeId) -> Result<Self, GraphError> {
+        validate_attach_child(graph, parent, child)?;
+        Ok(Self::link(parent, child))
+    }
+
+    /// Parent and child must already exist when this command runs (e.g. earlier steps in a
+    /// [`CompositeCommand`](crate::CompositeCommand)).
+    pub fn link(parent: NodeId, child: NodeId) -> Self {
+        Self { parent, child }
+    }
+}
+
+impl Command for AttachChildCommand {
+    fn name(&self) -> &'static str {
+        "attach_child"
+    }
+    fn execute(&mut self, ctx: &mut crate::canvas::CommandContext) {
+        ctx.graph
+            .add_child(self.parent, self.child)
+            .unwrap_or_else(|e| {
+                log::error!("Failed to attach child: {}", e);
+            });
+        ctx.port_offset_cache.clear_node(&self.child);
+    }
+    fn undo(&mut self, ctx: &mut crate::canvas::CommandContext) {
+        ctx.graph.remove_child(self.parent, self.child);
+        ctx.port_offset_cache.clear_node(&self.child);
+    }
+    fn to_ops(&self, _ctx: &mut crate::canvas::CommandContext) -> Vec<GraphOp> {
+        vec![GraphOp::PushChildNode {
+            id: self.parent,
+            child_id: self.child,
+        }]
     }
 }
 

@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use gpui::{Bounds, Element, MouseButton, PathBuilder, Pixels, Point, canvas, px, rgb};
 
 use crate::{
-    Edge, EdgeId, RenderContext,
+    Edge, EdgeId, EventResult, RenderContext,
     plugin::{FlowEvent, Plugin, PluginContext, utils::canvas_paint_point},
     plugins::edge::command::ClearEdgeCommand,
 };
@@ -30,25 +30,14 @@ impl Plugin for EdgePlugin {
     fn name(&self) -> &'static str {
         "edge"
     }
-    fn on_event(
-        &mut self,
-        event: &FlowEvent,
-        ctx: &mut crate::plugin::PluginContext,
-    ) -> crate::plugin::EventResult {
+    fn on_event(&mut self, event: &FlowEvent, ctx: &mut PluginContext) -> EventResult {
         if let FlowEvent::Input(crate::plugin::InputEvent::MouseDown(ev)) = event {
             if ev.button != MouseButton::Left {
-                return crate::plugin::EventResult::Continue;
+                return EventResult::Continue;
             }
-            let shift = ev.modifiers.shift;
-            if let Some(id) = hit_test_get_edge(ev.position, ctx) {
-                ctx.cache_port_offset_with_edge(&id);
-                ctx.execute_command(SelectEdgeCommand::new(id, shift, ctx));
-                return crate::plugin::EventResult::Stop;
-            } else if !shift {
-                ctx.execute_command(ClearEdgeCommand::new(ctx));
-            }
+            return handle_edge_mouse_down(ev.position, ev.modifiers.shift, ctx);
         }
-        crate::plugin::EventResult::Continue
+        EventResult::Continue
     }
     fn priority(&self) -> i32 {
         120
@@ -85,6 +74,10 @@ impl Plugin for EdgePlugin {
             })
             .collect();
 
+        if visible_edges.is_empty() {
+            return None;
+        }
+
         for (_, edge) in &visible_edges {
             ctx.cache_port_offset_with_edge(&edge.id);
         }
@@ -94,39 +87,49 @@ impl Plugin for EdgePlugin {
             .map(|(id, edge)| (*id, edge_geometry2(edge, ctx)))
             .collect();
 
-        let selected_edges = ctx.graph.selected_edge().clone();
-        let stroke = ctx.theme.edge_stroke;
-        let stroke_sel = ctx.theme.edge_stroke_selected;
-
-        Some(
-            canvas(
-                move |_, _, _| (edges, selected_edges, stroke, stroke_sel),
-                move |bounds, (edges, selected_edges, stroke, stroke_sel), win, _| {
-                    for (id, geometry) in edges.iter() {
-                        let Some(EdgeGeometry { start, c1, c2, end }) = geometry.as_ref() else {
-                            continue;
-                        };
-                        let start = canvas_paint_point(bounds, *start);
-                        let c1 = canvas_paint_point(bounds, *c1);
-                        let c2 = canvas_paint_point(bounds, *c2);
-                        let end = canvas_paint_point(bounds, *end);
-                        let mut line = PathBuilder::stroke(px(1.0));
-                        line.move_to(start);
-                        line.cubic_bezier_to(end, c1, c2);
-
-                        let selected = selected_edges.iter().any(|i| *i == *id);
-
-                        if let Ok(line) = line.build() {
-                            win.paint_path(line, rgb(if selected { stroke_sel } else { stroke }));
-                        }
-                    }
-                },
-            )
-            .into_any(),
-        )
+        Some(edges_canvas_element(
+            edges,
+            ctx.graph.selected_edge().clone(),
+            ctx.theme.edge_stroke,
+            ctx.theme.edge_stroke_selected,
+        ))
     }
 }
 
+/// Shared edge canvas used by [`EdgePlugin`] and [`crate::plugins::GraphPlugin`].
+pub(crate) fn edges_canvas_element(
+    edges: Vec<(EdgeId, Option<EdgeGeometry>)>,
+    selected_edges: HashSet<EdgeId>,
+    stroke: u32,
+    stroke_sel: u32,
+) -> gpui::AnyElement {
+    canvas(
+        move |_, _, _| (edges, selected_edges, stroke, stroke_sel),
+        move |bounds, (edges, selected_edges, stroke, stroke_sel), win, _| {
+            for (id, geometry) in edges.iter() {
+                let Some(EdgeGeometry { start, c1, c2, end }) = geometry.as_ref() else {
+                    continue;
+                };
+                let start = canvas_paint_point(bounds, *start);
+                let c1 = canvas_paint_point(bounds, *c1);
+                let c2 = canvas_paint_point(bounds, *c2);
+                let end = canvas_paint_point(bounds, *end);
+                let mut line = PathBuilder::stroke(px(1.0));
+                line.move_to(start);
+                line.cubic_bezier_to(end, c1, c2);
+
+                let selected = selected_edges.contains(id);
+
+                if let Ok(line) = line.build() {
+                    win.paint_path(line, rgb(if selected { stroke_sel } else { stroke }));
+                }
+            }
+        },
+    )
+    .into_any()
+}
+
+#[derive(Debug, Clone)]
 pub struct EdgeGeometry {
     pub start: Point<Pixels>,
     pub c1: Point<Pixels>,
@@ -153,7 +156,7 @@ fn edge_geometry(edge: &Edge, ctx: &PluginContext) -> Option<EdgeGeometry> {
     Some(EdgeGeometry { start, c1, c2, end })
 }
 
-fn edge_geometry2(edge: &Edge, ctx: &RenderContext) -> Option<EdgeGeometry> {
+pub(crate) fn edge_geometry2(edge: &Edge, ctx: &RenderContext) -> Option<EdgeGeometry> {
     let Edge {
         source_port: source_id,
         target_port: target_id,
@@ -170,6 +173,29 @@ fn edge_geometry2(edge: &Edge, ctx: &RenderContext) -> Option<EdgeGeometry> {
     let c2 = ctx.edge_control_point(end, target_port.position());
 
     Some(EdgeGeometry { start, c1, c2, end })
+}
+
+/// Canvas-local pointer hits a visible edge curve (used before node drag in nested graphs).
+pub(crate) fn edge_hit_at(mouse: Point<Pixels>, ctx: &PluginContext) -> Option<EdgeId> {
+    hit_test_get_edge(mouse, ctx)
+}
+
+/// Left-click edge select / clear ([`EdgePlugin`] and [`crate::plugins::GraphPlugin`]).
+pub(crate) fn handle_edge_mouse_down(
+    position: Point<Pixels>,
+    shift: bool,
+    ctx: &mut PluginContext,
+) -> EventResult {
+    if let Some(id) = hit_test_get_edge(position, ctx) {
+        ctx.cache_port_offset_with_edge(&id);
+        ctx.execute_command(SelectEdgeCommand::new(id, shift, ctx));
+        EventResult::Stop
+    } else if !shift {
+        ctx.execute_command(ClearEdgeCommand::new(ctx));
+        EventResult::Continue
+    } else {
+        EventResult::Continue
+    }
 }
 
 fn hit_test_get_edge(mouse: Point<Pixels>, ctx: &PluginContext) -> Option<EdgeId> {

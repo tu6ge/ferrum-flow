@@ -54,6 +54,11 @@ pub struct Node {
     inputs: Vec<PortId>,
     outputs: Vec<PortId>,
     data: serde_json::Value,
+
+    parent: Option<NodeId>,
+    /// Child ids for hierarchy membership only; **sibling z-order** lives on
+    /// [`Graph::children_index`](crate::graph::Graph::children_index).
+    children: Vec<NodeId>,
 }
 
 impl Node {
@@ -71,6 +76,9 @@ impl Node {
             inputs: vec![],
             outputs: vec![],
             data: json!({}),
+
+            parent: None,
+            children: vec![],
         }
     }
 
@@ -102,6 +110,7 @@ impl Node {
         (self.x, self.y)
     }
 
+    #[deprecated(since = "0.1.0", note = "Use `point` instead")]
     pub fn position_point(&self) -> Point<Pixels> {
         Point::new(self.x, self.y)
     }
@@ -187,6 +196,35 @@ impl Node {
         self.inputs.push(id);
         self
     }
+
+    pub fn parent(&self) -> Option<NodeId> {
+        self.parent
+    }
+
+    pub fn children(&self) -> &[NodeId] {
+        &self.children
+    }
+
+    pub(super) fn set_parent(&mut self, parent: Option<NodeId>) {
+        self.parent = parent;
+    }
+
+    pub(super) fn push_child(&mut self, child: NodeId) {
+        if !self.children.contains(&child) {
+            self.children.push(child);
+        }
+    }
+
+    pub(super) fn remove_child_ref(&mut self, child: NodeId) {
+        self.children
+            .iter()
+            .position(|id| *id == child)
+            .map(|index| self.children.remove(index));
+    }
+
+    pub(super) fn clear_children(&mut self) {
+        self.children.clear();
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -248,6 +286,15 @@ pub enum PortType {
     Union(Vec<PortType>),
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum PortScope {
+    /// The port is only allowed to connect to ports on nodes with the same direct parent (siblings).
+    #[default]
+    Local,
+    /// The port is allowed to connect to ports within any level of the node hierarchy.
+    Boundary,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Port {
     id: PortId,
@@ -257,6 +304,7 @@ pub struct Port {
     position: PortPosition,
     size: Size<Pixels>,
     port_type: PortType,
+    scope: PortScope,
 }
 
 impl Port {
@@ -278,6 +326,7 @@ impl Port {
             position,
             size,
             port_type,
+            scope: PortScope::default(),
         }
     }
 
@@ -307,6 +356,14 @@ impl Port {
 
     pub fn port_type_ref(&self) -> &PortType {
         &self.port_type
+    }
+
+    pub fn scope(&self) -> PortScope {
+        self.scope
+    }
+
+    pub fn set_scope(&mut self, scope: PortScope) {
+        self.scope = scope;
     }
 
     pub fn port_type_mut(&mut self) -> &mut PortType {
@@ -389,6 +446,7 @@ pub struct PortSpec {
     position: PortPosition,
     size: Size<Pixels>,
     port_type: PortType,
+    scope: PortScope,
 }
 
 impl PortSpec {
@@ -397,6 +455,7 @@ impl PortSpec {
             position,
             size: DEFAULT_PORT_SIZE,
             port_type: PortType::Any,
+            scope: PortScope::default(),
         }
     }
 
@@ -405,6 +464,7 @@ impl PortSpec {
             position,
             size: DEFAULT_PORT_SIZE,
             port_type: PortType::Any,
+            scope: PortScope::default(),
         }
     }
 
@@ -415,6 +475,11 @@ impl PortSpec {
 
     pub fn with_type(mut self, port_type: PortType) -> Self {
         self.port_type = port_type;
+        self
+    }
+
+    pub fn with_scope(mut self, scope: PortScope) -> Self {
+        self.scope = scope;
         self
     }
 }
@@ -617,6 +682,8 @@ impl<'a, G> NodeBuilder<'a, G> {
             inputs: input_ids,
             outputs: output_ids,
             data: self.data,
+            parent: None,
+            children: vec![],
         }
     }
 
@@ -645,6 +712,7 @@ impl<'a, G> NodeBuilder<'a, G> {
                 position: spec.position,
                 size: spec.size,
                 port_type: spec.port_type,
+                scope: spec.scope,
             });
 
             inputs.push(port_id);
@@ -668,6 +736,7 @@ impl<'a, G> NodeBuilder<'a, G> {
                 position: spec.position,
                 size: spec.size,
                 port_type: spec.port_type,
+                scope: spec.scope,
             });
 
             outputs.push(port_id);
@@ -684,6 +753,8 @@ impl<'a, G> NodeBuilder<'a, G> {
                 inputs,
                 outputs,
                 data: self.data,
+                parent: None,
+                children: vec![],
             },
             ports,
             self.graph,

@@ -1,6 +1,9 @@
 use gpui::{Bounds, KeyDownEvent, Pixels, Point};
 
-use crate::{Edge, Graph, GraphChangeKind, NodeId, Viewport, canvas::PortLayoutCache};
+use crate::{
+    Edge, Graph, GraphChangeKind, Node, NodeId, ParentDeletePolicy, Viewport,
+    canvas::PortLayoutCache,
+};
 
 /// [`gpui::canvas`] paint callbacks use **window** space for [`gpui::Window::paint_path`], while
 /// graph helpers ([`crate::RenderContext::world_to_screen`], port centers, etc.) use **canvas-local**
@@ -20,9 +23,17 @@ pub fn invalidate_port_layout_cache_for_graph_change(
     kind: &GraphChangeKind,
 ) {
     match kind {
-        GraphChangeKind::NodeRemoved { id } => cache.clear_node(id),
         GraphChangeKind::NodeAdded(node) => cache.clear_node(&node.id()),
-        GraphChangeKind::NodeSetWidthed { id, .. }
+        GraphChangeKind::NodeRemovedWithPolicy { id, policy } => match policy {
+            ParentDeletePolicy::Cascade => cache.clear_node_cascade(id, graph),
+            ParentDeletePolicy::Promote => cache.clear_node(id),
+        },
+        // delete default with promote policy
+        GraphChangeKind::NodeRemoved { id }
+        | GraphChangeKind::NodeParentChanged { id, .. }
+        | GraphChangeKind::NodePushedChild { id, .. }
+        | GraphChangeKind::NodePoppedChild { id, .. }
+        | GraphChangeKind::NodeSetWidthed { id, .. }
         | GraphChangeKind::NodeSetHeighted { id, .. }
         | GraphChangeKind::NodeDataUpdated { id, .. } => cache.clear_node(id),
         GraphChangeKind::PortAdded(port) => cache.clear_node(&port.node_id()),
@@ -57,11 +68,19 @@ pub fn primary_platform_modifier(ev: &KeyDownEvent) -> bool {
 }
 
 pub fn is_node_visible(graph: &Graph, viewport: &Viewport, node_id: &NodeId) -> bool {
-    let Some(node) = graph.get_node(node_id) else {
+    let Some(bounds) = graph.node_world_bounds(*node_id) else {
         return false;
     };
 
-    viewport.is_node_visible(node)
+    viewport.is_world_bounds_visible(&bounds)
+}
+
+pub fn is_node_visible_with_node(graph: &Graph, viewport: &Viewport, node: &Node) -> bool {
+    let Some(bounds) = graph.node_world_bounds_with_node(node) else {
+        return false;
+    };
+
+    viewport.is_world_bounds_visible(&bounds)
 }
 
 pub fn is_edge_visible(graph: &Graph, viewport: &Viewport, edge: &Edge) -> bool {
@@ -81,15 +100,8 @@ pub fn is_edge_visible(graph: &Graph, viewport: &Viewport, edge: &Edge) -> bool 
     };
     let n2 = port.node_id();
 
-    let node1_visible = graph
-        .get_node(&n1)
-        .map(|n| viewport.is_node_visible(n))
-        .unwrap_or(false);
-
-    let node2_visible = graph
-        .get_node(&n2)
-        .map(|n| viewport.is_node_visible(n))
-        .unwrap_or(false);
+    let node1_visible = is_node_visible(graph, viewport, &n1);
+    let node2_visible = is_node_visible(graph, viewport, &n2);
 
     node1_visible || node2_visible
 }

@@ -27,7 +27,7 @@ fn generate_fullscreen_bitmap(
     start_y: f32,
     bg_color: u32,
     dot_color: u32,
-) -> Arc<RenderImage> {
+) -> Option<Arc<RenderImage>> {
     let w = width as usize;
     let h = height as usize;
 
@@ -79,8 +79,8 @@ fn generate_fullscreen_bitmap(
         chunk.swap(0, 2);
     }
 
-    let img = RgbaImage::from_raw(width, height, data).unwrap();
-    Arc::new(RenderImage::new(smallvec![Frame::new(img)]))
+    let img = RgbaImage::from_raw(width, height, data)?;
+    Some(Arc::new(RenderImage::new(smallvec![Frame::new(img)])))
 }
 
 pub struct BackgroundPlugin {
@@ -138,7 +138,7 @@ impl BackgroundPlugin {
         }
 
         self.bitmap_key = Some(key);
-        self.bitmap = Some(generate_fullscreen_bitmap(
+        self.bitmap = generate_fullscreen_bitmap(
             width,
             height,
             grid,
@@ -146,7 +146,7 @@ impl BackgroundPlugin {
             oy_mod,
             ctx.theme.background,
             ctx.theme.background_grid_dot,
-        ));
+        );
     }
 }
 

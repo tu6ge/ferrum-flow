@@ -3,13 +3,18 @@ use std::{collections::HashSet, sync::Arc};
 use gpui::{Bounds, Element, MouseButton, Pixels, Point, canvas, px, rgb};
 
 use crate::{
-    DefaultEdgeValidator, EdgeValidator, Graph, PortId, PortKind, PortPosition, ToastMessage,
+    CompositeCommand, DefaultEdgeValidator, EdgeValidator, Graph, NodeId, Port, PortId, PortKind,
+    PortPosition, PortScope,
     canvas::Interaction,
-    plugin::{FlowEvent, InputEvent, Plugin, RenderContext, utils::canvas_paint_point},
+    plugin::{
+        FlowEvent, InputEvent, Plugin, PluginContext, RenderContext, utils::canvas_paint_point,
+    },
     plugins::port::{edge_bezier, filled_disc_path, port_screen_big_bounds, port_screen_bounds},
 };
 
-use super::command::CreateEdge;
+use super::command::{
+    AttachChildCommand, CreateEdge, CreateNode, CreatePort, validate_attach_child,
+};
 
 /// Dangling link from a port to a world-space endpoint (shown with a dot until the user clicks it).
 #[derive(Clone, Copy)]
@@ -82,7 +87,7 @@ impl PortInteractionPlugin {
             PortKind::Input => builder.output(),
         };
 
-        let (mut new_node, new_ports, _) = builder.build_raw();
+        let (mut new_node, mut new_ports, _) = builder.build_raw();
 
         let Some(connect_port) = (match source.kind() {
             PortKind::Output => new_ports.iter().find(|p| p.kind() == PortKind::Input),
@@ -97,10 +102,26 @@ impl PortInteractionPlugin {
             scratch.add_port(port.clone());
         }
         let offset = ctx.port_world_offset_relative(&scratch, &new_node, connect_port);
-        new_node.set_position_with_point(Point::new(
-            p.end_world.x - offset.x,
-            p.end_world.y - offset.y,
-        ));
+        let (node_local, attach_parent) =
+            Self::pending_link_node_placement(ctx, &source, p.end_world, offset);
+
+        if attach_parent.is_none() {
+            let source_had_parent = ctx
+                .graph
+                .get_node(&source.node_id())
+                .and_then(|n| n.parent())
+                .is_some();
+            if source_had_parent {
+                let connect_id = connect_port.id();
+                for port in &mut new_ports {
+                    if port.id() == connect_id {
+                        port.set_scope(PortScope::Boundary);
+                    }
+                }
+            }
+        }
+
+        new_node.set_position_with_point(node_local);
 
         let edge = match source.kind() {
             PortKind::Output => {
@@ -117,12 +138,77 @@ impl PortInteractionPlugin {
             }
         };
 
-        ctx.execute_command(super::command::CreateNode::new(new_node));
+        let new_id = new_node.id();
+        let mut composite = CompositeCommand::new();
+        composite.push(CreateNode::new(new_node));
         for port in new_ports {
-            ctx.execute_command(super::command::CreatePort::new(port));
+            composite.push(CreatePort::new(port));
+        }
+        if let Some(parent) = attach_parent {
+            if let Some(pnode) = ctx.graph.get_node(&parent).cloned() {
+                scratch.add_node(pnode);
+            }
+            match validate_attach_child(&scratch, parent, new_id) {
+                Ok(()) => composite.push(AttachChildCommand::link(parent, new_id)),
+                Err(err) => {
+                    ctx.emit(FlowEvent::error(err.to_string()));
+                    return;
+                }
+            }
+        }
+        composite.push(CreateEdge::new(edge));
+        ctx.execute_command(composite);
+    }
+
+    /// Where to place a node created from a dangling wire endpoint.
+    ///
+    /// - **Default:** same direct parent as the source port's node; position is **local** under that parent.
+    /// - **Escape to root:** source port is [`PortScope::Boundary`] and the drop is outside the parent's
+    ///   world bounds (e.g. past the group frame); new node becomes a root at world coordinates so the
+    ///   edge is allowed and matches where the user dropped.
+    fn pending_link_node_placement(
+        ctx: &PluginContext,
+        source: &Port,
+        end_world: Point<Pixels>,
+        port_offset: Point<Pixels>,
+    ) -> (Point<Pixels>, Option<NodeId>) {
+        let source_parent = ctx
+            .graph
+            .get_node(&source.node_id())
+            .and_then(|n| n.parent());
+
+        let place_at_root = match source_parent {
+            None => true,
+            Some(parent) => {
+                source.scope() == PortScope::Boundary
+                    && !Self::pending_drop_inside_parent(ctx, parent, end_world)
+            }
+        };
+
+        if place_at_root {
+            let top_left = Point::new(end_world.x - port_offset.x, end_world.y - port_offset.y);
+            return (top_left, None);
         }
 
-        ctx.execute_command(CreateEdge::new(edge));
+        let local_anchor = ctx
+            .graph
+            .local_point_from_world(end_world, source_parent)
+            .unwrap_or(end_world);
+        let top_left = Point::new(
+            local_anchor.x - port_offset.x,
+            local_anchor.y - port_offset.y,
+        );
+        (top_left, source_parent)
+    }
+
+    fn pending_drop_inside_parent(
+        ctx: &PluginContext,
+        parent: NodeId,
+        world: Point<Pixels>,
+    ) -> bool {
+        ctx.graph
+            .node_world_bounds(parent)
+            .is_some_and(|b| b.contains(&world))
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -366,9 +452,7 @@ impl Interaction for PortConnecting {
                     ctx.execute_command(CreateEdge::new(edge));
                 }
                 Err(err) => {
-                    ctx.emit(FlowEvent::custom(ToastMessage::error(
-                        err.message().to_string(),
-                    )));
+                    ctx.emit(FlowEvent::error(err.message().to_string()));
                 }
             }
 

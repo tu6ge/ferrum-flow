@@ -6,6 +6,7 @@ mod delete;
 mod edge;
 mod fit_all;
 mod focus_selection;
+mod graph;
 mod history;
 mod minimap;
 mod node;
@@ -28,6 +29,9 @@ pub use delete::DeletePlugin;
 pub use edge::EdgePlugin;
 pub use fit_all::FitAllGraphPlugin;
 pub use focus_selection::FocusSelectionPlugin;
+pub use graph::{
+    BoundaryDragPolicy, GraphPlugin, NestedNodeDragPlugin, NodeRenderLod, NodeRenderLodConfig,
+};
 pub use history::HistoryPlugin;
 pub use layout::AutoLayoutPlugin;
 pub use minimap::MinimapPlugin;
@@ -35,13 +39,15 @@ pub use node::{
     ActiveNodeDrag, NODE_DRAG_TICK_INTERVAL, NodeDragEvent, NodeInteractionPlugin, NodePlugin,
 };
 pub use port::{
-    CreateEdge, CreateNode, CreatePort, DefaultEdgeValidator, EdgeValidationError,
-    EdgeValidationErrorCode, EdgeValidator, PortInteractionPlugin, edge_bezier, filled_disc_path,
-    port_screen_big_bounds, port_screen_bounds,
+    AttachChildCommand, CreateEdge, CreateNode, CreatePort, DefaultEdgeValidator,
+    EdgeValidationError, EdgeValidationErrorCode, EdgeValidator, PortInteractionPlugin,
+    edge_bezier, filled_disc_path, port_screen_big_bounds, port_screen_bounds,
 };
 pub use select_all_viewport::SelectAllViewportPlugin;
 pub use selection::SelectionPlugin;
 pub use snap_guides::SnapGuidesPlugin;
-pub use toast::{ToastLevel, ToastMessage, ToastPlugin};
+pub use toast::ToastPlugin;
+#[deprecated(note = "Use `FlowEvent::Message` instead")]
+pub use toast::{ToastLevel, ToastMessage};
 pub use viewport::ViewportPlugin;
 pub use zoom_controls::ZoomControlsPlugin;

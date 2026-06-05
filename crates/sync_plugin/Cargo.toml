@@ -13,7 +13,7 @@ default = []
 dev-ws-relay = ["tokio/net", "tokio/macros"]
 
 [dependencies]
-ferrum-flow = { version = "0.3.1" }
+ferrum-flow = { workspace = true }
 tokio = { version = "1.50.0", features = [
   "rt-multi-thread",
 ], default-features = false }
@@ -26,6 +26,7 @@ gpui = { workspace = true }
 uuid = { workspace = true }
 anyhow = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
+log = { workspace = true }
 
 [dev-dependencies]
 tokio = { version = "1.50.0", features = ["full"] }

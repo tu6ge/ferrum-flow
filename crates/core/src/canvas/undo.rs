@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use gpui::{Bounds, Pixels, Point};
 
 use crate::{
-    Edge, EdgeBuilderInGraph, EdgeId, Graph, GraphOp, Node, NodeBuilderInGraph, NodeId, Port,
-    PortId, RendererRegistry, SharedState, Viewport,
+    Edge, EdgeBuilderInGraph, EdgeId, Graph, GraphError, GraphOp, Node, NodeBuilderInGraph, NodeId,
+    ParentDeletePolicy, Port, PortId, RendererRegistry, SharedState, Viewport,
     canvas::PortLayoutCache,
     plugin::{is_edge_visible, is_node_visible},
 };
@@ -190,9 +190,25 @@ impl<'a> CommandContext<'a> {
     pub fn get_node_mut(&mut self, id: &NodeId) -> Option<&mut Node> {
         self.graph.get_node_mut(id)
     }
-    pub fn remove_node(&mut self, id: &NodeId) {
-        self.graph.remove_node(id);
+    pub fn remove_node(
+        &mut self,
+        id: &NodeId,
+        policy: ParentDeletePolicy,
+    ) -> Result<(), GraphError> {
+        self.graph.remove_node(id, policy)?;
         self.port_offset_cache.clear_node(id);
+
+        Ok(())
+    }
+
+    pub fn remove_node_cascade(&mut self, id: &NodeId) {
+        self.graph.remove_node_cascade(id);
+    }
+    pub fn remove_node_promote(&mut self, id: &NodeId) -> Result<(), GraphError> {
+        self.graph.remove_node_promote(id)?;
+        self.port_offset_cache.clear_node(id);
+
+        Ok(())
     }
     pub fn nodes(&self) -> &HashMap<NodeId, Node> {
         self.graph.nodes()
@@ -219,8 +235,8 @@ impl<'a> CommandContext<'a> {
     pub fn clear_selected_node(&mut self) {
         self.graph.clear_selected_node();
     }
-    pub fn remove_selected_node(&mut self) -> bool {
-        self.graph.remove_selected_node()
+    pub fn remove_selected_node(&mut self, policy: ParentDeletePolicy) -> Result<bool, GraphError> {
+        self.graph.remove_selected_node(policy)
     }
 
     pub fn add_selected_edge(&mut self, id: EdgeId, shift: bool) {
@@ -314,7 +330,7 @@ impl<'a> CommandContext<'a> {
         is_node_visible(self.graph, self.viewport, node_id)
     }
     pub fn is_node_visible_node(&self, node: &Node) -> bool {
-        self.viewport.is_node_visible(node)
+        is_node_visible(self.graph, self.viewport, &node.id())
     }
 
     pub fn is_edge_visible(&self, edge: &Edge) -> bool {

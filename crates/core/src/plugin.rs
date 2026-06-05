@@ -7,12 +7,13 @@ use gpui::{
 };
 
 use crate::{
-    Edge, EdgeBuilderInGraph, EdgeId, FlowCanvas, FlowTheme, Graph, GraphOp, Node, NodeBuilder,
-    NodeBuilderInGraph, NodeId, NodeRenderer, Port, PortId, PortPosition, RendererRegistry,
-    SharedState, Viewport,
+    Edge, EdgeBuilderInGraph, EdgeId, FlowCanvas, FlowTheme, Graph, GraphError, GraphOp, Node,
+    NodeBuilder, NodeBuilderInGraph, NodeId, NodeRenderer, ParentDeletePolicy, Port, PortId,
+    PortPosition, RendererRegistry, SharedState, Viewport,
     canvas::{
         Command, CommandContext, HistoryProvider, Interaction, InteractionState, PortLayoutCache,
     },
+    plugin::utils::is_node_visible_with_node,
     port_screen::PortScreenFrame,
 };
 
@@ -133,8 +134,15 @@ impl<'a, 'b> InitPluginContext<'a, 'b> {
     pub fn get_node_mut(&mut self, id: &NodeId) -> Option<&mut Node> {
         self.graph.get_node_mut(id)
     }
-    pub fn remove_node(&mut self, id: &NodeId) {
-        self.graph.remove_node(id);
+    pub fn remove_node(
+        &mut self,
+        id: &NodeId,
+        policy: ParentDeletePolicy,
+    ) -> Result<(), GraphError> {
+        self.graph.remove_node(id, policy)?;
+        self.port_offset_cache.clear_node(id);
+
+        Ok(())
     }
     pub fn nodes(&self) -> &HashMap<NodeId, Node> {
         self.graph.nodes()
@@ -161,8 +169,8 @@ impl<'a, 'b> InitPluginContext<'a, 'b> {
     pub fn clear_selected_node(&mut self) {
         self.graph.clear_selected_node();
     }
-    pub fn remove_selected_node(&mut self) -> bool {
-        self.graph.remove_selected_node()
+    pub fn remove_selected_node(&mut self, policy: ParentDeletePolicy) -> Result<bool, GraphError> {
+        self.graph.remove_selected_node(policy)
     }
 
     pub fn add_selected_edge(&mut self, id: EdgeId, shift: bool) {
@@ -273,7 +281,7 @@ impl<'a, 'b> InitPluginContext<'a, 'b> {
         is_node_visible(self.graph, self.viewport, node_id)
     }
     pub fn is_node_visible_node(&self, node: &Node) -> bool {
-        self.viewport.is_node_visible(node)
+        is_node_visible(self.graph, self.viewport, &node.id())
     }
 
     pub fn is_edge_visible(&self, edge: &Edge) -> bool {
@@ -287,9 +295,9 @@ impl<'a, 'b> InitPluginContext<'a, 'b> {
     /// Port center in screen pixels when you already have the owning [`Node`].
     /// *warning*: this is using port offset cache, so it will not be accurate if the port offset is not cached.
     pub fn port_screen_center(&self, node: &Node, port_id: PortId) -> Option<Point<Pixels>> {
-        let node_pos = node.point();
         let offset = self.port_offset_cached(&node.id(), &port_id)?;
-        Some(self.viewport.world_to_screen(node_pos + offset))
+        let world = self.graph.port_world_point(node.id(), offset)?;
+        Some(self.viewport.world_to_screen(world))
     }
 
     /// Like [`Self::port_screen_center`], resolving the port from [`Graph::ports`].
@@ -524,8 +532,8 @@ impl<'a> PluginContext<'a> {
         Some(self.renderers.get(node.renderer_key()))
     }
 
-    /// World-space offset from the node's top-left ([`Node::point`]) to the port anchor used for
-    /// edge wiring (same as [`NodeRenderer::port_offset`]).
+    /// Local offset from the node's top-left to the port anchor (same as [`NodeRenderer::port_offset`]).
+    /// For nested nodes, combine with [`Graph::node_world_point`] / [`Self::port_screen_center`].
     ///
     /// `graph` must contain `node` and that node's ports (a scratch graph is fine) so multi-port
     /// spacing matches runtime layout.
@@ -543,9 +551,15 @@ impl<'a> PluginContext<'a> {
     pub fn get_node_mut(&mut self, id: &NodeId) -> Option<&mut Node> {
         self.graph.get_node_mut(id)
     }
-    pub fn remove_node(&mut self, id: &NodeId) {
-        self.graph.remove_node(id);
+    pub fn remove_node(
+        &mut self,
+        id: &NodeId,
+        policy: ParentDeletePolicy,
+    ) -> Result<(), GraphError> {
+        self.graph.remove_node(id, policy)?;
         self.port_offset_cache.clear_node(id);
+
+        Ok(())
     }
     pub fn nodes(&self) -> &HashMap<NodeId, Node> {
         self.graph.nodes()
@@ -572,8 +586,8 @@ impl<'a> PluginContext<'a> {
     pub fn clear_selected_node(&mut self) {
         self.graph.clear_selected_node();
     }
-    pub fn remove_selected_node(&mut self) -> bool {
-        self.graph.remove_selected_node()
+    pub fn remove_selected_node(&mut self, policy: ParentDeletePolicy) -> Result<bool, GraphError> {
+        self.graph.remove_selected_node(policy)
     }
 
     pub fn add_selected_edge(&mut self, id: EdgeId, shift: bool) {
@@ -684,7 +698,7 @@ impl<'a> PluginContext<'a> {
         is_node_visible(self.graph, self.viewport, node_id)
     }
     pub fn is_node_visible_node(&self, node: &Node) -> bool {
-        self.viewport.is_node_visible(node)
+        is_node_visible(self.graph, self.viewport, &node.id())
     }
 
     pub fn is_edge_visible(&self, edge: &Edge) -> bool {
@@ -706,9 +720,9 @@ impl<'a> PluginContext<'a> {
     /// Port center in screen pixels when you already have the owning [`Node`].
     /// *warning*: this is using port offset cache, so it will not be accurate if the port offset is not cached.
     pub fn port_screen_center(&self, node: &Node, port_id: PortId) -> Option<Point<Pixels>> {
-        let node_pos = node.point();
         let offset = self.port_offset_cached(&node.id(), &port_id)?;
-        Some(self.viewport.world_to_screen(node_pos + offset))
+        let world = self.graph.port_world_point(node.id(), offset)?;
+        Some(self.viewport.world_to_screen(world))
     }
 
     /// Like [`Self::port_screen_center`], resolving the port from [`Graph::ports`].
@@ -763,6 +777,7 @@ pub enum FlowEvent {
     /// [`crate::Viewport::window_bounds`]. Handle this for layout-dependent setup (e.g. initial fit-all).
     /// Do not emit this from plugins; it is reserved for the canvas host after `on_children_prepainted`.
     DrawableBoundsReady,
+    Message(CanvasMessage),
     Custom(Box<dyn std::any::Any + Send>),
 }
 
@@ -775,6 +790,19 @@ impl FlowEvent {
             FlowEvent::Custom(e) => e.downcast_ref::<T>(),
             _ => None,
         }
+    }
+
+    pub fn success(message: impl Into<String>) -> Self {
+        FlowEvent::Message(CanvasMessage::success(message))
+    }
+    pub fn warning(message: impl Into<String>) -> Self {
+        FlowEvent::Message(CanvasMessage::warning(message))
+    }
+    pub fn info(message: impl Into<String>) -> Self {
+        FlowEvent::Message(CanvasMessage::info(message))
+    }
+    pub fn error(message: impl Into<String>) -> Self {
+        FlowEvent::Message(CanvasMessage::error(message))
     }
 }
 
@@ -789,6 +817,87 @@ pub enum InputEvent {
     Wheel(ScrollWheelEvent),
 
     Hover(bool),
+}
+
+#[derive(Debug)]
+pub struct CanvasMessage {
+    message: String,
+    level: MessageLevel,
+    source: Option<Box<dyn std::error::Error>>,
+}
+
+impl std::fmt::Display for CanvasMessage {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.message)
+    }
+}
+
+impl std::error::Error for CanvasMessage {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        self.source.as_ref().map(|s| s.as_ref())
+    }
+}
+
+impl Clone for CanvasMessage {
+    fn clone(&self) -> Self {
+        Self {
+            message: self.message.clone(),
+            level: self.level,
+            source: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MessageLevel {
+    Error,
+    Warning,
+    Info,
+    Success,
+}
+
+impl std::fmt::Display for MessageLevel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            MessageLevel::Error => write!(f, "error"),
+            MessageLevel::Warning => write!(f, "warning"),
+            MessageLevel::Info => write!(f, "info"),
+            MessageLevel::Success => write!(f, "success"),
+        }
+    }
+}
+
+impl CanvasMessage {
+    pub fn new(message: impl Into<String>, level: MessageLevel) -> Self {
+        Self {
+            message: message.into(),
+            level,
+            source: None,
+        }
+    }
+    pub fn error(message: impl Into<String>) -> Self {
+        Self::new(message, MessageLevel::Error)
+    }
+    pub fn warning(message: impl Into<String>) -> Self {
+        Self::new(message, MessageLevel::Warning)
+    }
+    pub fn info(message: impl Into<String>) -> Self {
+        Self::new(message, MessageLevel::Info)
+    }
+    pub fn success(message: impl Into<String>) -> Self {
+        Self::new(message, MessageLevel::Success)
+    }
+    pub fn with_source(mut self, source: impl std::error::Error + 'static) -> Self {
+        self.source = Some(Box::new(source));
+        self
+    }
+
+    pub fn message(&self) -> &str {
+        &self.message
+    }
+    pub fn level(&self) -> MessageLevel {
+        self.level
+    }
 }
 
 pub struct RenderContext<'a> {
@@ -926,7 +1035,11 @@ impl<'a> RenderContext<'a> {
         selected: bool,
         variant: NodeCardVariant,
     ) -> Stateful<Div> {
-        let screen = self.world_to_screen(node.point());
+        let world = self
+            .graph
+            .node_world_point(node.id())
+            .unwrap_or_else(|| node.point());
+        let screen = self.world_to_screen(world);
         let z = self.viewport.zoom();
         let base = div()
             .id(ElementId::Uuid(*node.id().as_uuid()))
@@ -981,7 +1094,7 @@ impl<'a> RenderContext<'a> {
         is_node_visible(self.graph, self.viewport, node_id)
     }
     pub fn is_node_visible_node(&self, node: &Node) -> bool {
-        self.viewport.is_node_visible(node)
+        is_node_visible_with_node(self.graph, self.viewport, node)
     }
 
     pub fn is_edge_visible(&self, edge: &Edge) -> bool {
@@ -1003,9 +1116,9 @@ impl<'a> RenderContext<'a> {
     /// Port center in screen pixels when you already have the owning [`Node`].
     /// *warning*: this is using port offset cache, so it will not be accurate if the port offset is not cached.
     pub fn port_screen_center(&self, node: &Node, port_id: PortId) -> Option<Point<Pixels>> {
-        let node_pos = node.point();
         let offset = self.port_offset_cached(&node.id(), &port_id)?;
-        Some(self.viewport.world_to_screen(node_pos + offset))
+        let world = self.graph.port_world_point(node.id(), offset)?;
+        Some(self.viewport.world_to_screen(world))
     }
 
     /// Like [`Self::port_screen_center`], resolving the port from [`Graph::ports`].

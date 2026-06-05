@@ -4,9 +4,9 @@ use std::collections::BTreeMap;
 use std::time::Duration;
 
 use crate::{
-    BackgroundPlugin, DeletePlugin, EdgePlugin, FlowTheme, GraphChange, HistoryPlugin,
-    NodeInteractionPlugin, NodePlugin, PortInteractionPlugin, SelectionPlugin, SharedState,
-    SyncPlugin, SyncPluginContext, ViewportPlugin,
+    BackgroundPlugin, DeletePlugin, FlowTheme, GraphChange, GraphError, GraphPlugin, HistoryPlugin,
+    IntoFlowGraph, NestedNodeDragPlugin, PortInteractionPlugin, SelectionPlugin, SharedState,
+    SyncPlugin, SyncPluginContext, ToastPlugin, ViewportPlugin,
     graph::Graph,
     plugin::{
         EventResult, FlowEvent, InitPluginContext, InputEvent, Plugin, PluginContext,
@@ -110,20 +110,6 @@ pub struct FlowCanvas {
     outbound: Option<FlowCanvasOutbound>,
 }
 
-// // TODO
-// impl Clone for FlowCanvas {
-//     fn clone(&self) -> Self {
-//         Self {
-//             graph: self.graph.clone(),
-//             viewport: self.viewport.clone(),
-//             plugins_registry: PluginRegistry::new(),
-//             focus_handle: self.focus_handle.clone(),
-//             interaction: InteractionState::new(),
-//             event_queue: vec![],
-//         }
-//     }
-// }
-
 impl FlowCanvas {
     fn init_delayed_notify_channel(&mut self, cx: &mut Context<Self>) {
         let (tx, mut rx) = mpsc::unbounded::<()>();
@@ -139,12 +125,18 @@ impl FlowCanvas {
     }
 
     pub fn builder<'a, 'b>(
-        graph: Graph,
+        graph: impl IntoFlowGraph,
         ctx: &'a mut Context<'b, Self>,
         _: &'a Window,
     ) -> FlowCanvasBuilder<'a, 'b> {
+        let (graph, graph_error) = match graph.into_flow_graph() {
+            Ok(graph) => (graph, None),
+            Err(e) => (Graph::new(), Some(e)),
+        };
+
         FlowCanvasBuilder {
             graph,
+            graph_error,
             ctx,
             plugins: PluginRegistry::new(),
             sync_plugin: None,
@@ -453,6 +445,11 @@ impl FlowCanvas {
         self.handle_event(FlowEvent::Input(InputEvent::Hover(*hovered)), cx);
         self.process_event_queue(cx);
     }
+
+    fn handle_process_event_queue(&mut self, event: FlowEvent, cx: &mut Context<Self>) {
+        self.handle_event(event, cx);
+        self.process_event_queue(cx);
+    }
 }
 
 impl Render for FlowCanvas {
@@ -573,6 +570,8 @@ impl Render for FlowCanvas {
 
 pub struct FlowCanvasBuilder<'a, 'b> {
     graph: Graph,
+    graph_error: Option<GraphError>,
+
     ctx: &'a mut Context<'b, FlowCanvas>,
 
     plugins: PluginRegistry,
@@ -614,13 +613,13 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
             .plugins
             .add(BackgroundPlugin::new())
             .add(SelectionPlugin::new())
-            .add(NodeInteractionPlugin::new())
+            .add(NestedNodeDragPlugin::new())
             .add(ViewportPlugin::new())
-            .add(NodePlugin::new())
+            .add(GraphPlugin::new())
             .add(PortInteractionPlugin::new())
-            .add(EdgePlugin::new())
-            .add(DeletePlugin::new())
-            .add(HistoryPlugin::new());
+            .add(DeletePlugin::default())
+            .add(HistoryPlugin::new())
+            .add(ToastPlugin::new());
         self
     }
 
@@ -673,8 +672,8 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
             .into_iter()
             .filter(|(_, count)| *count > 1)
         {
-            eprintln!(
-                "warning: plugin '{name}' is registered {count} times; this can cause duplicated event handling"
+            log::warn!(
+                "plugin '{name}' is registered {count} times; this can cause duplicated event handling"
             );
         }
 
@@ -711,7 +710,9 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
                                 &this.graph,
                                 &change.kind,
                             );
-                            this.graph.apply(change.kind);
+                            if let Err(e) = this.graph.apply(change.kind) {
+                                log::error!("failed to apply graph change: {}", e);
+                            }
                             cx.notify();
                         });
                     }
@@ -736,6 +737,10 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
             for plugin in canvas.plugins_registry.iter_mut() {
                 plugin.setup(&mut ctx);
             }
+        }
+
+        if let Some(graph_error) = self.graph_error {
+            canvas.handle_process_event_queue(FlowEvent::error(graph_error.to_string()), self.ctx);
         }
 
         canvas

@@ -70,7 +70,10 @@ impl LayoutStrategy for ForceDirectedLayout {
 
         let mut pos: HashMap<NodeId, (f32, f32)> = HashMap::new();
         for id in &ids {
-            let n = graph.get_node(id).expect("node exists");
+            let Some(n) = graph.get_node(id) else {
+                log::error!("node not found: {}", id);
+                continue;
+            };
             let p = hint.and_then(|h| h.get(id)).unwrap_or_else(|| n.point());
             pos.insert(*id, (px_f32(p.x), px_f32(p.y)));
         }
@@ -106,12 +109,15 @@ impl LayoutStrategy for ForceDirectedLayout {
                     let f = k * k / d;
                     let rx = (dx / d) * f;
                     let ry = (dy / d) * f;
-                    let du = disp.get_mut(&u).unwrap();
-                    du.0 -= rx;
-                    du.1 -= ry;
-                    let dv = disp.get_mut(&v).unwrap();
-                    dv.0 += rx;
-                    dv.1 += ry;
+                    if let Some(du) = disp.get_mut(&u) {
+                        du.0 -= rx;
+                        du.1 -= ry;
+                    }
+
+                    if let Some(dv) = disp.get_mut(&v) {
+                        dv.0 += rx;
+                        dv.1 += ry;
+                    }
                 }
             }
 
@@ -126,12 +132,14 @@ impl LayoutStrategy for ForceDirectedLayout {
                 let f = d * d / k;
                 let ax = (dx / d) * f;
                 let ay = (dy / d) * f;
-                let du = disp.get_mut(&u).unwrap();
-                du.0 += ax;
-                du.1 += ay;
-                let dv = disp.get_mut(&v).unwrap();
-                dv.0 -= ax;
-                dv.1 -= ay;
+                if let Some(du) = disp.get_mut(&u) {
+                    du.0 += ax;
+                    du.1 += ay;
+                }
+                if let Some(dv) = disp.get_mut(&v) {
+                    dv.0 -= ax;
+                    dv.1 -= ay;
+                }
             }
 
             // Apply capped displacement; optionally stop when the largest step is tiny.
@@ -146,9 +154,10 @@ impl LayoutStrategy for ForceDirectedLayout {
                 let step_x = dx * scale;
                 let step_y = dy * scale;
                 max_step = max_step.max((step_x * step_x + step_y * step_y).sqrt());
-                let (px_, py_) = pos.get_mut(id).unwrap();
-                *px_ += step_x;
-                *py_ += step_y;
+                if let Some((px_, py_)) = pos.get_mut(id) {
+                    *px_ += step_x;
+                    *py_ += step_y;
+                }
             }
 
             if use_conv && max_step < conv {

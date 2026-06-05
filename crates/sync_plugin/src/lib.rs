@@ -1,3 +1,5 @@
+#![cfg_attr(not(test), deny(clippy::unwrap_used))]
+
 #[cfg(feature = "dev-ws-relay")]
 mod dev_ws_relay;
 mod plugin;

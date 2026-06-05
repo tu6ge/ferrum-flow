@@ -146,18 +146,26 @@ impl Viewport {
         }
     }
 
-    pub fn is_node_visible(&self, node: &Node) -> bool {
+    /// Whether **world-space** `bounds` intersects the drawable window area.
+    pub fn is_world_bounds_visible(&self, bounds: &Bounds<Pixels>) -> bool {
         let Some(window_bounds) = self.window_bounds else {
             return false;
         };
 
-        let screen = self.world_to_screen(node.point());
-        let size = *node.size_ref();
+        let screen = self.world_to_screen(bounds.origin);
+        let size = bounds.size;
 
         screen.x + self.world_length_to_screen(size.width) > px(0.0)
             && screen.x < window_bounds.size.width
             && screen.y + self.world_length_to_screen(size.height) > px(0.0)
             && screen.y < window_bounds.size.height
+    }
+
+    /// Visibility using the node's **stored** position (local for children). Prefer
+    /// [`crate::plugin::is_node_visible`] with a [`crate::Graph`] for nested nodes.
+    #[deprecated(note = "Use `is_world_bounds_visible` instead")]
+    pub fn is_node_visible(&self, node: &Node) -> bool {
+        self.is_world_bounds_visible(&node.bounds())
     }
 
     pub(crate) fn visibility_cache_key(&self) -> ViewportVisibilityCacheKey {

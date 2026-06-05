@@ -4,6 +4,9 @@ use gpui::{Pixels, Point};
 
 use crate::{EdgeId, Graph, NodeId, PortId, RendererRegistry};
 
+/// Per-node port positions **relative to the node's local origin** (same space as [`crate::Node::point`]).
+///
+/// Combine with [`Graph::node_world_point`] for world/screen layout on nested nodes.
 #[derive(Debug, Clone)]
 pub struct PortLayoutCache {
     map: HashMap<NodeId, HashMap<PortId, Point<Pixels>>>,
@@ -44,6 +47,13 @@ impl PortLayoutCache {
 
     pub fn clear_node(&mut self, node_id: &NodeId) {
         self.map.remove(node_id);
+    }
+
+    pub fn clear_node_cascade(&mut self, node_id: &NodeId, graph: &Graph) {
+        graph
+            .descendants(*node_id)
+            .for_each(|id| self.clear_node(&id));
+        self.clear_node(node_id);
     }
 
     pub fn clear_all(&mut self) {

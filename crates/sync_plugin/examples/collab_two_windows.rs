@@ -147,11 +147,11 @@ fn main() {
                         .with_show_remote_name(true);
                     FlowCanvas::builder(Graph::new(), ctx, window)
                         .plugin(SelectionPlugin::new())
-                        .plugin(NodeInteractionPlugin::new())
                         .plugin(ViewportPlugin::new())
                         .plugin(ZoomControlsPlugin::new())
                         .plugin(BackgroundPlugin::new())
-                        .plugin(NodePlugin::new())
+                        .plugin(GraphPlugin::new())
+                        .plugin(NestedNodeDragPlugin::new())
                         //.plugin(MinimapPlugin::new())
                         .plugin(ClipboardPlugin::new())
                         .plugin(ContextMenuPlugin::new())
@@ -160,8 +160,7 @@ fn main() {
                         .plugin(FocusSelectionPlugin::new())
                         .plugin(FitAllGraphPlugin::new())
                         .plugin(PortInteractionPlugin::new())
-                        .plugin(EdgePlugin::new())
-                        .plugin(DeletePlugin::new())
+                        .plugin(DeletePlugin::default())
                         .plugin(HistoryPlugin::new())
                         .node_renderer("sync", SyncBasicNodeRenderer)
                         .sync_plugin(

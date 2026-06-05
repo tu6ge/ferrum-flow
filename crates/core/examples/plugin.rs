@@ -67,9 +67,9 @@ impl StarterPlugin {
             .data(json!({ "label": format!("Plugin Node {i}") }))
             .build();
 
-        ctx.emit(FlowEvent::custom(ToastMessage::success(format!(
+        ctx.emit(FlowEvent::success(format!(
             "Created node #{i} from StarterPlugin"
-        ))));
+        )));
     }
 }
 

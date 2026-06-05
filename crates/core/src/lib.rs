@@ -1,10 +1,13 @@
+#![cfg_attr(not(test), deny(clippy::unwrap_used))]
+#![cfg_attr(not(test), deny(clippy::expect_used))]
+#![cfg_attr(not(test), deny(clippy::panic))]
+
 pub mod builder_state;
 mod canvas;
 #[cfg(any(feature = "testing", test))]
 pub mod command_interop;
 mod edge;
 mod graph;
-mod node;
 mod plugin;
 #[cfg(any(feature = "testing", test))]
 pub mod plugin_testing;
@@ -20,8 +23,8 @@ pub use canvas::{
     default_node_caption,
 };
 pub use edge::*;
+pub use graph::node::*;
 pub use graph::*;
-pub use node::*;
 pub use plugin::{
     EventResult, FlowEvent, InitPluginContext, InputEvent, NodeCardVariant, Plugin, PluginContext,
     RenderContext, RenderLayer, SyncPlugin, SyncPluginContext, primary_platform_modifier,

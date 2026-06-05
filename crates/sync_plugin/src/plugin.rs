@@ -32,10 +32,12 @@ pub struct YrsSyncPlugin {
     doc: yrs::Doc,
     awareness: Arc<Awareness>,
     init_graph: Graph,
-    nodes: MapRef,        // ref HashMap<NodeId, Node>
-    ports: MapRef,        // ref HashMap<PortId, Port>
-    edges: MapRef,        // ref HashMap<EdgeId, Edge>
-    node_order: ArrayRef, // ref Vec<NodeId>
+    nodes: MapRef,          // ref HashMap<NodeId, Node>
+    children_index: MapRef, // Map of node id to its children node ids
+    roots: ArrayRef,        // List of root node ids
+    ports: MapRef,          // ref HashMap<PortId, Port>
+    edges: MapRef,          // ref HashMap<EdgeId, Edge>
+    node_order: ArrayRef,   // ref Vec<NodeId>
     undo_manager: yrs::UndoManager,
     undo_origin: Origin,
     _subscription_nodes: Option<yrs::Subscription>,
@@ -65,6 +67,8 @@ impl YrsSyncPlugin {
         let doc = Doc::new();
         let root = doc.get_or_insert_map("graph");
         let nodes = doc.get_or_insert_map("nodes");
+        let children_index = doc.get_or_insert_map("children_index");
+        let roots = doc.get_or_insert_array("roots");
         let ports = doc.get_or_insert_map("ports");
         let edges = doc.get_or_insert_map("edges");
         let node_order = doc.get_or_insert_array("node_order");
@@ -89,6 +93,8 @@ impl YrsSyncPlugin {
             undo_origin,
             doc,
             nodes,
+            children_index,
+            roots,
             ports,
             edges,
             node_order,
@@ -130,6 +136,14 @@ impl YrsSyncPlugin {
         for node in self.init_graph.nodes().values() {
             self.insert_node(&mut txn, node);
         }
+        for (node_id, children) in self.init_graph.children_index() {
+            self.insert_children_index(&mut txn, node_id, children);
+        }
+
+        for root in self.init_graph.roots() {
+            self.roots.push_back(&mut txn, root.to_string());
+        }
+
         for port in self.init_graph.ports_values() {
             self.add_port(&mut txn, port);
         }
@@ -163,12 +177,78 @@ impl YrsSyncPlugin {
 
         let data_json = to_any(&node.data_ref()).unwrap_or(Any::Null);
         node_ref.insert(txn, "data", data_json);
+
+        let parent = node.parent();
+        if let Some(parent_id) = parent {
+            node_ref.insert(txn, "parent", parent_id.to_string());
+        } else {
+            node_ref.insert(txn, "parent", Any::Null);
+        }
+
+        let children = node.children();
+        if !children.is_empty() {
+            let children_array = node_ref.insert(txn, "children", ArrayRef::default_prelim());
+            for child_id in children {
+                children_array.push_back(txn, child_id.to_string());
+            }
+        }
+    }
+
+    fn insert_children_index(
+        &self,
+        txn: &mut TransactionMut,
+        node_id: &NodeId,
+        children: &[NodeId],
+    ) {
+        let children_array =
+            self.children_index
+                .insert(txn, node_id.to_string(), ArrayRef::default_prelim());
+        for child_id in children {
+            children_array.push_back(txn, child_id.to_string());
+        }
     }
 
     fn update_node_position(&self, txn: &mut TransactionMut, id: &NodeId, x: f32, y: f32) {
         if let Some(yrs::Out::YMap(node_ref)) = self.nodes.get(txn, &id.to_string()) {
             node_ref.insert(txn, "x", x);
             node_ref.insert(txn, "y", y);
+        }
+    }
+
+    fn update_node_parent(
+        &self,
+        txn: &mut TransactionMut,
+        id: &NodeId,
+        parent_id: &Option<NodeId>,
+    ) {
+        let node_map = MapPrelim::default();
+        let node_ref = self.nodes.insert(txn, id.to_string(), node_map);
+        if let Some(parent_id) = parent_id {
+            node_ref.insert(txn, "parent", parent_id.to_string());
+        } else {
+            node_ref.insert(txn, "parent", Any::Null);
+        }
+    }
+
+    fn node_push_child(&self, txn: &mut TransactionMut, id: &NodeId, child_id: &NodeId) {
+        if let Some(yrs::Out::YMap(node_ref)) = self.nodes.get(txn, &id.to_string()) {
+            let children_array = node_ref.get(txn, "children").unwrap_or_default();
+            if let yrs::Out::YArray(children_array) = children_array {
+                children_array.push_back(txn, child_id.to_string());
+            }
+        }
+    }
+
+    fn node_pop_child(&self, txn: &mut TransactionMut, id: &NodeId, child_id: &NodeId) {
+        if let Some(yrs::Out::YMap(node_ref)) = self.nodes.get(txn, &id.to_string()) {
+            let children_array = node_ref.get(txn, "children").unwrap_or_default();
+            if let yrs::Out::YArray(children_array) = children_array
+                && let Some(index) = children_array
+                    .iter(txn)
+                    .position(|item| item == Out::Any(Any::String(child_id.to_string().into())))
+            {
+                children_array.remove(txn, index as u32);
+            }
         }
     }
 
@@ -213,7 +293,11 @@ impl YrsSyncPlugin {
                 self.update_node_position(txn, &id, x, y);
             }
             GraphOp::AddNode(node) => self.insert_node(txn, &node),
+            GraphOp::ChangeParentNode { id, parent } => self.update_node_parent(txn, &id, &parent),
+            GraphOp::PushChildNode { id, child_id } => self.node_push_child(txn, &id, &child_id),
+            GraphOp::PopChildNode { id, child_id } => self.node_pop_child(txn, &id, &child_id),
             GraphOp::RemoveNode { id } => self.remove_node(txn, &id),
+            GraphOp::RemoveNodeWithPolicy { .. } => todo!(),
             GraphOp::ResizeNode { .. } => todo!(),
             GraphOp::UpdateNodeData { .. } => todo!(),
             GraphOp::NodeOrderInsert { id } => self.add_node_order(txn, &id),
@@ -263,11 +347,7 @@ impl SyncPlugin for YrsSyncPlugin {
         let undo_origin = self.undo_origin.clone();
         let nodes_ref = self.nodes.clone();
         let sub = self.nodes.observe_deep(move |txn, event| {
-            let source = match txn.origin() {
-                Some(orig) if *orig == Origin::from("local_intent") => ChangeSource::Local,
-                Some(orig) if *orig == undo_origin => ChangeSource::Undo,
-                _ => ChangeSource::Remote,
-            };
+            let source = ChangeSource::from_origin(txn.origin(), &undo_origin);
 
             for ev in event.iter() {
                 if let yrs::types::Event::Map(ev) = ev {
@@ -286,11 +366,7 @@ impl SyncPlugin for YrsSyncPlugin {
 
         let undo_origin = self.undo_origin.clone();
         let sub = self.ports.observe(move |txn, event| {
-            let source = match txn.origin() {
-                Some(orig) if *orig == Origin::from("local_intent") => ChangeSource::Local,
-                Some(orig) if *orig == undo_origin => ChangeSource::Undo,
-                _ => ChangeSource::Remote,
-            };
+            let source = ChangeSource::from_origin(txn.origin(), &undo_origin);
 
             for (key, change) in event.keys(txn) {
                 if let Some(kind) = parse_port_change(txn, key, change) {
@@ -303,11 +379,7 @@ impl SyncPlugin for YrsSyncPlugin {
         let undo_origin = self.undo_origin.clone();
 
         let sub = self.edges.observe(move |txn, event| {
-            let source = match txn.origin() {
-                Some(orig) if *orig == Origin::from("local_intent") => ChangeSource::Local,
-                Some(orig) if *orig == undo_origin => ChangeSource::Undo,
-                _ => ChangeSource::Remote,
-            };
+            let source = ChangeSource::from_origin(txn.origin(), &undo_origin);
 
             for (key, change) in event.keys(txn) {
                 if let Some(kind) = parse_edge_change(txn, key, change) {
@@ -319,11 +391,7 @@ impl SyncPlugin for YrsSyncPlugin {
 
         let undo_origin = self.undo_origin.clone();
         let sub = self.node_order.observe(move |txn, event| {
-            let source = match txn.origin() {
-                Some(orig) if *orig == Origin::from("local_intent") => ChangeSource::Local,
-                Some(orig) if *orig == undo_origin => ChangeSource::Undo,
-                _ => ChangeSource::Remote,
-            };
+            let source = ChangeSource::from_origin(txn.origin(), &undo_origin);
 
             let array = event.target();
 
@@ -582,7 +650,7 @@ fn handler_node_change(
 
     if is_nodes_map_child_change {
         for (key, change) in ev.keys(txn) {
-            if let Some(k) = parse_node_change(txn, key, change) {
+            if let Some(k) = parse_node_change(txn, key, change, nodes) {
                 kind.push(k);
             }
         }
@@ -615,6 +683,8 @@ fn handler_node_change(
         {
             kind.push(GraphChangeKind::NodeDataUpdated { id, data });
         }
+
+        //TODO parent change and children change
     }
 
     kind
@@ -624,15 +694,29 @@ fn parse_node_change(
     txn: &yrs::TransactionMut,
     key: &Arc<str>,
     change: &EntryChange,
+    nodes: &MapRef,
 ) -> Option<GraphChangeKind> {
     let id = NodeId::from_uuid(key.to_string().parse().ok()?);
 
     match change {
         EntryChange::Inserted(value) => {
             if let yrs::Out::YMap(node_map) = value {
-                Some(GraphChangeKind::NodeAdded(read_node_from_map(
-                    txn, node_map, id,
-                )))
+                read_node_from_map(txn, node_map, id, nodes).map(|node| {
+                    let mut list = vec![GraphChangeKind::NodeAdded(node.clone())];
+                    for child_id in node.children() {
+                        list.push(GraphChangeKind::NodePushedChild {
+                            id: node.id(),
+                            child_id: *child_id,
+                        });
+                    }
+                    if let Some(parent_id) = node.parent() {
+                        list.push(GraphChangeKind::NodeParentChanged {
+                            id,
+                            parent: Some(parent_id),
+                        });
+                    }
+                    GraphChangeKind::Batch(list)
+                })
             } else {
                 None
             }
@@ -642,7 +726,12 @@ fn parse_node_change(
     }
 }
 
-fn read_node_from_map(txn: &yrs::TransactionMut, node_map: &MapRef, id: NodeId) -> Node {
+fn read_node_from_map(
+    txn: &yrs::TransactionMut,
+    node_map: &MapRef,
+    id: NodeId,
+    _nodes: &MapRef,
+) -> Option<Node> {
     let node_type: String = node_map.get_as(txn, "type").unwrap_or_default();
     let execute_type: String = node_map.get_as(txn, "execute_type").unwrap_or_default();
     let x = read_map_f32(txn, node_map, "x").unwrap_or_default();
@@ -676,12 +765,14 @@ fn read_node_from_map(txn: &yrs::TransactionMut, node_map: &MapRef, id: NodeId) 
         }
     }
 
-    NodeBuilder::new(node_type)
-        .execute_type(execute_type)
-        .position(x, y)
-        .size(width, height)
-        .data(data)
-        .build_raw_with_port_ids(id, inputs, outputs)
+    Some(
+        NodeBuilder::new(node_type)
+            .execute_type(execute_type)
+            .position(x, y)
+            .size(width, height)
+            .data(data)
+            .build_raw_with_port_ids(id, inputs, outputs),
+    )
 }
 
 fn parse_port_change(
@@ -808,6 +899,20 @@ impl PresenceConfig {
     }
 }
 
+trait FromOrigin {
+    fn from_origin(origin: Option<&Origin>, undo_origin: &Origin) -> Self;
+}
+
+impl FromOrigin for ChangeSource {
+    fn from_origin(origin: Option<&Origin>, undo_origin: &Origin) -> Self {
+        match origin {
+            Some(orig) if *orig == Origin::from("local_intent") => ChangeSource::Local,
+            Some(orig) if *orig == undo_origin.clone() => ChangeSource::Undo,
+            _ => ChangeSource::Remote,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -894,7 +999,7 @@ mod tests {
             panic!("expected node map to be present in yrs document");
         };
 
-        let restored = read_node_from_map(&txn, &node_map, original.id());
+        let restored = read_node_from_map(&txn, &node_map, original.id(), &plugin.nodes).unwrap();
 
         assert_eq!(restored.id(), original.id());
         let restored_json =
