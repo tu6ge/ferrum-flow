@@ -32,6 +32,7 @@ use crate::plugin::{
     EventResult, FlowEvent, InputEvent, Plugin, PluginContext, RenderContext, RenderLayer,
 };
 use crate::plugins::edge::{EdgeGeometry, edge_geometry2, edges_canvas_element};
+use crate::plugins::node::render_node_card;
 use crate::plugins::node::{
     ActiveNodeDrag, node_ids_for_drag_overlay, render_lod::NodeCardsLod, render_node_cards,
     render_node_ports, render_node_shell,
@@ -195,16 +196,20 @@ fn render_flat_graph(
     drag_overlay: &HashSet<crate::NodeId>,
     lod: Option<&NodeCardsLod<'_>>,
 ) -> Option<AnyElement> {
-    let node_ids: Vec<_> = ctx
-        .graph
-        .paint_order_iter()
-        .filter(|id| ctx.is_node_visible(id))
-        .filter(|id| !drag_overlay.contains(id))
-        .collect();
-
     let stroke = ctx.theme.edge_stroke;
     let stroke_sel = ctx.theme.edge_stroke_selected;
     let selected = ctx.graph.selected_edge().clone();
+
+    let mut layer = div().id("graph-layer").absolute().size_full().child({
+        let list = ctx.graph.paint_order_iter().filter_map(|node_id| {
+            if !ctx.is_node_visible(&node_id) || drag_overlay.contains(&node_id) {
+                return None;
+            }
+            let node = ctx.graph.nodes().get(&node_id)?;
+            Some(render_node_card(ctx, node_id, node, lod))
+        });
+        div().children(list).into_any()
+    });
 
     let mut edges: Vec<(EdgeId, Option<EdgeGeometry>)> = Vec::new();
     for (_, edge) in ctx.graph.edges().iter() {
@@ -215,14 +220,6 @@ fn render_flat_graph(
         edges.push((edge.id, edge_geometry2(edge, ctx)));
     }
 
-    if node_ids.is_empty() && edges.is_empty() {
-        return None;
-    }
-
-    let mut layer = div().id("graph-layer").absolute().size_full();
-    if !node_ids.is_empty() {
-        layer = layer.child(render_node_cards(ctx, &node_ids, "graph-flat-nodes", lod));
-    }
     if !edges.is_empty() {
         layer = layer.child(
             div()

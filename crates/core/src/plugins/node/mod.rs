@@ -15,7 +15,10 @@ pub use drag_shared::{
     collect_drag_nodes, dragged_ids_from_nodes, exceeds_drag_threshold, insert_active_drag,
     run_drag_side_effects, screen_pointer_world_delta, start_world_positions,
 };
-use gpui::{Element as _, ElementId, InteractiveElement as _, ParentElement, Styled as _, div, px};
+use gpui::{
+    Div, Element as _, ElementId, InteractiveElement as _, ParentElement, Stateful, Styled as _,
+    div, px,
+};
 pub use interaction::NodeInteractionPlugin;
 pub use render_lod::{NodeRenderLod, NodeRenderLodConfig, resolve_node_render_lod};
 
@@ -47,6 +50,35 @@ fn render_degraded_node_shell(ctx: &RenderContext, node: &Node) -> gpui::AnyElem
         .into_any()
 }
 
+pub(super) fn render_node_card(
+    ctx: &mut RenderContext,
+    node_id: crate::NodeId,
+    node: &Node,
+    lod: Option<&NodeCardsLod<'_>>,
+) -> Stateful<Div> {
+    match node_render_lod(ctx, &node_id, lod) {
+        NodeRenderLod::ShellOnly => div()
+            .id(ElementId::Uuid(*node_id.as_uuid()))
+            .child(render_degraded_node_shell(ctx, node)),
+        NodeRenderLod::Full => {
+            ctx.cache_port_offset_with_nodes(&[node_id]);
+            let render = ctx.renderers.get(node.renderer_key());
+            let node_render = render.render(node, ctx);
+
+            let port_ids: Vec<crate::PortId> = ctx.cached_port_ids_for_node(&node_id).collect();
+            let ports = port_ids.iter().filter_map(|port_id| {
+                let port = ctx.graph.get_port(port_id)?;
+                render.port_render(node, port, ctx)
+            });
+
+            div()
+                .id(ElementId::Uuid(*node_id.as_uuid()))
+                .child(node_render)
+                .children(ports)
+        }
+    }
+}
+
 /// Renders the given nodes (and their ports) like [`NodePlugin`], for use on the interaction overlay.
 ///
 /// Pass `lod` from [`GraphPlugin`](crate::plugins::GraphPlugin); omit for full detail ([`NodePlugin`]).
@@ -71,31 +103,7 @@ where
 {
     let list = node_ids.into_iter().filter_map(|node_id| {
         let node = ctx.graph.nodes().get(&node_id)?;
-        match node_render_lod(ctx, &node_id, lod) {
-            NodeRenderLod::ShellOnly => Some(
-                div()
-                    .id(ElementId::Uuid(*node_id.as_uuid()))
-                    .child(render_degraded_node_shell(ctx, node)),
-            ),
-            NodeRenderLod::Full => {
-                ctx.cache_port_offset_with_nodes(&[node_id]);
-                let render = ctx.renderers.get(node.renderer_key());
-                let node_render = render.render(node, ctx);
-
-                let port_ids: Vec<crate::PortId> = ctx.cached_port_ids_for_node(&node_id).collect();
-                let ports = port_ids.iter().filter_map(|port_id| {
-                    let port = ctx.graph.get_port(port_id)?;
-                    render.port_render(node, port, ctx)
-                });
-
-                Some(
-                    div()
-                        .id(ElementId::Uuid(*node_id.as_uuid()))
-                        .child(node_render)
-                        .children(ports),
-                )
-            }
-        }
+        Some(render_node_card(ctx, node_id, node, lod))
     });
 
     div().id(id).children(list).into_any()
