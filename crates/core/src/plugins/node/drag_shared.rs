@@ -115,7 +115,7 @@ pub fn run_drag_side_effects(
 }
 
 /// Applies a world-space drag delta to one node's stored **local** position.
-pub trait ApplyNodeDragDelta {
+pub(crate) trait ApplyNodeDragDelta {
     fn apply(
         &self,
         ctx: &mut PluginContext,

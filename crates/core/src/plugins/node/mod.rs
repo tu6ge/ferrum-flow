@@ -10,10 +10,11 @@ use crate::Graph;
 use crate::node::Node;
 pub use command::{DragNodesCommand, SelecteNodeCommand};
 pub use drag_events::{ActiveNodeDrag, NODE_DRAG_TICK_INTERVAL, NodeDragEvent};
+pub(crate) use drag_shared::ApplyNodeDragDelta;
 pub use drag_shared::{
-    ApplyNodeDragDelta, DragSessionTimers, apply_drag_to_nodes, clear_active_drag,
-    collect_drag_nodes, dragged_ids_from_nodes, exceeds_drag_threshold, insert_active_drag,
-    run_drag_side_effects, screen_pointer_world_delta, start_world_positions,
+    DragSessionTimers, apply_drag_to_nodes, clear_active_drag, collect_drag_nodes,
+    dragged_ids_from_nodes, exceeds_drag_threshold, insert_active_drag, run_drag_side_effects,
+    screen_pointer_world_delta, start_world_positions,
 };
 use gpui::{
     Div, Element as _, ElementId, InteractiveElement as _, ParentElement, Stateful, Styled as _,
