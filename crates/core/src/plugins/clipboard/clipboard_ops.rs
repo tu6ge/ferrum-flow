@@ -46,11 +46,7 @@ pub(crate) fn extract_subgraph(graph: &Graph) -> Option<CopiedSubgraph> {
     let mut port_ids = HashSet::new();
     let mut ports = Vec::new();
     let mut nodes = Vec::with_capacity(closure.len());
-    for id in graph
-        .paint_order()
-        .into_iter()
-        .filter(|id| closure.contains(id))
-    {
+    for id in graph.paint_order_iter().filter(|id| closure.contains(id)) {
         let n = graph.get_node(&id)?;
         for pid in n.inputs().iter().chain(n.outputs().iter()) {
             port_ids.insert(*pid);
