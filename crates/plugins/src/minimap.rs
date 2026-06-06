@@ -4,14 +4,12 @@ use std::collections::HashMap;
 
 use gpui::{Bounds, Element, MouseButton, PathBuilder, Pixels, Point, Size, canvas, px, rgb};
 
-use crate::{
-    NodeId, Viewport,
-    canvas::{Command, CommandContext},
-    plugin::{
-        EventResult, FlowEvent, InputEvent, Plugin, PluginContext, RenderContext, RenderLayer,
-        utils::canvas_paint_point,
-    },
+use ferrum_flow_core::{
+    Command, CommandContext, EventResult, FlowEvent, GraphOp, InputEvent, NodeId, Plugin,
+    PluginContext, RenderContext, RenderLayer, Viewport,
 };
+
+use crate::edge::canvas_paint_point;
 
 const MAP_W: f32 = 200.0;
 const MAP_H: f32 = 140.0;
@@ -193,7 +191,7 @@ impl Command for MinimapPanCommand {
         ctx.set_offset(self.from);
     }
 
-    fn to_ops(&self, _ctx: &mut crate::CommandContext) -> Vec<crate::GraphOp> {
+    fn to_ops(&self, _ctx: &mut CommandContext) -> Vec<GraphOp> {
         vec![]
     }
 }
@@ -413,7 +411,7 @@ fn rect_stroke_bounds(
 mod command_interop_tests {
     use gpui::{Point, px};
 
-    use crate::{Graph, command_interop::assert_command_interop};
+    use ferrum_flow_core::{Graph, command_interop::assert_command_interop};
 
     use super::MinimapPanCommand;
 

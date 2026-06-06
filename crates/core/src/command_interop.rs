@@ -25,7 +25,7 @@ use crate::{
     Viewport, canvas::PortLayoutCache,
 };
 
-fn with_command_ctx<R>(graph: &mut Graph, f: impl FnOnce(&mut CommandContext) -> R) -> R {
+pub fn with_command_ctx<R>(graph: &mut Graph, f: impl FnOnce(&mut CommandContext) -> R) -> R {
     let mut port_offset_cache = PortLayoutCache::new();
     let mut viewport = Viewport::new();
     let mut renderers = RendererRegistry::new();

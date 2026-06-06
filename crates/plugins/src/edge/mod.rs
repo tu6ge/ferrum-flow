@@ -2,11 +2,12 @@ use std::collections::HashSet;
 
 use gpui::{Bounds, Element, MouseButton, PathBuilder, Pixels, Point, canvas, px, rgb};
 
-use crate::{
-    Edge, EdgeId, EventResult, RenderContext,
-    plugin::{FlowEvent, Plugin, PluginContext, utils::canvas_paint_point},
-    plugins::edge::command::ClearEdgeCommand,
+use ferrum_flow_core::{
+    Edge, EdgeId, EventResult, FlowEvent, InputEvent, Plugin, PluginContext, RenderContext,
+    RenderLayer,
 };
+
+use crate::edge::command::ClearEdgeCommand;
 
 mod command;
 
@@ -31,7 +32,7 @@ impl Plugin for EdgePlugin {
         "edge"
     }
     fn on_event(&mut self, event: &FlowEvent, ctx: &mut PluginContext) -> EventResult {
-        if let FlowEvent::Input(crate::plugin::InputEvent::MouseDown(ev)) = event {
+        if let FlowEvent::Input(InputEvent::MouseDown(ev)) = event {
             if ev.button != MouseButton::Left {
                 return EventResult::Continue;
             }
@@ -42,10 +43,10 @@ impl Plugin for EdgePlugin {
     fn priority(&self) -> i32 {
         120
     }
-    fn render_layer(&self) -> crate::plugin::RenderLayer {
-        crate::plugin::RenderLayer::Edges
+    fn render_layer(&self) -> RenderLayer {
+        RenderLayer::Edges
     }
-    fn render(&mut self, ctx: &mut crate::RenderContext) -> Option<gpui::AnyElement> {
+    fn render(&mut self, ctx: &mut RenderContext) -> Option<gpui::AnyElement> {
         let visible_nodes: HashSet<_> = ctx
             .graph
             .nodes()
@@ -315,4 +316,14 @@ fn vec_dot(a: (f32, f32), b: (f32, f32)) -> f32 {
 
 fn vec_length(v: (f32, f32)) -> f32 {
     (v.0 * v.0 + v.1 * v.1).sqrt()
+}
+
+/// [`gpui::canvas`] paint callbacks use **window** space for [`gpui::Window::paint_path`], while
+/// graph helpers ([`crate::RenderContext::world_to_screen`], port centers, etc.) use **canvas-local**
+/// pixels (origin at the top-left of the flow drawable). Add the canvas element layout origin to
+/// convert local → paint space (embedded [`FlowCanvas`](crate::canvas::FlowCanvas) has a non-zero
+/// origin in the window).
+#[inline]
+pub(crate) fn canvas_paint_point(bounds: Bounds<Pixels>, local: Point<Pixels>) -> Point<Pixels> {
+    bounds.origin + local
 }

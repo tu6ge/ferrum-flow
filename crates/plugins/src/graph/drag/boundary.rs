@@ -2,7 +2,7 @@
 
 use gpui::{Pixels, Point, px};
 
-use crate::{Graph, NodeId};
+use ferrum_flow_core::{Graph, NodeId};
 
 pub(crate) fn clamp_local_in_parent_applies(
     graph: &Graph,

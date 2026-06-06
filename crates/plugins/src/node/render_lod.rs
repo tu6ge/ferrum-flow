@@ -2,7 +2,7 @@
 
 use std::collections::HashSet;
 
-use crate::{Graph, NodeId};
+use ferrum_flow_core::{Graph, NodeId};
 
 /// How much detail to paint for one node card.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -79,7 +79,7 @@ pub fn resolve_node_render_lod(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Graph;
+    use ferrum_flow_core::Graph;
 
     fn config() -> NodeRenderLodConfig {
         NodeRenderLodConfig {

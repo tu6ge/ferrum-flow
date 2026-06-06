@@ -13,11 +13,9 @@ const LABEL_RESET_ZOOM: &str = "\u{21BA}";
 /// Square four corners — “frame / fit content” (same action as [`crate::plugins::FitAllGraphPlugin`]).
 const LABEL_FIT_ENTIRE_GRAPH: &str = "\u{26F6}";
 
-use crate::{
-    canvas::{Command, CommandContext},
-    plugin::{
-        EventResult, FlowEvent, InputEvent, Plugin, PluginContext, RenderContext, RenderLayer,
-    },
+use ferrum_flow_core::{
+    Command, CommandContext, EventResult, FlowEvent, GraphOp, InputEvent, Plugin, PluginContext,
+    RenderContext, RenderLayer,
 };
 
 use super::fit_all::fit_entire_graph;
@@ -119,7 +117,7 @@ impl Command for ViewportZoomCommand {
         ctx.set_offset(self.from_offset);
     }
 
-    fn to_ops(&self, ctx: &mut crate::CommandContext) -> Vec<crate::GraphOp> {
+    fn to_ops(&self, ctx: &mut CommandContext) -> Vec<GraphOp> {
         ctx.set_zoom(self.to_zoom);
         ctx.set_offset(self.to_offset);
         vec![]
@@ -285,7 +283,7 @@ impl Plugin for ZoomControlsPlugin {
 mod command_interop_tests {
     use gpui::{Point, px};
 
-    use crate::{Graph, command_interop::assert_command_interop};
+    use ferrum_flow_core::{Graph, command_interop::assert_command_interop};
 
     use super::ViewportZoomCommand;
 

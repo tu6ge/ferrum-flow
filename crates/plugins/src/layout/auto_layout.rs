@@ -10,10 +10,11 @@
 
 use std::sync::Arc;
 
-use crate::{
-    plugin::{FlowEvent, Plugin, PluginContext, primary_platform_modifier},
-    plugins::node::DragNodesCommand,
+use ferrum_flow_core::{
+    EventResult, FlowEvent, InputEvent, Plugin, PluginContext, primary_platform_modifier,
 };
+
+use crate::node::DragNodesCommand;
 
 use super::{LayoutOptions, LayoutOutput, LayoutStrategy};
 
@@ -59,18 +60,14 @@ impl Plugin for AutoLayoutPlugin {
         89
     }
 
-    fn on_event(
-        &mut self,
-        event: &FlowEvent,
-        ctx: &mut PluginContext,
-    ) -> crate::plugin::EventResult {
-        if let FlowEvent::Input(crate::plugin::InputEvent::KeyDown(ev)) = event
+    fn on_event(&mut self, event: &FlowEvent, ctx: &mut PluginContext) -> EventResult {
+        if let FlowEvent::Input(InputEvent::KeyDown(ev)) = event
             && primary_platform_modifier(ev)
             && ev.keystroke.modifiers.shift
             && ev.keystroke.key == "g"
         {
             let Some(strategy) = self.strategy.as_ref() else {
-                return crate::plugin::EventResult::Stop;
+                return EventResult::Stop;
             };
 
             match strategy.compute(ctx.graph, &self.options, None) {
@@ -88,8 +85,8 @@ impl Plugin for AutoLayoutPlugin {
                     )));
                 }
             }
-            return crate::plugin::EventResult::Stop;
+            return EventResult::Stop;
         }
-        crate::plugin::EventResult::Continue
+        EventResult::Continue
     }
 }

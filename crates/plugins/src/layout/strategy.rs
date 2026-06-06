@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use gpui::{Pixels, Point};
 
-use crate::{Graph, NodeId};
+use ferrum_flow_core::{Graph, NodeId};
 
 /// Role of a strategy inside a multi-stage layout pipeline.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]

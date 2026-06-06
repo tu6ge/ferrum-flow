@@ -5,7 +5,7 @@ use crate::{Node, PortPosition};
 /// Fingerprint of [`Viewport`] fields that affect [`Viewport::is_node_visible`].
 /// Used by [`crate::NodePlugin`] to avoid rescanning the full node list every frame.
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub(crate) struct ViewportVisibilityCacheKey {
+pub struct ViewportVisibilityCacheKey {
     pub zoom: f32,
     pub offset_x: f32,
     pub offset_y: f32,
@@ -168,7 +168,7 @@ impl Viewport {
         self.is_world_bounds_visible(&node.bounds())
     }
 
-    pub(crate) fn visibility_cache_key(&self) -> ViewportVisibilityCacheKey {
+    pub fn visibility_cache_key(&self) -> ViewportVisibilityCacheKey {
         match self.window_bounds {
             Some(b) => ViewportVisibilityCacheKey {
                 zoom: self.zoom,

@@ -5,11 +5,9 @@ use gpui::{
     div, px, rgb,
 };
 
-use crate::{
-    NodeId, ParentDeletePolicy,
-    plugin::{
-        EventResult, FlowEvent, InputEvent, Plugin, PluginContext, RenderContext, RenderLayer,
-    },
+use ferrum_flow_core::{
+    EventResult, FlowEvent, InputEvent, NodeId, ParentDeletePolicy, Plugin, PluginContext,
+    RenderContext, RenderLayer,
 };
 
 use super::{
@@ -398,11 +396,7 @@ impl Plugin for ContextMenuPlugin {
         )
     }
 
-    fn on_event(
-        &mut self,
-        event: &FlowEvent,
-        ctx: &mut PluginContext,
-    ) -> crate::plugin::EventResult {
+    fn on_event(&mut self, event: &FlowEvent, ctx: &mut PluginContext) -> EventResult {
         if let FlowEvent::Input(InputEvent::MouseDown(ev)) = event {
             if ev.button == MouseButton::Left {
                 if let Some(open) = self.open.take() {

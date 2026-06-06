@@ -7,7 +7,7 @@ use std::collections::{HashMap, HashSet};
 
 use gpui::{Point, px};
 
-use crate::{Graph, NodeId};
+use ferrum_flow_core::{Graph, NodeId};
 
 use super::strategy::{
     LayoutError, LayoutOptions, LayoutOutput, LayoutPhase, LayoutStrategy, NodePositionDelta,

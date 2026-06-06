@@ -871,7 +871,7 @@ impl Graph {
         self.ancestors(target).any(|id| id == ancestor)
     }
 
-    pub(crate) fn ensure_node(&self, id: NodeId) -> Result<(), GraphError> {
+    pub fn ensure_node(&self, id: NodeId) -> Result<(), GraphError> {
         if self.nodes.contains_key(&id) {
             Ok(())
         } else {

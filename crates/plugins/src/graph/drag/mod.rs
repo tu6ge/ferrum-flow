@@ -9,10 +9,9 @@ use std::time::Duration;
 
 use gpui::MouseButton;
 
-use crate::{
-    plugin::{EventResult, FlowEvent, InputEvent, Plugin, PluginContext},
-    plugins::node::NODE_DRAG_TICK_INTERVAL,
-};
+use ferrum_flow_core::{EventResult, FlowEvent, InputEvent, Plugin, PluginContext};
+
+use crate::node::NODE_DRAG_TICK_INTERVAL;
 
 use super::pointer::graph_edge_hit_at;
 

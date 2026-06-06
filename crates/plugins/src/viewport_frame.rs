@@ -1,10 +1,6 @@
 use gpui::{Pixels, Point, px};
 
-use crate::{
-    Viewport,
-    canvas::{Command, CommandContext},
-    plugin::PluginContext,
-};
+use ferrum_flow_core::{Command, CommandContext, GraphOp, PluginContext, Viewport};
 
 /// Same zoom limits as [`crate::plugins::ViewportPlugin`] wheel zoom.
 pub(crate) const ZOOM_MIN: f32 = 0.7;
@@ -64,7 +60,7 @@ impl Command for ViewportFrameCommand {
         ctx.set_offset(self.from_offset);
     }
 
-    fn to_ops(&self, ctx: &mut CommandContext) -> Vec<crate::GraphOp> {
+    fn to_ops(&self, ctx: &mut CommandContext) -> Vec<GraphOp> {
         ctx.set_zoom(self.to_zoom);
         ctx.set_offset(self.to_offset);
         vec![]
@@ -136,7 +132,7 @@ pub(crate) fn apply_frame_world_rect_to_viewport(
 mod command_interop_tests {
     use gpui::{Point, px};
 
-    use crate::{Graph, command_interop::assert_command_interop};
+    use ferrum_flow_core::{Graph, command_interop::assert_command_interop};
 
     use super::ViewportFrameCommand;
 

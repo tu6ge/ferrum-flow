@@ -6,13 +6,12 @@ use gpui::{
     Styled, div, px, rgb, rgba,
 };
 
-use crate::{
-    FlowTheme, NodeId,
-    canvas::{Interaction, InteractionResult},
-    plugin::{
-        EventResult, FlowEvent, InputEvent, Plugin, PluginContext, RenderContext, RenderLayer,
-    },
+use ferrum_flow_core::{
+    EventResult, FlowEvent, FlowTheme, InputEvent, Interaction, InteractionResult, NodeId, Plugin,
+    PluginContext, RenderContext, RenderLayer,
 };
+
+use crate::node::DragNodesCommand;
 
 const DRAG_THRESHOLD: Pixels = px(2.0);
 const DRAG_COMMAND_INTERVAL: Duration = Duration::from_millis(50);
@@ -43,11 +42,7 @@ impl Plugin for SelectionPlugin {
         "selection"
     }
 
-    fn on_event(
-        &mut self,
-        event: &FlowEvent,
-        ctx: &mut crate::plugin::PluginContext,
-    ) -> EventResult {
+    fn on_event(&mut self, event: &FlowEvent, ctx: &mut PluginContext) -> EventResult {
         if let FlowEvent::Input(InputEvent::MouseDown(ev)) = event {
             if ev.button != MouseButton::Left {
                 return EventResult::Continue;
@@ -197,10 +192,7 @@ impl Interaction for SelectionInteraction {
                     if should_command {
                         let start_position: Vec<_> =
                             nodes.iter().map(|(id, point)| (*id, *point)).collect();
-                        ctx.execute_command(super::node::DragNodesCommand::new(
-                            &start_position,
-                            ctx,
-                        ));
+                        ctx.execute_command(DragNodesCommand::new(&start_position, ctx));
                         self.last_drag_command_at = Some(now);
                     }
                 }

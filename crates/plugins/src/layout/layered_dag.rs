@@ -8,7 +8,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 
 use gpui::{Point, px};
 
-use crate::{Graph, NodeId};
+use ferrum_flow_core::{Graph, NodeId};
 
 use super::strategy::{
     LayoutDirection, LayoutError, LayoutOptions, LayoutOutput, LayoutPhase, LayoutStrategy,
@@ -271,7 +271,7 @@ fn delta_from_positions(graph: &Graph, positions: HashMap<NodeId, (f32, f32)>) -
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Graph;
+    use ferrum_flow_core::Graph;
     use serde_json::json;
 
     #[test]

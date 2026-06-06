@@ -27,19 +27,20 @@ use gpui::{
     Styled as _, div,
 };
 
-use crate::EdgeId;
-use crate::plugin::{
+use ferrum_flow_core::{Edge, EdgeId, NodeId};
+use ferrum_flow_core::{
     EventResult, FlowEvent, InputEvent, Plugin, PluginContext, RenderContext, RenderLayer,
-};
-use crate::plugins::edge::{EdgeGeometry, edge_geometry2, edges_canvas_element};
-use crate::plugins::node::render_node_card;
-use crate::plugins::node::{
-    ActiveNodeDrag, node_ids_for_drag_overlay, render_lod::NodeCardsLod, render_node_cards,
-    render_node_ports, render_node_shell,
 };
 use pointer::graph_handle_edge_mouse_down;
 
-pub use crate::plugins::node::{NodeRenderLod, NodeRenderLodConfig};
+use crate::ActiveNodeDrag;
+use crate::edge::{EdgeGeometry, edge_geometry2, edges_canvas_element};
+use crate::node::render_lod::NodeCardsLod;
+pub use crate::node::{NodeRenderLod, NodeRenderLodConfig};
+use crate::node::{
+    node_ids_for_drag_overlay, render_node_card, render_node_cards, render_node_ports,
+    render_node_shell,
+};
 pub use drag::{BoundaryDragPolicy, NestedNodeDragPlugin};
 use hierarchy::GraphHierarchy;
 pub use plan::{EdgePaintKind, classify_edge};
@@ -193,7 +194,7 @@ impl Plugin for GraphPlugin {
 /// Flat canvas: all nodes in [`Graph::paint_order`], all visible edges on top (like legacy plugins).
 fn render_flat_graph(
     ctx: &mut RenderContext,
-    drag_overlay: &HashSet<crate::NodeId>,
+    drag_overlay: &HashSet<NodeId>,
     lod: Option<&NodeCardsLod<'_>>,
 ) -> Option<AnyElement> {
     let stroke = ctx.theme.edge_stroke;
@@ -232,10 +233,7 @@ fn render_flat_graph(
 }
 
 /// Flat graph: dragged nodes excluded from [`render_flat_graph`] static layer, redrawn here.
-fn render_flat_drag_overlay(
-    ctx: &mut RenderContext,
-    overlay_ids: &[crate::NodeId],
-) -> Option<AnyElement> {
+fn render_flat_drag_overlay(ctx: &mut RenderContext, overlay_ids: &[NodeId]) -> Option<AnyElement> {
     let drag_overlay: HashSet<_> = overlay_ids.iter().copied().collect();
     let node_ids: Vec<_> = ctx
         .graph
@@ -263,7 +261,7 @@ fn render_flat_drag_overlay(
 /// Interaction-layer paint while dragging ([`crate::plugins::graph::NestedNodeDragPlugin`]).
 pub(crate) fn render_hierarchy_drag_overlay(
     ctx: &mut RenderContext,
-    overlay_ids: &[crate::NodeId],
+    overlay_ids: &[NodeId],
 ) -> Option<AnyElement> {
     if overlay_ids.is_empty() {
         return None;
@@ -349,13 +347,12 @@ pub(crate) fn render_hierarchy_drag_overlay(
 }
 
 type HierarchyEdges = (
-    HashMap<crate::NodeId, Vec<(EdgeId, Option<EdgeGeometry>)>>,
+    HashMap<NodeId, Vec<(EdgeId, Option<EdgeGeometry>)>>,
     Vec<(EdgeId, Option<EdgeGeometry>)>,
 );
 
 fn collect_hierarchy_edges(ctx: &mut RenderContext) -> HierarchyEdges {
-    let mut intra_by_parent: HashMap<crate::NodeId, Vec<(EdgeId, Option<EdgeGeometry>)>> =
-        HashMap::new();
+    let mut intra_by_parent: HashMap<NodeId, Vec<(EdgeId, Option<EdgeGeometry>)>> = HashMap::new();
     let mut cross_edges: Vec<(EdgeId, Option<EdgeGeometry>)> = Vec::new();
 
     for (_, edge) in ctx.graph.edges().iter() {
@@ -378,20 +375,13 @@ fn collect_hierarchy_edges(ctx: &mut RenderContext) -> HierarchyEdges {
     (intra_by_parent, cross_edges)
 }
 
-fn edge_endpoint_node_ids(
-    ctx: &RenderContext,
-    edge: &crate::Edge,
-) -> Option<(crate::NodeId, crate::NodeId)> {
+fn edge_endpoint_node_ids(ctx: &RenderContext, edge: &Edge) -> Option<(NodeId, NodeId)> {
     let sp = ctx.graph.get_port(&edge.source_port)?;
     let tp = ctx.graph.get_port(&edge.target_port)?;
     Some((sp.node_id(), tp.node_id()))
 }
 
-fn edge_any_endpoint_in_set(
-    ctx: &RenderContext,
-    edge: &crate::Edge,
-    nodes: &HashSet<crate::NodeId>,
-) -> bool {
+fn edge_any_endpoint_in_set(ctx: &RenderContext, edge: &Edge, nodes: &HashSet<NodeId>) -> bool {
     let Some((s, t)) = edge_endpoint_node_ids(ctx, edge) else {
         return false;
     };
@@ -400,7 +390,7 @@ fn edge_any_endpoint_in_set(
 
 fn cross_edges_for_static_layer(
     cross_edges: &[(EdgeId, Option<EdgeGeometry>)],
-    drag_overlay: &HashSet<crate::NodeId>,
+    drag_overlay: &HashSet<NodeId>,
     ctx: &RenderContext,
 ) -> Vec<(EdgeId, Option<EdgeGeometry>)> {
     if drag_overlay.is_empty() {
@@ -419,7 +409,7 @@ fn cross_edges_for_static_layer(
 
 fn cross_edges_for_drag_overlay(
     cross_edges: &[(EdgeId, Option<EdgeGeometry>)],
-    drag_overlay: &HashSet<crate::NodeId>,
+    drag_overlay: &HashSet<NodeId>,
     ctx: &RenderContext,
 ) -> Vec<(EdgeId, Option<EdgeGeometry>)> {
     cross_edges
@@ -444,15 +434,15 @@ enum GroupPaintPass {
 #[allow(clippy::too_many_arguments)]
 fn render_group_anchor(
     ctx: &mut RenderContext,
-    anchor: crate::NodeId,
-    paint_order: &[crate::NodeId],
-    drag_overlay: &HashSet<crate::NodeId>,
+    anchor: NodeId,
+    paint_order: &[NodeId],
+    drag_overlay: &HashSet<NodeId>,
     pass: GroupPaintPass,
-    intra_by_parent: &HashMap<crate::NodeId, Vec<(EdgeId, Option<EdgeGeometry>)>>,
+    intra_by_parent: &HashMap<NodeId, Vec<(EdgeId, Option<EdgeGeometry>)>>,
     selected: &HashSet<EdgeId>,
     stroke: u32,
     stroke_sel: u32,
-    covered: &mut HashSet<crate::NodeId>,
+    covered: &mut HashSet<NodeId>,
     lod: Option<&NodeCardsLod<'_>>,
 ) -> Option<AnyElement> {
     match pass {
@@ -527,11 +517,7 @@ fn render_group_anchor(
     Some(group.into_any())
 }
 
-fn child_in_pass(
-    id: crate::NodeId,
-    pass: GroupPaintPass,
-    drag_overlay: &HashSet<crate::NodeId>,
-) -> bool {
+fn child_in_pass(id: NodeId, pass: GroupPaintPass, drag_overlay: &HashSet<NodeId>) -> bool {
     match pass {
         GroupPaintPass::Static => !drag_overlay.contains(&id),
         GroupPaintPass::DragOverlay => drag_overlay.contains(&id),

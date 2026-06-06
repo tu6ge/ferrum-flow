@@ -5,9 +5,9 @@ use std::{
 
 use gpui::{Element as _, ParentElement as _, Styled as _, div, px, rgb};
 
-use crate::{
-    FlowTheme,
-    plugin::{CanvasMessage, FlowEvent, MessageLevel, Plugin, PluginContext, RenderContext},
+use ferrum_flow_core::{
+    CanvasMessage, EventResult, FlowEvent, FlowTheme, MessageLevel, Plugin, PluginContext,
+    RenderContext, RenderLayer,
 };
 
 const DEFAULT_TOAST_DURATION: Duration = Duration::from_millis(3000);
@@ -152,26 +152,22 @@ impl Plugin for ToastPlugin {
         "toast"
     }
 
-    fn on_event(
-        &mut self,
-        event: &FlowEvent,
-        ctx: &mut PluginContext,
-    ) -> crate::plugin::EventResult {
+    fn on_event(&mut self, event: &FlowEvent, ctx: &mut PluginContext) -> EventResult {
         self.gc_expired();
         if let FlowEvent::Message(msg) = event {
             ctx.schedule_after(self.duration);
             self.push(msg);
             ctx.notify();
         }
-        crate::plugin::EventResult::Continue
+        EventResult::Continue
     }
 
     fn priority(&self) -> i32 {
         10
     }
 
-    fn render_layer(&self) -> crate::plugin::RenderLayer {
-        crate::plugin::RenderLayer::Overlay
+    fn render_layer(&self) -> RenderLayer {
+        RenderLayer::Overlay
     }
 
     fn render(&mut self, ctx: &mut RenderContext) -> Option<gpui::AnyElement> {

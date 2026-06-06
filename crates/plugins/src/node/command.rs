@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use gpui::{Pixels, Point};
 
-use crate::{EdgeId, GraphOp, NodeId, canvas::Command, plugin::PluginContext};
+use ferrum_flow_core::{Command, CommandContext, EdgeId, GraphOp, NodeId, PluginContext};
 
 pub struct SelecteNodeCommand {
     node_id: NodeId,
@@ -28,21 +28,21 @@ impl Command for SelecteNodeCommand {
     fn name(&self) -> &'static str {
         "select_node"
     }
-    fn execute(&mut self, ctx: &mut crate::canvas::CommandContext) {
+    fn execute(&mut self, ctx: &mut CommandContext) {
         if !self.shift {
             ctx.clear_selected_edge();
         }
         ctx.add_selected_node(self.node_id, self.shift);
         ctx.bring_node_to_front(self.node_id);
     }
-    fn undo(&mut self, ctx: &mut crate::canvas::CommandContext) {
+    fn undo(&mut self, ctx: &mut CommandContext) {
         ctx.graph.set_selected_node(self.old_selected_node.clone());
         ctx.graph.set_selected_edge(self.old_selected_edge.clone());
         let a = ctx.graph.node_order_mut();
         *a = self.old_node_order.clone();
     }
 
-    fn to_ops(&self, ctx: &mut crate::CommandContext) -> Vec<crate::GraphOp> {
+    fn to_ops(&self, ctx: &mut CommandContext) -> Vec<GraphOp> {
         if !self.shift {
             ctx.clear_selected_edge();
         }
@@ -94,14 +94,14 @@ impl Command for DragNodesCommand {
     fn name(&self) -> &'static str {
         "drag_nodes"
     }
-    fn execute(&mut self, ctx: &mut crate::canvas::CommandContext) {
+    fn execute(&mut self, ctx: &mut CommandContext) {
         for (id, point) in self.to.iter() {
             if let Some(node) = ctx.get_node_mut(id) {
                 node.set_position_with_point(*point);
             }
         }
     }
-    fn undo(&mut self, ctx: &mut crate::canvas::CommandContext) {
+    fn undo(&mut self, ctx: &mut CommandContext) {
         for (id, point) in self.from.iter() {
             if let Some(node) = ctx.get_node_mut(id) {
                 node.set_position_with_point(*point);
@@ -109,7 +109,7 @@ impl Command for DragNodesCommand {
         }
     }
 
-    fn to_ops(&self, _ctx: &mut crate::CommandContext) -> Vec<crate::GraphOp> {
+    fn to_ops(&self, _ctx: &mut CommandContext) -> Vec<GraphOp> {
         let mut list = vec![];
         for (id, point) in self.to.iter() {
             list.push(GraphOp::MoveNode {
@@ -127,7 +127,7 @@ impl Command for DragNodesCommand {
 mod command_interop_tests {
     use gpui::{Point, px};
 
-    use crate::{Graph, command_interop::assert_command_interop};
+    use ferrum_flow_core::{Graph, command_interop::assert_command_interop};
 
     use super::{DragNodesCommand, SelecteNodeCommand};
 

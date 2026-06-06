@@ -6,8 +6,6 @@ pub(crate) mod render_lod;
 
 use std::collections::HashSet;
 
-use crate::Graph;
-use crate::node::Node;
 pub use command::{DragNodesCommand, SelecteNodeCommand};
 pub use drag_events::{ActiveNodeDrag, NODE_DRAG_TICK_INTERVAL, NodeDragEvent};
 pub(crate) use drag_shared::ApplyNodeDragDelta;
@@ -16,6 +14,12 @@ pub use drag_shared::{
     dragged_ids_from_nodes, exceeds_drag_threshold, insert_active_drag, run_drag_side_effects,
     screen_pointer_world_delta, start_world_positions,
 };
+use ferrum_flow_core::Graph;
+use ferrum_flow_core::Node;
+use ferrum_flow_core::NodeId;
+use ferrum_flow_core::PortId;
+use ferrum_flow_core::RenderLayer;
+use ferrum_flow_core::ViewportVisibilityCacheKey;
 use gpui::{
     Div, Element as _, ElementId, InteractiveElement as _, ParentElement, Stateful, Styled as _,
     div, px,
@@ -23,12 +27,12 @@ use gpui::{
 pub use interaction::NodeInteractionPlugin;
 pub use render_lod::{NodeRenderLod, NodeRenderLodConfig, resolve_node_render_lod};
 
-use crate::plugin::{NodeCardVariant, Plugin, RenderContext};
+use ferrum_flow_core::{NodeCardVariant, Plugin, RenderContext};
 use render_lod::NodeCardsLod;
 
 fn node_render_lod(
     ctx: &RenderContext,
-    node_id: &crate::NodeId,
+    node_id: &NodeId,
     lod: Option<&NodeCardsLod<'_>>,
 ) -> NodeRenderLod {
     let Some(lod) = lod else {
@@ -53,7 +57,7 @@ fn render_degraded_node_shell(ctx: &RenderContext, node: &Node) -> gpui::AnyElem
 
 pub(super) fn render_node_card(
     ctx: &mut RenderContext,
-    node_id: crate::NodeId,
+    node_id: NodeId,
     node: &Node,
     lod: Option<&NodeCardsLod<'_>>,
 ) -> Stateful<Div> {
@@ -66,7 +70,7 @@ pub(super) fn render_node_card(
             let render = ctx.renderers.get(node.renderer_key());
             let node_render = render.render(node, ctx);
 
-            let port_ids: Vec<crate::PortId> = ctx.cached_port_ids_for_node(&node_id).collect();
+            let port_ids: Vec<PortId> = ctx.cached_port_ids_for_node(&node_id).collect();
             let ports = port_ids.iter().filter_map(|port_id| {
                 let port = ctx.graph.get_port(port_id)?;
                 render.port_render(node, port, ctx)
@@ -85,7 +89,7 @@ pub(super) fn render_node_card(
 /// Pass `lod` from [`GraphPlugin`](crate::plugins::GraphPlugin); omit for full detail ([`NodePlugin`]).
 pub(super) fn render_node_cards(
     ctx: &mut RenderContext,
-    node_ids: &[crate::NodeId],
+    node_ids: &[NodeId],
     id: &'static str,
     lod: Option<&NodeCardsLod<'_>>,
 ) -> gpui::AnyElement {
@@ -100,7 +104,7 @@ pub(super) fn render_node_cards_iter<I>(
     lod: Option<&NodeCardsLod<'_>>,
 ) -> gpui::AnyElement
 where
-    I: IntoIterator<Item = crate::NodeId>,
+    I: IntoIterator<Item = NodeId>,
 {
     let list = node_ids.into_iter().filter_map(|node_id| {
         let node = ctx.graph.nodes().get(&node_id)?;
@@ -113,7 +117,7 @@ where
 /// Parent group background only (ports rendered separately for z-order).
 pub(super) fn render_node_shell(
     ctx: &mut RenderContext,
-    node_id: &crate::NodeId,
+    node_id: &NodeId,
 ) -> Option<gpui::AnyElement> {
     let node = ctx.graph.nodes().get(node_id)?;
     let render = ctx.renderers.get(node.renderer_key());
@@ -129,11 +133,11 @@ pub(super) fn render_node_shell(
 /// Ports for a node after its shell and children exist (intra-parent edges stay underneath).
 pub(super) fn render_node_ports(
     ctx: &mut RenderContext,
-    node_id: &crate::NodeId,
+    node_id: &NodeId,
 ) -> Option<gpui::AnyElement> {
     let node = ctx.graph.nodes().get(node_id)?;
     let render = ctx.renderers.get(node.renderer_key());
-    let port_ids: Vec<crate::PortId> = ctx.cached_port_ids_for_node(node_id).collect();
+    let port_ids: Vec<PortId> = ctx.cached_port_ids_for_node(node_id).collect();
     let ports = port_ids.iter().filter_map(|port_id| {
         let port = ctx.graph.get_port(port_id)?;
         render.port_render(node, port, ctx)
@@ -165,9 +169,6 @@ pub(crate) fn node_ids_for_drag_overlay(graph: &Graph, dragged: &[NodeId]) -> Ve
 }
 
 use std::sync::Arc;
-
-use crate::NodeId;
-use crate::viewport::ViewportVisibilityCacheKey;
 
 /// Invalidates [`NodePlugin::static_layer_node_ids`] when the viewport changes **or** the active
 /// node-drag overlay set changes ([`ActiveNodeDrag`] `Arc` identity + length).
@@ -227,8 +228,8 @@ impl Plugin for NodePlugin {
     fn priority(&self) -> i32 {
         60
     }
-    fn render_layer(&self) -> crate::plugin::RenderLayer {
-        crate::plugin::RenderLayer::Nodes
+    fn render_layer(&self) -> RenderLayer {
+        RenderLayer::Nodes
     }
     fn render(&mut self, ctx: &mut RenderContext) -> Option<gpui::AnyElement> {
         let key = NodeStaticLayerCacheKey::from_render_ctx(ctx);
@@ -265,7 +266,7 @@ impl Plugin for NodePlugin {
 #[cfg(test)]
 mod tests {
     use super::node_ids_for_drag_overlay;
-    use crate::Graph;
+    use ferrum_flow_core::Graph;
 
     #[test]
     fn drag_overlay_includes_descendants_in_paint_order() {

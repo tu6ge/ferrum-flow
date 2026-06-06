@@ -1,6 +1,8 @@
 use gpui::{Pixels, Point};
 
-use crate::{NodeId, plugin::PluginContext, plugins::node::ApplyNodeDragDelta};
+use ferrum_flow_core::{NodeId, PluginContext};
+
+use crate::node::ApplyNodeDragDelta;
 
 use super::{boundary, policy::BoundaryDragPolicy};
 

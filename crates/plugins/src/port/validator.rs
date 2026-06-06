@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use crate::{Graph, NodeId, PluginContext, Port, PortKind, PortScope};
+use ferrum_flow_core::{Graph, NodeId, PluginContext, Port, PortKind, PortScope};
 
 /// Validates whether an edge may be created between two ports.
 pub trait EdgeValidator: Send + Sync {
@@ -136,7 +136,7 @@ fn nodes_share_direct_parent(graph: &Graph, a: NodeId, b: NodeId) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Graph;
+    use ferrum_flow_core::Graph;
 
     #[test]
     fn nodes_share_direct_parent_siblings_and_roots() {

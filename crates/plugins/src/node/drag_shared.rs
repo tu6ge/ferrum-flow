@@ -6,11 +6,9 @@ use std::time::{Duration, Instant};
 
 use gpui::{Pixels, Point, px};
 
-use crate::{
-    NodeId,
-    plugin::{FlowEvent, PluginContext},
-    plugins::node::{ActiveNodeDrag, NodeDragEvent, command::DragNodesCommand},
-};
+use ferrum_flow_core::{FlowEvent, NodeId, PluginContext};
+
+use crate::node::{ActiveNodeDrag, NodeDragEvent, command::DragNodesCommand};
 
 pub const DRAG_THRESHOLD: Pixels = px(2.0);
 pub const DRAG_COMMAND_INTERVAL: Duration = Duration::from_millis(50);

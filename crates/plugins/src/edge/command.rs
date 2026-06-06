@@ -1,6 +1,6 @@
 use std::{collections::HashSet, vec};
 
-use crate::{EdgeId, NodeId, canvas::Command, plugin::PluginContext};
+use ferrum_flow_core::{Command, CommandContext, EdgeId, GraphOp, NodeId, PluginContext};
 
 pub(super) struct SelectEdgeCommand {
     edge_id: EdgeId,
@@ -24,17 +24,17 @@ impl Command for SelectEdgeCommand {
     fn name(&self) -> &'static str {
         "select_edge"
     }
-    fn execute(&mut self, ctx: &mut crate::canvas::CommandContext) {
+    fn execute(&mut self, ctx: &mut CommandContext) {
         if !self.shift {
             ctx.clear_selected_node();
         }
         ctx.add_selected_edge(self.edge_id, self.shift);
     }
-    fn undo(&mut self, ctx: &mut crate::canvas::CommandContext) {
+    fn undo(&mut self, ctx: &mut CommandContext) {
         ctx.graph.set_selected_node(self.old_selected_node.clone());
         ctx.graph.set_selected_edge(self.old_selected_edge.clone());
     }
-    fn to_ops(&self, ctx: &mut crate::CommandContext) -> Vec<crate::GraphOp> {
+    fn to_ops(&self, ctx: &mut CommandContext) -> Vec<GraphOp> {
         if !self.shift {
             ctx.clear_selected_node();
         }
@@ -59,14 +59,14 @@ impl Command for ClearEdgeCommand {
     fn name(&self) -> &'static str {
         "clear_edge"
     }
-    fn execute(&mut self, ctx: &mut crate::canvas::CommandContext) {
+    fn execute(&mut self, ctx: &mut CommandContext) {
         ctx.clear_selected_edge();
     }
-    fn undo(&mut self, ctx: &mut crate::canvas::CommandContext) {
+    fn undo(&mut self, ctx: &mut CommandContext) {
         ctx.graph.set_selected_edge(self.old_selected_edge.clone());
     }
 
-    fn to_ops(&self, ctx: &mut crate::CommandContext) -> Vec<crate::GraphOp> {
+    fn to_ops(&self, ctx: &mut CommandContext) -> Vec<GraphOp> {
         ctx.clear_selected_edge();
         vec![]
     }
@@ -74,7 +74,7 @@ impl Command for ClearEdgeCommand {
 
 #[cfg(test)]
 mod command_interop_tests {
-    use crate::{Graph, command_interop::assert_command_interop};
+    use ferrum_flow_core::{Graph, command_interop::assert_command_interop};
 
     use super::{ClearEdgeCommand, SelectEdgeCommand};
 

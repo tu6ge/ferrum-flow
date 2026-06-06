@@ -1,9 +1,8 @@
 use gpui::{Pixels, Point, px};
 
-use crate::{
-    NodeId,
-    plugin::{FlowEvent, Plugin, PluginContext, primary_platform_modifier},
-    plugins::node::DragNodesCommand,
+use crate::node::DragNodesCommand;
+use ferrum_flow_core::{
+    EventResult, FlowEvent, InputEvent, NodeId, Plugin, PluginContext, primary_platform_modifier,
 };
 
 /// Align selected nodes to their shared bounding box (⌘⇧L/R/T/B/H/V or Ctrl⇧…).
@@ -132,20 +131,14 @@ impl Plugin for AlignPlugin {
         "align"
     }
 
-    fn setup(&mut self, _ctx: &mut crate::plugin::InitPluginContext) {}
-
     fn priority(&self) -> i32 {
         91
     }
 
-    fn on_event(
-        &mut self,
-        event: &FlowEvent,
-        ctx: &mut PluginContext,
-    ) -> crate::plugin::EventResult {
-        if let FlowEvent::Input(crate::plugin::InputEvent::KeyDown(ev)) = event {
+    fn on_event(&mut self, event: &FlowEvent, ctx: &mut PluginContext) -> EventResult {
+        if let FlowEvent::Input(InputEvent::KeyDown(ev)) = event {
             if !align_shortcut(ev) {
-                return crate::plugin::EventResult::Continue;
+                return EventResult::Continue;
             }
             let kind = match ev.keystroke.key.as_str() {
                 "l" => Some(AlignKind::Left),
@@ -158,9 +151,9 @@ impl Plugin for AlignPlugin {
             };
             if let Some(kind) = kind {
                 apply_align(ctx, kind);
-                return crate::plugin::EventResult::Stop;
+                return EventResult::Stop;
             }
         }
-        crate::plugin::EventResult::Continue
+        EventResult::Continue
     }
 }

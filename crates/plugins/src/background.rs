@@ -1,4 +1,4 @@
-use crate::plugin::Plugin;
+use ferrum_flow_core::{Plugin, RenderContext, RenderLayer};
 use gpui::{
     Corners, Element as _, InteractiveElement as _, ParentElement, RenderImage, Styled, canvas, div,
 };
@@ -102,7 +102,7 @@ impl BackgroundPlugin {
         }
     }
 
-    fn sync_bitmap(&mut self, ctx: &crate::plugin::RenderContext) {
+    fn sync_bitmap(&mut self, ctx: &RenderContext) {
         let zoom = ctx.zoom();
         let grid = BASE_GRID * zoom;
         let offset = ctx.offset();
@@ -157,11 +157,11 @@ impl Plugin for BackgroundPlugin {
     fn priority(&self) -> i32 {
         0
     }
-    fn render_layer(&self) -> crate::plugin::RenderLayer {
-        crate::plugin::RenderLayer::Background
+    fn render_layer(&self) -> RenderLayer {
+        RenderLayer::Background
     }
 
-    fn render(&mut self, ctx: &mut crate::plugin::RenderContext) -> Option<gpui::AnyElement> {
+    fn render(&mut self, ctx: &mut RenderContext) -> Option<gpui::AnyElement> {
         self.sync_bitmap(ctx);
 
         let Some(bitmap) = self.bitmap.as_ref().map(Arc::clone) else {

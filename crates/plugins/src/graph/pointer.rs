@@ -5,12 +5,12 @@
 
 use gpui::{Pixels, Point};
 
-use crate::plugin::{EventResult, PluginContext};
-use crate::plugins::edge::{edge_hit_at, handle_edge_mouse_down};
+use crate::edge::{edge_hit_at, handle_edge_mouse_down};
+use ferrum_flow_core::{EdgeId, EventResult, PluginContext};
 
 /// Cache port layout for edges that could be hit (same visibility rule as [`super::plan::edge_is_visible`]).
 pub(crate) fn cache_visible_edge_ports_for_hit(ctx: &mut PluginContext) {
-    let edge_ids: Vec<crate::EdgeId> = ctx.graph.edges().keys().copied().collect();
+    let edge_ids: Vec<EdgeId> = ctx.graph.edges().keys().copied().collect();
     for id in edge_ids {
         let Some(edge) = ctx.graph.get_edge(&id) else {
             continue;
@@ -30,10 +30,7 @@ pub(crate) fn cache_visible_edge_ports_for_hit(ctx: &mut PluginContext) {
 }
 
 /// Hit-test after port cache (nested graph paint does not run [`crate::plugins::EdgePlugin::render`]).
-pub(crate) fn graph_edge_hit_at(
-    mouse: Point<Pixels>,
-    ctx: &mut PluginContext,
-) -> Option<crate::EdgeId> {
+pub(crate) fn graph_edge_hit_at(mouse: Point<Pixels>, ctx: &mut PluginContext) -> Option<EdgeId> {
     cache_visible_edge_ports_for_hit(ctx);
     edge_hit_at(mouse, ctx)
 }

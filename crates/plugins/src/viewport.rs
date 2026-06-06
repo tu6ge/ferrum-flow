@@ -1,8 +1,8 @@
 use gpui::{MouseButton, Pixels, Point, px};
 
-use crate::{
-    canvas::{Command, Interaction, InteractionResult},
-    plugin::{EventResult, FlowEvent, InputEvent, Plugin},
+use ferrum_flow_core::{
+    Command, CommandContext, EventResult, FlowEvent, GraphOp, InputEvent, Interaction,
+    InteractionResult, Plugin, PluginContext,
 };
 
 pub struct ViewportPlugin;
@@ -24,11 +24,7 @@ impl Plugin for ViewportPlugin {
         "viewport"
     }
 
-    fn on_event(
-        &mut self,
-        event: &crate::plugin::FlowEvent,
-        ctx: &mut crate::plugin::PluginContext,
-    ) -> EventResult {
+    fn on_event(&mut self, event: &FlowEvent, ctx: &mut PluginContext) -> EventResult {
         if let FlowEvent::Input(InputEvent::MouseDown(ev)) = event
             && ((ev.button == MouseButton::Left && ev.modifiers.shift)
                 || ev.button == MouseButton::Middle)
@@ -75,7 +71,7 @@ impl Interaction for Panning {
     fn on_mouse_move(
         &mut self,
         ev: &gpui::MouseMoveEvent,
-        ctx: &mut crate::plugin::PluginContext,
+        ctx: &mut PluginContext,
     ) -> InteractionResult {
         let dx = ev.position.x - self.start_mouse.x;
         let dy = ev.position.y - self.start_mouse.y;
@@ -92,8 +88,8 @@ impl Interaction for Panning {
     fn on_mouse_up(
         &mut self,
         _event: &gpui::MouseUpEvent,
-        ctx: &mut crate::plugin::PluginContext,
-    ) -> crate::canvas::InteractionResult {
+        ctx: &mut PluginContext,
+    ) -> InteractionResult {
         ctx.execute_command(PanningCommand {
             from: self.start_offset,
             to: ctx.offset(),
@@ -112,14 +108,14 @@ impl Command for PanningCommand {
     fn name(&self) -> &'static str {
         "panning"
     }
-    fn execute(&mut self, ctx: &mut crate::canvas::CommandContext) {
+    fn execute(&mut self, ctx: &mut CommandContext) {
         ctx.set_offset(self.to);
     }
-    fn undo(&mut self, ctx: &mut crate::canvas::CommandContext) {
+    fn undo(&mut self, ctx: &mut CommandContext) {
         ctx.set_offset(self.from);
     }
 
-    fn to_ops(&self, _ctx: &mut crate::CommandContext) -> Vec<crate::GraphOp> {
+    fn to_ops(&self, _ctx: &mut CommandContext) -> Vec<GraphOp> {
         vec![]
     }
 }
@@ -128,7 +124,7 @@ impl Command for PanningCommand {
 mod command_interop_tests {
     use gpui::{Point, px};
 
-    use crate::{Graph, command_interop::assert_command_interop};
+    use ferrum_flow_core::{Graph, command_interop::assert_command_interop};
 
     use super::PanningCommand;
 

@@ -2,14 +2,16 @@ use std::{collections::HashSet, sync::Arc};
 
 use gpui::{Bounds, Element, MouseButton, Pixels, Point, canvas, px, rgb};
 
+use ferrum_flow_core::{
+    CompositeCommand, EventResult, FlowEvent, Graph, InputEvent, Interaction, InteractionResult,
+    NodeId, Plugin, PluginContext, Port, PortId, PortKind, PortPosition, PortScope, RenderContext,
+    RenderLayer, Viewport,
+};
+
+use super::{DefaultEdgeValidator, EdgeValidator};
 use crate::{
-    CompositeCommand, DefaultEdgeValidator, EdgeValidator, Graph, NodeId, Port, PortId, PortKind,
-    PortPosition, PortScope,
-    canvas::Interaction,
-    plugin::{
-        FlowEvent, InputEvent, Plugin, PluginContext, RenderContext, utils::canvas_paint_point,
-    },
-    plugins::port::{edge_bezier, filled_disc_path, port_screen_big_bounds, port_screen_bounds},
+    edge::canvas_paint_point,
+    port::{edge_bezier, filled_disc_path, port_screen_big_bounds, port_screen_bounds},
 };
 
 use super::command::{
@@ -64,7 +66,7 @@ impl PortInteractionPlugin {
     }
 
     fn pending_dot_contains_screen(
-        ctx: &crate::plugin::PluginContext,
+        ctx: &PluginContext,
         end_world: Point<Pixels>,
         screen: Point<Pixels>,
     ) -> bool {
@@ -76,7 +78,7 @@ impl PortInteractionPlugin {
         dx * dx + dy * dy <= rf * rf
     }
 
-    fn finish_pending_link(&mut self, ctx: &mut crate::plugin::PluginContext, p: PendingPortLink) {
+    fn finish_pending_link(&mut self, ctx: &mut PluginContext, p: PendingPortLink) {
         let Some(source) = ctx.graph.get_port(&p.source_port).cloned() else {
             return;
         };
@@ -219,7 +221,7 @@ impl PortInteractionPlugin {
         end: Point<Pixels>,
         start_position: PortPosition,
         target_position: PortPosition,
-        viewport: &crate::Viewport,
+        viewport: &Viewport,
         line_rgb: u32,
         dot_rgb: u32,
     ) {
@@ -239,29 +241,25 @@ impl Plugin for PortInteractionPlugin {
         "port_interaction"
     }
 
-    fn on_event(
-        &mut self,
-        event: &FlowEvent,
-        ctx: &mut crate::plugin::PluginContext,
-    ) -> crate::plugin::EventResult {
+    fn on_event(&mut self, event: &FlowEvent, ctx: &mut PluginContext) -> EventResult {
         if let Some(p) = event.as_custom::<PendingLinkCommitted>() {
             self.pending = Some(PendingPortLink {
                 source_port: p.source_port,
                 end_world: p.end_world,
             });
-            return crate::plugin::EventResult::Stop;
+            return EventResult::Stop;
         }
 
         if let FlowEvent::Input(InputEvent::MouseDown(ev)) = event {
             if ev.button != MouseButton::Left {
-                return crate::plugin::EventResult::Continue;
+                return EventResult::Continue;
             }
             if let Some(pend) = self.pending
                 && Self::pending_dot_contains_screen(ctx, pend.end_world, ev.position)
             {
                 self.pending = None;
                 self.finish_pending_link(ctx, pend);
-                return crate::plugin::EventResult::Stop;
+                return EventResult::Stop;
             }
 
             let visible_nodes: HashSet<_> = ctx
@@ -307,7 +305,7 @@ impl Plugin for PortInteractionPlugin {
                     validation_error: None,
                     hovered_port: None,
                 });
-                return crate::plugin::EventResult::Stop;
+                return EventResult::Stop;
             }
 
             if self.pending.take().is_some() {
@@ -315,7 +313,7 @@ impl Plugin for PortInteractionPlugin {
             }
         }
 
-        crate::plugin::EventResult::Continue
+        EventResult::Continue
     }
 
     fn priority(&self) -> i32 {
@@ -344,8 +342,8 @@ impl Plugin for PortInteractionPlugin {
         )
     }
 
-    fn render_layer(&self) -> crate::plugin::RenderLayer {
-        crate::plugin::RenderLayer::Interaction
+    fn render_layer(&self) -> RenderLayer {
+        RenderLayer::Interaction
     }
 }
 
@@ -376,8 +374,8 @@ impl Interaction for PortConnecting {
     fn on_mouse_move(
         &mut self,
         event: &gpui::MouseMoveEvent,
-        ctx: &mut crate::plugin::PluginContext,
-    ) -> crate::canvas::InteractionResult {
+        ctx: &mut PluginContext,
+    ) -> InteractionResult {
         self.mouse = Some(event.position);
         let mouse_world = ctx.screen_to_world(event.position);
         self.validation_error = None;
@@ -394,11 +392,11 @@ impl Interaction for PortConnecting {
 
                 let Some(source_port) = ctx.graph.get_port(&self.port_id) else {
                     ctx.notify();
-                    return crate::canvas::InteractionResult::Continue;
+                    return InteractionResult::Continue;
                 };
                 let Some(target_port) = ctx.graph.get_port(&port_id) else {
                     ctx.notify();
-                    return crate::canvas::InteractionResult::Continue;
+                    return InteractionResult::Continue;
                 };
 
                 let (source_port, target_port) = match (source_port.kind(), target_port.kind()) {
@@ -416,14 +414,14 @@ impl Interaction for PortConnecting {
             }
         }
         ctx.notify();
-        crate::canvas::InteractionResult::Continue
+        InteractionResult::Continue
     }
 
     fn on_mouse_up(
         &mut self,
         ev: &gpui::MouseUpEvent,
-        ctx: &mut crate::plugin::PluginContext,
-    ) -> crate::canvas::InteractionResult {
+        ctx: &mut PluginContext,
+    ) -> InteractionResult {
         let mouse_world = ctx.screen_to_world(ev.position);
         if let Some(candidate) = self
             .candidate_ports
@@ -432,10 +430,10 @@ impl Interaction for PortConnecting {
         {
             let port_id = candidate.id;
             let Some(target_port) = ctx.graph.get_port(&port_id) else {
-                return crate::canvas::InteractionResult::End;
+                return InteractionResult::End;
             };
             let Some(source_port) = ctx.graph.get_port(&self.port_id) else {
-                return crate::canvas::InteractionResult::End;
+                return InteractionResult::End;
             };
 
             let (source_port, target_port) = match (source_port.kind(), target_port.kind()) {
@@ -456,14 +454,14 @@ impl Interaction for PortConnecting {
                 }
             }
 
-            return crate::canvas::InteractionResult::End;
+            return InteractionResult::End;
         }
 
         ctx.emit(FlowEvent::custom(PendingLinkCommitted {
             source_port: self.port_id,
             end_world: mouse_world,
         }));
-        crate::canvas::InteractionResult::End
+        InteractionResult::End
     }
 
     fn render(&self, ctx: &mut RenderContext) -> Option<gpui::AnyElement> {

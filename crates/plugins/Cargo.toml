@@ -8,6 +8,13 @@ repository = "https://github.com/tu6ge/ferrum-flow"
 description = "A FerrumFlow built-in plugins library."
 
 [dependencies]
-ferrum-flow-core = { workspace = true }
+ferrum-flow-core = { workspace = true, features = ["testing"] }
 gpui = { workspace = true }
 serde_json = { workspace = true }
+log = { workspace = true }
+uuid = { workspace = true }
+anyhow = { workspace = true }
+# used by background plugin
+image = { workspace = true }
+# used by background plugin
+smallvec = { workspace = true }

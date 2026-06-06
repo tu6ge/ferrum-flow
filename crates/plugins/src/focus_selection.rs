@@ -1,6 +1,6 @@
-use crate::{
-    plugin::{FlowEvent, Plugin, PluginContext, primary_platform_modifier},
-    plugins::viewport_frame::frame_world_rect,
+use crate::viewport_frame::frame_world_rect;
+use ferrum_flow_core::{
+    EventResult, FlowEvent, InputEvent, Plugin, PluginContext, primary_platform_modifier,
 };
 
 /// Pan + zoom the viewport so selected nodes fit the window (⌘⇧F / Ctrl⇧F). Undo restores prior view.
@@ -46,18 +46,14 @@ impl Plugin for FocusSelectionPlugin {
         90
     }
 
-    fn on_event(
-        &mut self,
-        event: &FlowEvent,
-        ctx: &mut PluginContext,
-    ) -> crate::plugin::EventResult {
-        if let FlowEvent::Input(crate::plugin::InputEvent::KeyDown(ev)) = event
+    fn on_event(&mut self, event: &FlowEvent, ctx: &mut PluginContext) -> EventResult {
+        if let FlowEvent::Input(InputEvent::KeyDown(ev)) = event
             && focus_shortcut(ev)
             && ev.keystroke.key == "f"
         {
             focus_selected(ctx);
-            return crate::plugin::EventResult::Stop;
+            return EventResult::Stop;
         }
-        crate::plugin::EventResult::Continue
+        EventResult::Continue
     }
 }

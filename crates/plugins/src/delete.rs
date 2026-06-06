@@ -1,7 +1,6 @@
-use crate::{
-    Edge, EdgeId, Graph, GraphError, GraphOp, Node, NodeId, ParentDeletePolicy, Port,
-    canvas::Command,
-    plugin::{FlowEvent, Plugin},
+use ferrum_flow_core::{
+    Command, CommandContext, Edge, EdgeId, EventResult, FlowEvent, Graph, GraphError, GraphOp,
+    InputEvent, Node, NodeId, ParentDeletePolicy, Plugin, PluginContext, Port,
 };
 use gpui::Point;
 use std::collections::{HashMap, HashSet};
@@ -22,7 +21,7 @@ impl Default for DeletePlugin {
     }
 }
 
-pub(crate) fn delete_selection(ctx: &mut crate::plugin::PluginContext, policy: ParentDeletePolicy) {
+pub(crate) fn delete_selection(ctx: &mut PluginContext, policy: ParentDeletePolicy) {
     let cmd = DeleteCommand::new(ctx, policy);
     match cmd {
         Ok(cmd) => ctx.execute_command(cmd),
@@ -37,12 +36,8 @@ impl Plugin for DeletePlugin {
         "delete"
     }
 
-    fn on_event(
-        &mut self,
-        event: &FlowEvent,
-        ctx: &mut crate::plugin::PluginContext,
-    ) -> crate::plugin::EventResult {
-        if let FlowEvent::Input(crate::plugin::InputEvent::KeyDown(ev)) = event
+    fn on_event(&mut self, event: &FlowEvent, ctx: &mut PluginContext) -> EventResult {
+        if let FlowEvent::Input(InputEvent::KeyDown(ev)) = event
             && (ev.keystroke.key == "delete" || ev.keystroke.key == "backspace")
         {
             let cmd = DeleteCommand::new(ctx, self.policy);
@@ -52,9 +47,9 @@ impl Plugin for DeletePlugin {
                     ctx.emit(e.into());
                 }
             }
-            return crate::plugin::EventResult::Stop;
+            return EventResult::Stop;
         }
-        crate::plugin::EventResult::Continue
+        EventResult::Continue
     }
 }
 
@@ -77,10 +72,7 @@ struct DeleteCommand {
 }
 
 impl DeleteCommand {
-    fn collect_edges_for_selected_nodes(
-        graph: &crate::Graph,
-        selected_nodes: &[Node],
-    ) -> Vec<Edge> {
+    fn collect_edges_for_selected_nodes(graph: &Graph, selected_nodes: &[Node]) -> Vec<Edge> {
         let mut edge_ids = HashSet::new();
         let mut edges = Vec::new();
 
@@ -99,10 +91,7 @@ impl DeleteCommand {
         edges
     }
 
-    fn new(
-        ctx: &crate::plugin::PluginContext,
-        policy: ParentDeletePolicy,
-    ) -> Result<Self, GraphError> {
+    fn new(ctx: &PluginContext, policy: ParentDeletePolicy) -> Result<Self, GraphError> {
         let selected_node: Vec<Node> = ctx
             .graph
             .selected_node()
@@ -193,7 +182,7 @@ impl DeleteCommand {
         depth
     }
 
-    fn restore_node_hierarchy(&self, ctx: &mut crate::canvas::CommandContext) {
+    fn restore_node_hierarchy(&self, ctx: &mut CommandContext) {
         let restored: HashSet<_> = self.selected_node.iter().map(|n| n.id()).collect();
         let by_id: HashMap<_, _> = self.selected_node.iter().map(|n| (n.id(), n)).collect();
         let mut nodes: Vec<_> = self.selected_node.iter().collect();
@@ -229,11 +218,7 @@ impl DeleteCommand {
     }
 
     /// All node ids that `remove_node` will touch for the given selection and policy.
-    fn deletion_set(
-        nodes: &[Node],
-        graph: &Graph,
-        policy: ParentDeletePolicy,
-    ) -> HashSet<crate::NodeId> {
+    fn deletion_set(nodes: &[Node], graph: &Graph, policy: ParentDeletePolicy) -> HashSet<NodeId> {
         let mut set: HashSet<_> = nodes.iter().map(|n| n.id()).collect();
         if matches!(policy, ParentDeletePolicy::Cascade) {
             let mut stack: Vec<_> = set.iter().copied().collect();
@@ -291,13 +276,13 @@ impl Command for DeleteCommand {
     fn name(&self) -> &'static str {
         "delete"
     }
-    fn execute(&mut self, ctx: &mut crate::canvas::CommandContext) {
+    fn execute(&mut self, ctx: &mut CommandContext) {
         ctx.remove_selected_edge();
         if let Err(e) = ctx.remove_selected_node(self.policy) {
             log::error!("failed to remove selected node: {e}");
         }
     }
-    fn undo(&mut self, ctx: &mut crate::canvas::CommandContext) {
+    fn undo(&mut self, ctx: &mut CommandContext) {
         for node in &self.selected_node {
             ctx.add_node(node.clone());
             ctx.add_selected_node(node.id(), true);
@@ -316,7 +301,7 @@ impl Command for DeleteCommand {
         }
     }
 
-    fn to_ops(&self, ctx: &mut crate::CommandContext) -> Vec<crate::GraphOp> {
+    fn to_ops(&self, ctx: &mut CommandContext) -> Vec<GraphOp> {
         let mut list = vec![];
         let mut removed_edges = HashSet::new();
         for node in &self.selected_node {
@@ -346,29 +331,9 @@ impl Command for DeleteCommand {
 mod tests {
     use std::collections::HashSet;
 
-    use crate::{
-        Command, CommandContext, Graph, ParentDeletePolicy, RendererRegistry, SharedState,
-        Viewport, canvas::PortLayoutCache,
-    };
+    use ferrum_flow_core::{Command, Graph, ParentDeletePolicy, command_interop::with_command_ctx};
 
     use super::DeleteCommand;
-
-    fn with_ctx<R>(graph: &mut Graph, f: impl FnOnce(&mut CommandContext<'_>) -> R) -> R {
-        let mut port_offset_cache = PortLayoutCache::new();
-        let mut viewport = Viewport::new();
-        let mut renderers = RendererRegistry::new();
-        let mut shared_state = SharedState::new();
-        let mut notify = || {};
-        let mut ctx = CommandContext::new(
-            graph,
-            &mut port_offset_cache,
-            &mut viewport,
-            &mut renderers,
-            &mut shared_state,
-            &mut notify,
-        );
-        f(&mut ctx)
-    }
 
     #[test]
     fn undo_delete_parent_restores_promoted_children() {
@@ -404,11 +369,11 @@ mod tests {
             promoted_children,
         };
 
-        with_ctx(&mut graph, |ctx| cmd.execute(ctx));
+        with_command_ctx(&mut graph, |ctx| cmd.execute(ctx));
         assert!(graph.get_node(&parent).is_none());
         assert_eq!(graph.get_node(&child).unwrap().parent(), None);
 
-        with_ctx(&mut graph, |ctx| cmd.undo(ctx));
+        with_command_ctx(&mut graph, |ctx| cmd.undo(ctx));
         assert!(graph.get_node(&parent).is_some());
         assert_eq!(graph.get_node(&child).unwrap().parent(), Some(parent));
         assert_eq!(graph.get_node(&child).unwrap().point().x, gpui::px(12.0));
@@ -420,17 +385,19 @@ mod tests {
 mod command_interop_tests {
     use std::collections::HashSet;
 
-    use crate::{Graph, ParentDeletePolicy, command_interop::assert_command_interop};
+    use ferrum_flow_core::{
+        Edge, Graph, Node, ParentDeletePolicy, Port, command_interop::assert_command_interop,
+    };
 
     use super::{DeleteCommand, PromotedChildSnapshot};
 
     fn delete_command_like_new(graph: &Graph, policy: ParentDeletePolicy) -> DeleteCommand {
-        let selected_node: Vec<crate::Node> = graph
+        let selected_node: Vec<Node> = graph
             .selected_node()
             .iter()
             .filter_map(|id| graph.get_node(id).cloned())
             .collect();
-        let mut selected_edge: Vec<crate::Edge> = graph
+        let mut selected_edge: Vec<Edge> = graph
             .selected_edge()
             .iter()
             .filter_map(|id| graph.get_edge(id).cloned())
@@ -442,7 +409,7 @@ mod command_interop_tests {
                 selected_edge.push(edge);
             }
         }
-        let selected_port: Vec<crate::Port> = graph
+        let selected_port: Vec<Port> = graph
             .selected_node()
             .iter()
             .filter_map(|node_id| graph.get_node(node_id))

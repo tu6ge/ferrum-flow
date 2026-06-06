@@ -4,15 +4,15 @@ use std::time::Duration;
 use gpui::{MouseButton, Pixels, Point};
 
 use super::{DragSessionTimers, exceeds_drag_threshold, run_drag_side_effects};
-use crate::{
-    NodeId,
-    canvas::{Interaction, InteractionResult},
-    plugin::{EventResult, FlowEvent, InputEvent, Plugin, PluginContext},
-    plugins::node::{
-        ActiveNodeDrag, NODE_DRAG_TICK_INTERVAL, NodeDragEvent, collect_drag_nodes,
-        command::{DragNodesCommand, SelecteNodeCommand},
-        dragged_ids_from_nodes, insert_active_drag,
-    },
+use ferrum_flow_core::{
+    EventResult, FlowEvent, InputEvent, Interaction, InteractionResult, NodeId, Plugin,
+    PluginContext, RenderContext,
+};
+
+use crate::node::{
+    ActiveNodeDrag, NODE_DRAG_TICK_INTERVAL, NodeDragEvent, collect_drag_nodes,
+    command::{DragNodesCommand, SelecteNodeCommand},
+    dragged_ids_from_nodes, insert_active_drag,
 };
 
 /// Flat canvas node drag. Nested graphs use [`crate::plugins::graph::NestedNodeDragPlugin`] instead.
@@ -180,7 +180,7 @@ impl Interaction for NodeDragInteraction {
         }
     }
 
-    fn render(&self, ctx: &mut crate::plugin::RenderContext) -> Option<gpui::AnyElement> {
+    fn render(&self, ctx: &mut RenderContext) -> Option<gpui::AnyElement> {
         match &self.state {
             NodeDragState::Draging { dragged_ids, .. } => {
                 let overlay_ids = super::node_ids_for_drag_overlay(ctx.graph, dragged_ids.as_ref());

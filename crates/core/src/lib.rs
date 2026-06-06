@@ -25,10 +25,11 @@ pub use edge::*;
 pub use graph::node::*;
 pub use graph::*;
 pub use plugin::{
-    EventResult, FlowEvent, InitPluginContext, InputEvent, NodeCardVariant, Plugin, PluginContext,
-    RenderContext, RenderLayer, SyncPlugin, SyncPluginContext, primary_platform_modifier,
+    CanvasMessage, EventResult, FlowEvent, InitPluginContext, InputEvent, MessageLevel,
+    NodeCardVariant, Plugin, PluginContext, RenderContext, RenderLayer, SyncPlugin,
+    SyncPluginContext, primary_platform_modifier,
 };
 pub use port_screen::PortScreenFrame;
 pub use shared_state::SharedState;
 pub use theme::FlowTheme;
-pub use viewport::Viewport;
+pub use viewport::{Viewport, ViewportVisibilityCacheKey};

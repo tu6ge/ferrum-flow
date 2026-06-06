@@ -1,4 +1,6 @@
-use crate::{Edge, Graph, GraphError, GraphOp, Node, NodeId, Port, canvas::Command};
+use ferrum_flow_core::{
+    Command, CommandContext, Edge, Graph, GraphError, GraphOp, Node, NodeId, Port,
+};
 
 pub struct CreateEdge {
     edge: Edge,
@@ -14,14 +16,14 @@ impl Command for CreateEdge {
     fn name(&self) -> &'static str {
         "create_edge"
     }
-    fn execute(&mut self, ctx: &mut crate::canvas::CommandContext) {
+    fn execute(&mut self, ctx: &mut CommandContext) {
         ctx.add_edge(self.edge.clone());
     }
-    fn undo(&mut self, ctx: &mut crate::canvas::CommandContext) {
+    fn undo(&mut self, ctx: &mut CommandContext) {
         ctx.remove_edge(&self.edge.id);
     }
 
-    fn to_ops(&self, _ctx: &mut crate::CommandContext) -> Vec<crate::GraphOp> {
+    fn to_ops(&self, _ctx: &mut CommandContext) -> Vec<GraphOp> {
         vec![GraphOp::AddEdge(self.edge.clone())]
     }
 }
@@ -40,16 +42,16 @@ impl Command for CreateNode {
     fn name(&self) -> &'static str {
         "create_node"
     }
-    fn execute(&mut self, ctx: &mut crate::canvas::CommandContext) {
+    fn execute(&mut self, ctx: &mut CommandContext) {
         ctx.add_node(self.node.clone());
     }
-    fn to_ops(&self, _ctx: &mut crate::CommandContext) -> Vec<GraphOp> {
+    fn to_ops(&self, _ctx: &mut CommandContext) -> Vec<GraphOp> {
         vec![
             GraphOp::AddNode(self.node.clone()),
             GraphOp::NodeOrderInsert { id: self.node.id() },
         ]
     }
-    fn undo(&mut self, ctx: &mut crate::canvas::CommandContext) {
+    fn undo(&mut self, ctx: &mut CommandContext) {
         ctx.remove_node_cascade(&self.node.id());
     }
 }
@@ -68,14 +70,14 @@ impl Command for CreatePort {
     fn name(&self) -> &'static str {
         "create_port"
     }
-    fn execute(&mut self, ctx: &mut crate::canvas::CommandContext) {
+    fn execute(&mut self, ctx: &mut CommandContext) {
         ctx.add_port(self.port.clone());
         ctx.port_offset_cache.clear_node(&self.port.node_id());
     }
-    fn to_ops(&self, _ctx: &mut crate::CommandContext) -> Vec<GraphOp> {
+    fn to_ops(&self, _ctx: &mut CommandContext) -> Vec<GraphOp> {
         vec![GraphOp::AddPort(self.port.clone())]
     }
-    fn undo(&mut self, ctx: &mut crate::canvas::CommandContext) {
+    fn undo(&mut self, ctx: &mut CommandContext) {
         let node_id = self.port.node_id();
         ctx.remove_port(&self.port.id());
         ctx.port_offset_cache.clear_node(&node_id);
@@ -124,7 +126,7 @@ impl Command for AttachChildCommand {
     fn name(&self) -> &'static str {
         "attach_child"
     }
-    fn execute(&mut self, ctx: &mut crate::canvas::CommandContext) {
+    fn execute(&mut self, ctx: &mut CommandContext) {
         ctx.graph
             .add_child(self.parent, self.child)
             .unwrap_or_else(|e| {
@@ -132,11 +134,11 @@ impl Command for AttachChildCommand {
             });
         ctx.port_offset_cache.clear_node(&self.child);
     }
-    fn undo(&mut self, ctx: &mut crate::canvas::CommandContext) {
+    fn undo(&mut self, ctx: &mut CommandContext) {
         ctx.graph.remove_child(self.parent, self.child);
         ctx.port_offset_cache.clear_node(&self.child);
     }
-    fn to_ops(&self, _ctx: &mut crate::canvas::CommandContext) -> Vec<GraphOp> {
+    fn to_ops(&self, _ctx: &mut CommandContext) -> Vec<GraphOp> {
         vec![GraphOp::PushChildNode {
             id: self.parent,
             child_id: self.child,
@@ -148,10 +150,12 @@ impl Command for AttachChildCommand {
 mod command_interop_tests {
     use serde_json::json;
 
-    use crate::{
-        CreateEdge, CreateNode, CreatePort, Graph, PortBuilder, PortKind, PortPosition, PortType,
+    use ferrum_flow_core::{
+        Graph, PortBuilder, PortKind, PortPosition, PortType,
         command_interop::assert_command_interop,
     };
+
+    use super::*;
 
     #[test]
     fn create_node_command_interop() {

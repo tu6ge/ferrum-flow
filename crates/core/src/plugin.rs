@@ -537,7 +537,7 @@ impl<'a> PluginContext<'a> {
     ///
     /// `graph` must contain `node` and that node's ports (a scratch graph is fine) so multi-port
     /// spacing matches runtime layout.
-    pub(crate) fn port_world_offset_relative(
+    pub fn port_world_offset_relative(
         &self,
         graph: &Graph,
         node: &Node,
@@ -709,7 +709,7 @@ impl<'a> PluginContext<'a> {
         self.port_offset_cache.get_offset(node_id, port_id)
     }
 
-    pub(crate) fn viewport_mut(&mut self) -> &mut Viewport {
+    pub fn viewport_mut(&mut self) -> &mut Viewport {
         self.viewport
     }
 

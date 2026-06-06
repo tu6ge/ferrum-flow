@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use gpui::{Pixels, Point};
 
-use crate::{Graph, NodeId};
+use ferrum_flow_core::{Graph, NodeId};
 
 use super::strategy::{
     LayoutError, LayoutOptions, LayoutOutput, LayoutPhase, LayoutStrategy, NodePositionDelta,
@@ -157,7 +157,7 @@ fn delta_graph_to_positions(graph: &Graph, pos: &HashMap<NodeId, Point<Pixels>>)
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Graph;
+    use ferrum_flow_core::Graph;
     use serde_json::json;
 
     use super::super::force_directed::ForceDirectedLayout;

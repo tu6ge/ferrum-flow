@@ -1,6 +1,7 @@
-use crate::{
-    plugin::{FlowEvent, InitPluginContext, Plugin, PluginContext, primary_platform_modifier},
-    plugins::viewport_frame::{apply_frame_world_rect_to_viewport, frame_world_rect},
+use crate::viewport_frame::{apply_frame_world_rect_to_viewport, frame_world_rect};
+use ferrum_flow_core::{
+    EventResult, FlowEvent, InitPluginContext, InputEvent, Plugin, PluginContext,
+    primary_platform_modifier,
 };
 
 /// Marker stored in [`crate::SharedState`] by [`FitAllGraphPlugin::setup`]. Cleared on the first
@@ -56,27 +57,23 @@ impl Plugin for FitAllGraphPlugin {
         88
     }
 
-    fn on_event(
-        &mut self,
-        event: &FlowEvent,
-        ctx: &mut PluginContext,
-    ) -> crate::plugin::EventResult {
+    fn on_event(&mut self, event: &FlowEvent, ctx: &mut PluginContext) -> EventResult {
         match event {
             FlowEvent::DrawableBoundsReady => {
                 if try_apply_pending_initial_fit_all_ctx(ctx) {
                     ctx.notify();
                 }
-                crate::plugin::EventResult::Continue
+                EventResult::Continue
             }
-            FlowEvent::Input(crate::plugin::InputEvent::KeyDown(ev))
+            FlowEvent::Input(InputEvent::KeyDown(ev))
                 if primary_platform_modifier(ev)
                     && !ev.keystroke.modifiers.shift
                     && ev.keystroke.key == "0" =>
             {
                 fit_all(ctx);
-                crate::plugin::EventResult::Stop
+                EventResult::Stop
             }
-            _ => crate::plugin::EventResult::Continue,
+            _ => EventResult::Continue,
         }
     }
 }

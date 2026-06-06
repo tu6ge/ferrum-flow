@@ -1,4 +1,5 @@
-use crate::{Edge, Graph, NodeId, plugin::RenderContext};
+use ferrum_flow_core::RenderContext;
+use ferrum_flow_core::{Edge, Graph, NodeId};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EdgePaintKind {
@@ -41,7 +42,7 @@ pub fn edge_is_visible(ctx: &RenderContext, edge: &Edge) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Graph;
+    use ferrum_flow_core::Graph;
 
     #[test]
     fn intra_parent_same_direct_parent() {

@@ -9,12 +9,12 @@ use std::collections::HashSet;
 
 use gpui::{AnyElement, Div, Element, ParentElement, Pixels, Point, Styled, div, px, rgb};
 
-use crate::{
-    Graph, NodeId,
-    plugin::{EventResult, FlowEvent, Plugin, PluginContext, RenderContext, RenderLayer},
-    plugins::node::NodeDragEvent,
-    theme::FlowTheme,
+use ferrum_flow_core::{
+    EventResult, FlowEvent, FlowTheme, Graph, NodeId, Plugin, PluginContext, RenderContext,
+    RenderLayer,
 };
+
+use crate::node::NodeDragEvent;
 
 /// Screen-space snap distance, converted to world units via `threshold / zoom`.
 const SNAP_SCREEN_PX: f32 = 4.0;

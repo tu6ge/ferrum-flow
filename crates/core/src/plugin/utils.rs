@@ -1,19 +1,9 @@
-use gpui::{Bounds, KeyDownEvent, Pixels, Point};
+use gpui::KeyDownEvent;
 
 use crate::{
     Edge, Graph, GraphChangeKind, Node, NodeId, ParentDeletePolicy, Viewport,
     canvas::PortLayoutCache,
 };
-
-/// [`gpui::canvas`] paint callbacks use **window** space for [`gpui::Window::paint_path`], while
-/// graph helpers ([`crate::RenderContext::world_to_screen`], port centers, etc.) use **canvas-local**
-/// pixels (origin at the top-left of the flow drawable). Add the canvas element layout origin to
-/// convert local → paint space (embedded [`FlowCanvas`](crate::canvas::FlowCanvas) has a non-zero
-/// origin in the window).
-#[inline]
-pub(crate) fn canvas_paint_point(bounds: Bounds<Pixels>, local: Point<Pixels>) -> Point<Pixels> {
-    bounds.origin + local
-}
 
 /// Clears [`PortLayoutCache`] entries affected by an incoming graph change. Call **before**
 /// [`Graph::apply`](crate::graph::Graph::apply) so `PortRemoved` can still resolve `node_id`.

@@ -1,11 +1,8 @@
 use gpui::{Bounds, Path, PathBuilder, Pixels, Point, Size, px};
 
-use crate::{PortId, PortPosition, Viewport};
+use ferrum_flow_core::{PluginContext, PortId, PortPosition, Viewport};
 
-pub fn port_screen_bounds(
-    port_id: PortId,
-    ctx: &crate::plugin::PluginContext,
-) -> Option<Bounds<Pixels>> {
+pub fn port_screen_bounds(port_id: PortId, ctx: &PluginContext) -> Option<Bounds<Pixels>> {
     let port = ctx.graph.get_port(&port_id)?;
 
     let offset = ctx.port_offset_cached(&port.node_id(), &port_id)?;
@@ -18,10 +15,7 @@ pub fn port_screen_bounds(
     ))
 }
 
-pub fn port_screen_big_bounds(
-    port_id: PortId,
-    ctx: &crate::plugin::PluginContext,
-) -> Option<Bounds<Pixels>> {
+pub fn port_screen_big_bounds(port_id: PortId, ctx: &PluginContext) -> Option<Bounds<Pixels>> {
     let mut bounds = port_screen_bounds(port_id, ctx)?;
 
     let offset_width = px(15.0) - bounds.size.width / 2.0;

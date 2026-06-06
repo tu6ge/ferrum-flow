@@ -86,7 +86,7 @@ impl Node {
         self.id
     }
 
-    pub(crate) fn set_id(&mut self, id: NodeId) {
+    pub fn set_id(&mut self, id: NodeId) {
         self.id = id;
     }
 

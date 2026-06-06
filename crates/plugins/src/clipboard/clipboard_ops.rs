@@ -2,10 +2,10 @@ use std::collections::{HashMap, HashSet};
 
 use gpui::{Pixels, Point, px};
 
-use crate::{CompositeCommand, Edge, Graph, Node, NodeId, plugin::PluginContext};
+use ferrum_flow_core::{CompositeCommand, Edge, Graph, Node, NodeId, PluginContext};
 
 use super::copied_subgraph::CopiedSubgraph;
-use crate::plugins::{AttachChildCommand, CreateEdge, CreateNode, CreatePort};
+use crate::{AttachChildCommand, CreateEdge, CreateNode, CreatePort};
 
 #[derive(Clone)]
 pub(crate) struct ClipboardShared(pub CopiedSubgraph);
@@ -237,7 +237,7 @@ mod tests {
     use gpui::{Point, px};
     use serde_json::{Value, json};
 
-    use crate::plugin_testing::PluginTestHarness;
+    use ferrum_flow_core::plugin_testing::PluginTestHarness;
 
     use super::{extract_subgraph, paste_subgraph_at_world};
 

@@ -3,16 +3,15 @@ use std::time::Duration;
 
 use gpui::{Pixels, Point};
 
-use crate::{
-    NodeId,
-    canvas::{Interaction, InteractionResult},
-    plugin::PluginContext,
-    plugins::node::{
-        DragNodesCommand, DragSessionTimers, NodeDragEvent, SelecteNodeCommand,
-        apply_drag_to_nodes, clear_active_drag, collect_drag_nodes, dragged_ids_from_nodes,
-        exceeds_drag_threshold, insert_active_drag, node_ids_for_drag_overlay,
-        run_drag_side_effects, screen_pointer_world_delta, start_world_positions,
-    },
+use ferrum_flow_core::{
+    FlowEvent, Interaction, InteractionResult, NodeId, PluginContext, RenderContext,
+};
+
+use crate::node::{
+    DragNodesCommand, DragSessionTimers, NodeDragEvent, SelecteNodeCommand, apply_drag_to_nodes,
+    clear_active_drag, collect_drag_nodes, dragged_ids_from_nodes, exceeds_drag_threshold,
+    insert_active_drag, node_ids_for_drag_overlay, run_drag_side_effects,
+    screen_pointer_world_delta, start_world_positions,
 };
 
 use super::super::render_hierarchy_drag_overlay;
@@ -124,19 +123,19 @@ impl Interaction for NestedNodeDragInteraction {
         clear_active_drag(ctx);
         match &self.state {
             NestedDragState::Pending { node_id, shift, .. } => {
-                ctx.emit(crate::plugin::FlowEvent::custom(NodeDragEvent::End));
+                ctx.emit(FlowEvent::custom(NodeDragEvent::End));
                 ctx.execute_command(SelecteNodeCommand::new(*node_id, *shift, ctx));
                 InteractionResult::End
             }
             NestedDragState::Dragging { start_locals, .. } => {
-                ctx.emit(crate::plugin::FlowEvent::custom(NodeDragEvent::End));
+                ctx.emit(FlowEvent::custom(NodeDragEvent::End));
                 ctx.execute_command(DragNodesCommand::new(start_locals, ctx));
                 InteractionResult::End
             }
         }
     }
 
-    fn render(&self, ctx: &mut crate::plugin::RenderContext) -> Option<gpui::AnyElement> {
+    fn render(&self, ctx: &mut RenderContext) -> Option<gpui::AnyElement> {
         let NestedDragState::Dragging { dragged_ids, .. } = &self.state else {
             return None;
         };

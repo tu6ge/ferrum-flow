@@ -9,7 +9,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use crate::NodeId;
+use ferrum_flow_core::NodeId;
 
 /// Stored in [`crate::SharedState`] while a node drag interaction is active in
 /// the dragging phase. [`super::NodePlugin`] and the interaction overlay use

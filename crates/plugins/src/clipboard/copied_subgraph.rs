@@ -1,4 +1,4 @@
-use crate::{Edge, Node, Port};
+use ferrum_flow_core::{Edge, Node, Port};
 
 #[derive(Clone)]
 pub struct CopiedSubgraph {

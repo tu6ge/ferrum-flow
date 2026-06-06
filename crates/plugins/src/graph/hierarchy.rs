@@ -1,6 +1,6 @@
 //! Hierarchy scope helpers for [`super::GraphPlugin`].
 
-use crate::{Graph, NodeId};
+use ferrum_flow_core::{Graph, NodeId};
 
 /// Paint-scope queries for nested graphs ([`super::GraphPlugin`] only; not used with
 /// [`crate::plugins::NodePlugin`] / [`crate::plugins::EdgePlugin`] on the same canvas).

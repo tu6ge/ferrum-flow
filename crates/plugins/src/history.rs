@@ -1,4 +1,6 @@
-use crate::plugin::{FlowEvent, Plugin, primary_platform_modifier};
+use ferrum_flow_core::{
+    EventResult, FlowEvent, InputEvent, Plugin, PluginContext, primary_platform_modifier,
+};
 
 pub struct HistoryPlugin;
 
@@ -19,21 +21,17 @@ impl Plugin for HistoryPlugin {
         "history"
     }
 
-    fn on_event(
-        &mut self,
-        event: &FlowEvent,
-        ctx: &mut crate::plugin::PluginContext,
-    ) -> crate::plugin::EventResult {
-        if let FlowEvent::Input(crate::plugin::InputEvent::KeyDown(ev)) = event {
+    fn on_event(&mut self, event: &FlowEvent, ctx: &mut PluginContext) -> EventResult {
+        if let FlowEvent::Input(InputEvent::KeyDown(ev)) = event {
             let primary = primary_platform_modifier(ev);
             if ev.keystroke.key == "z" && primary && ev.keystroke.modifiers.shift {
                 ctx.redo();
-                return crate::plugin::EventResult::Stop;
+                return EventResult::Stop;
             } else if ev.keystroke.key == "z" && primary {
                 ctx.undo();
-                return crate::plugin::EventResult::Stop;
+                return EventResult::Stop;
             }
         }
-        crate::plugin::EventResult::Continue
+        EventResult::Continue
     }
 }

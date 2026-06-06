@@ -1,6 +1,8 @@
 use std::collections::HashSet;
 
-use crate::plugin::{FlowEvent, Plugin, PluginContext, primary_platform_modifier};
+use ferrum_flow_core::{
+    EventResult, FlowEvent, InputEvent, Plugin, PluginContext, primary_platform_modifier,
+};
 
 /// Select every node and edge that intersects the current window viewport (⌘A / Ctrl+A).
 pub struct SelectAllViewportPlugin;
@@ -50,19 +52,15 @@ impl Plugin for SelectAllViewportPlugin {
         93
     }
 
-    fn on_event(
-        &mut self,
-        event: &FlowEvent,
-        ctx: &mut PluginContext,
-    ) -> crate::plugin::EventResult {
-        if let FlowEvent::Input(crate::plugin::InputEvent::KeyDown(ev)) = event
+    fn on_event(&mut self, event: &FlowEvent, ctx: &mut PluginContext) -> EventResult {
+        if let FlowEvent::Input(InputEvent::KeyDown(ev)) = event
             && primary_platform_modifier(ev)
             && ev.keystroke.key == "a"
         {
             select_visible(ctx);
             ctx.notify();
-            return crate::plugin::EventResult::Stop;
+            return EventResult::Stop;
         }
-        crate::plugin::EventResult::Continue
+        EventResult::Continue
     }
 }
