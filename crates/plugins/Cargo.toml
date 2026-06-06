@@ -1,0 +1,13 @@
+[package]
+name = "ferrum-flow-plugins"
+version = "0.1.0"
+edition = "2024"
+license = "Apache-2.0"
+authors = ["tu6ge"]
+repository = "https://github.com/tu6ge/ferrum-flow"
+description = "A FerrumFlow built-in plugins library."
+
+[dependencies]
+ferrum-flow = { workspace = true }
+gpui = { workspace = true }
+serde_json = { workspace = true }
