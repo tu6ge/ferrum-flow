@@ -3,6 +3,7 @@
 members = [
   "crates/core",
   "crates/executor",
+  "crates/ferrum-flow",
   "crates/meili",
   "crates/plugins",
   "crates/shader",
