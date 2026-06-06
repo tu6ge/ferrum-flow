@@ -9,3 +9,5 @@ keywords = ["gui", "gpui", "node-editor", "workflow", "flow-editor"]
 description = "A high-performance node-based editor framework built with Rust and GPUI."
 
 [dependencies]
+ferrum-flow-core = { workspace = true }
+ferrum-flow-plugins = { workspace = true }

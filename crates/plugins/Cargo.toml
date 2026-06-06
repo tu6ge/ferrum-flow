@@ -8,6 +8,6 @@ repository = "https://github.com/tu6ge/ferrum-flow"
 description = "A FerrumFlow built-in plugins library."
 
 [dependencies]
-ferrum-flow = { workspace = true }
+ferrum-flow-core = { workspace = true }
 gpui = { workspace = true }
 serde_json = { workspace = true }

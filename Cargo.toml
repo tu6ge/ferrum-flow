@@ -13,7 +13,9 @@ resolver = "2"
 
 [workspace.dependencies]
 
-ferrum-flow = { path = "crates/core" }
+ferrum-flow-core = { path = "crates/core" }
+ferrum-flow-plugins = { path = "crates/plugins" }
+ferrum-flow = { path = "crates/ferrum-flow" }
 
 gpui = "0.2.2"
 anyhow = "1.0.102"

@@ -4,9 +4,7 @@ use std::collections::BTreeMap;
 use std::time::Duration;
 
 use crate::{
-    BackgroundPlugin, DeletePlugin, FlowTheme, GraphChange, GraphError, GraphPlugin, HistoryPlugin,
-    IntoFlowGraph, NestedNodeDragPlugin, PortInteractionPlugin, SelectionPlugin, SharedState,
-    SyncPlugin, SyncPluginContext, ToastPlugin, ViewportPlugin,
+    FlowTheme, GraphChange, GraphError, IntoFlowGraph, SharedState, SyncPlugin, SyncPluginContext,
     graph::Graph,
     plugin::{
         EventResult, FlowEvent, InitPluginContext, InputEvent, Plugin, PluginContext,
@@ -608,20 +606,21 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
     /// Event order is determined by each plugin’s [`Plugin::priority`] when [`FlowCanvas::build`]
     /// runs (not by the order of calls to [`.plugin`](Self::plugin)). Add minimap, clipboard,
     /// context menu, etc. with [`.plugin`](Self::plugin) before or after this call.
-    pub fn default_plugins(mut self) -> Self {
-        self.plugins = self
-            .plugins
-            .add(BackgroundPlugin::new())
-            .add(SelectionPlugin::new())
-            .add(NestedNodeDragPlugin::new())
-            .add(ViewportPlugin::new())
-            .add(GraphPlugin::new())
-            .add(PortInteractionPlugin::new())
-            .add(DeletePlugin::default())
-            .add(HistoryPlugin::new())
-            .add(ToastPlugin::new());
-        self
-    }
+    /// TODO
+    // pub fn default_plugins(mut self) -> Self {
+    //     self.plugins = self
+    //         .plugins
+    //         .add(BackgroundPlugin::new())
+    //         .add(SelectionPlugin::new())
+    //         .add(NestedNodeDragPlugin::new())
+    //         .add(ViewportPlugin::new())
+    //         .add(GraphPlugin::new())
+    //         .add(PortInteractionPlugin::new())
+    //         .add(DeletePlugin::default())
+    //         .add(HistoryPlugin::new())
+    //         .add(ToastPlugin::new());
+    //     self
+    // }
 
     pub fn sync_plugin(mut self, plugin: impl SyncPlugin + 'static) -> Self {
         self.sync_plugin = Some(Box::new(plugin));

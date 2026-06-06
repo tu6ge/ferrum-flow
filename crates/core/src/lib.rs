@@ -11,7 +11,6 @@ mod graph;
 mod plugin;
 #[cfg(any(feature = "testing", test))]
 pub mod plugin_testing;
-mod plugins;
 mod port_screen;
 mod shared_state;
 mod theme;
@@ -29,7 +28,6 @@ pub use plugin::{
     EventResult, FlowEvent, InitPluginContext, InputEvent, NodeCardVariant, Plugin, PluginContext,
     RenderContext, RenderLayer, SyncPlugin, SyncPluginContext, primary_platform_modifier,
 };
-pub use plugins::*;
 pub use port_screen::PortScreenFrame;
 pub use shared_state::SharedState;
 pub use theme::FlowTheme;
