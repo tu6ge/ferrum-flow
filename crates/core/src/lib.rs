@@ -17,9 +17,9 @@ mod theme;
 mod viewport;
 
 pub use canvas::{
-    Command, CommandContext, CompositeCommand, FlowCanvas, FlowCanvasOutbound, HistoryProvider,
-    Interaction, InteractionResult, InteractionState, LocalHistory, NodeRenderer, RendererRegistry,
-    default_node_caption,
+    Command, CommandContext, CompositeCommand, FlowCanvas, FlowCanvasBuilder, FlowCanvasOutbound,
+    HistoryProvider, Interaction, InteractionResult, InteractionState, LocalHistory, NodeRenderer,
+    RendererRegistry, default_node_caption,
 };
 pub use edge::*;
 pub use graph::node::*;

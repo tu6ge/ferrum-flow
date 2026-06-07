@@ -1,4 +1,4 @@
-use ferrum_flow::{FlowCanvas, Graph};
+use ferrum_flow::{DefaultPlugins as _, FlowCanvas, Graph};
 use gpui::{AppContext as _, Application, WindowOptions};
 use serde_json::json;
 

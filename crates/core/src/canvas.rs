@@ -598,30 +598,6 @@ impl<'a, 'b> FlowCanvasBuilder<'a, 'b> {
         self
     }
 
-    /// Registers the **core** plugin set for editing a node graph on the canvas: background,
-    /// selection, node drag, pan/zoom, node/edge rendering, port wiring, delete, and undo/redo
-    /// ([`BackgroundPlugin`], [`SelectionPlugin`], [`NodeInteractionPlugin`], [`ViewportPlugin`],
-    /// [`NodePlugin`], [`PortInteractionPlugin`], [`EdgePlugin`], [`DeletePlugin`], [`HistoryPlugin`]).
-    ///
-    /// Event order is determined by each plugin’s [`Plugin::priority`] when [`FlowCanvas::build`]
-    /// runs (not by the order of calls to [`.plugin`](Self::plugin)). Add minimap, clipboard,
-    /// context menu, etc. with [`.plugin`](Self::plugin) before or after this call.
-    /// TODO
-    // pub fn default_plugins(mut self) -> Self {
-    //     self.plugins = self
-    //         .plugins
-    //         .add(BackgroundPlugin::new())
-    //         .add(SelectionPlugin::new())
-    //         .add(NestedNodeDragPlugin::new())
-    //         .add(ViewportPlugin::new())
-    //         .add(GraphPlugin::new())
-    //         .add(PortInteractionPlugin::new())
-    //         .add(DeletePlugin::default())
-    //         .add(HistoryPlugin::new())
-    //         .add(ToastPlugin::new());
-    //     self
-    // }
-
     pub fn sync_plugin(mut self, plugin: impl SyncPlugin + 'static) -> Self {
         self.sync_plugin = Some(Box::new(plugin));
         self

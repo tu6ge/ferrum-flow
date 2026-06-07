@@ -11,3 +11,7 @@ description = "A high-performance node-based editor framework built with Rust an
 [dependencies]
 ferrum-flow-core = { workspace = true }
 ferrum-flow-plugins = { workspace = true }
+
+[dev-dependencies]
+gpui = { workspace = true }
+serde_json = { workspace = true }
