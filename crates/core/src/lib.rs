@@ -1,6 +1,6 @@
-#![cfg_attr(not(test), deny(clippy::unwrap_used))]
-#![cfg_attr(not(test), deny(clippy::expect_used))]
-#![cfg_attr(not(test), deny(clippy::panic))]
+#![cfg_attr(all(not(test), not(feature = "testing")), deny(clippy::unwrap_used))]
+#![cfg_attr(all(not(test), not(feature = "testing")), deny(clippy::expect_used))]
+#![cfg_attr(all(not(test), not(feature = "testing")), deny(clippy::panic))]
 
 pub mod builder_state;
 mod canvas;

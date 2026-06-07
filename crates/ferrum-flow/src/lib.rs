@@ -1,3 +1,7 @@
+#![cfg_attr(all(not(test), not(feature = "testing")), deny(clippy::unwrap_used))]
+#![cfg_attr(all(not(test), not(feature = "testing")), deny(clippy::expect_used))]
+#![cfg_attr(all(not(test), not(feature = "testing")), deny(clippy::panic))]
+
 pub use ferrum_flow_core::*;
 
 pub use ferrum_flow_plugins::*;
