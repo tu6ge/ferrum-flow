@@ -37,11 +37,15 @@ jobs:
 
       - name: Clippy
         run: |
+          cargo clippy -p ferrum-flow-core --all-targets
+          cargo clippy -p ferrum-flow-plugins --all-targets
           cargo clippy -p ferrum-flow --all-targets
           cargo clippy -p ferrum-flow-sync-plugin --all-targets
 
       - name: Tests
         run: |
+          cargo test -p ferrum-flow-core --all-targets --no-fail-fast
+          cargo test -p ferrum-flow-plugins --all-targets --no-fail-fast 
           cargo test -p ferrum-flow --all-targets --no-fail-fast
           cargo test -p ferrum-flow-sync-plugin --all-targets --no-fail-fast
 
