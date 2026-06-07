@@ -42,12 +42,15 @@ pub(crate) fn start_sync_thread(
     ws_url: String,
     ws_config: WsSyncConfig,
 ) {
-    thread::spawn(move || {
-        let rt = Runtime::new().expect("failed to create runtime");
-
-        rt.block_on(async move {
-            run_ws(awareness, undo_origin, repaint_tx, ws_url, ws_config).await;
-        });
+    thread::spawn(move || match Runtime::new() {
+        Ok(rt) => {
+            rt.block_on(async move {
+                run_ws(awareness, undo_origin, repaint_tx, ws_url, ws_config).await;
+            });
+        }
+        Err(e) => {
+            log::error!("failed to create runtime: {}", e);
+        }
     });
 }
 

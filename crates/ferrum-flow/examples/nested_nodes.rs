@@ -159,7 +159,7 @@ impl Plugin for NestedNodesDemoPlugin {
             if ev.keystroke.key == "i" {
                 ctx.emit(FlowEvent::success(format!(
                     "paint_order: {}",
-                    paint_order_summary(&ctx.graph)
+                    paint_order_summary(ctx.graph)
                 )));
                 return EventResult::Stop;
             }
