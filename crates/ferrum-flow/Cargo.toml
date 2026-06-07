@@ -8,6 +8,10 @@ repository = "https://github.com/tu6ge/ferrum-flow"
 keywords = ["gui", "gpui", "node-editor", "workflow", "flow-editor"]
 description = "A high-performance node-based editor framework built with Rust and GPUI."
 
+[features]
+default = []
+testing = ["ferrum-flow-core/testing"]
+
 [dependencies]
 ferrum-flow-core = { workspace = true }
 ferrum-flow-plugins = { workspace = true }
