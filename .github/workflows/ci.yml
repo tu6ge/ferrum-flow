@@ -61,7 +61,7 @@ jobs:
       matrix:
         include:
           - package: ferrum-flow
-            dir: /crates/core
+            dir: /crates/ferrum-flow
             tag_prefix: v
             cliff_config: cliff.ferrum-flow.toml
           - package: ferrum-flow-sync-plugin

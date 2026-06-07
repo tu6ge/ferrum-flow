@@ -19,7 +19,7 @@ filter_unconventional = true
 # Only consider v* tags when finding the previous release (not sync_plugin_v*).
 tag_pattern = "v[0-9].*"
 # Only commits that touch the core crate (avoids sync_plugin / unrelated paths).
-include_paths = ["crates/core/**"]
+include_paths = ["crates/ferrum-flow/**"]
 sort_commits = "oldest"
 commit_parsers = [
     { message = "^feat", group = "Features" },
